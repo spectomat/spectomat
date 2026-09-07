@@ -26,8 +26,12 @@ echo "drafts: $(count "$FLOOR/drafts")   specs: $(count "$FLOOR/specs")   plans:
 
 for p in "$FLOOR"/plans/*.md; do
   [[ -f "$p" ]] || continue
-  printf "%-40s steps done %3d  open %3d\n" "$(basename "$p")" \
-    "$(grep -cE '^- \[x\]' "$p" || true)" "$(grep -cE '^- \[ \]' "$p" || true)"
+  slug="$(basename "$p" .md)"
+  tasks=$(find "$FLOOR/plans/$slug" -maxdepth 1 -name 'task-*.md' 2>/dev/null | wc -l | tr -d ' ')
+  ticked=$(cat "$FLOOR/plans/$slug"/task-*.md 2>/dev/null | grep -cE '^- \[x\]' || true)
+  open=$(cat "$FLOOR/plans/$slug"/task-*.md 2>/dev/null | grep -cE '^- \[ \]' || true)
+  next=$(grep -lE '^- \[ \]' "$FLOOR/plans/$slug"/task-*.md 2>/dev/null | head -1)
+  printf "%-24s tasks %2d  steps done %3d  open %3d  next: %s\n" "$slug" "$tasks" "$ticked" "$open" "${next:+$(basename "$next")}"
 done
 
 BLOCKED=$(find "$FLOOR/done" -maxdepth 1 -name '*.blocked.md' -type f 2>/dev/null)

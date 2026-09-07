@@ -30,7 +30,7 @@ is clean, checked this iteration.
 docs/.spectomat/
   drafts/     ideas the user drops in, one .md each — the file name is the slug
   specs/      unit A writes one per draft; or a finished spec placed by hand
-  plans/      unit B writes one per spec
+  plans/      unit B writes an overview per spec plus <slug>/task-NN-<name>.md per task
   done/       unit D moves spec + plan here when every step is ticked and gates pass
   log.md      one line per unit
   factory.md  the rules, rendered once from the plugin template, re-read every iteration
@@ -51,7 +51,7 @@ draft remains. Every unit is a commit and a log line.
 | --- | --- |
 | A · draft → spec | `spectomat:writing-specs` |
 | B · spec → plan | `spectomat:writing-plans` |
-| C · plan → next task | `spectomat:executing-tasks`, with `spectomat:test-driven-development` |
+| C · next wave of ready tasks (parallel implementers, disjoint files) | `spectomat:executing-tasks`, with `spectomat:test-driven-development` |
 | any failing gate | `spectomat:systematic-debugging` |
 | D · plan → done, every commit, the promise | `spectomat:verification-before-completion` |
 

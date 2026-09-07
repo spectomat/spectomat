@@ -15,45 +15,26 @@
 | --- | --- | --- |
 | `src/<module>.js` | one sentence | Task 1 |
 
----
+## Tasks
 
-### Task 1: <component>
+One file per task under `docs/.spectomat/plans/{{SLUG}}/`, from
+`templates/task.md`, executed in this order. Tasks with no dependency between
+them and disjoint Files run in parallel as one wave.
 
-**Files:**
-- Create: `exact/path.js`
-- Modify: `exact/existing.js:120-140`
-- Test: `exact/path.test.js`
+| # | File | Component | Covers | Depends on |
+| --- | --- | --- | --- | --- |
+| 1 | `task-01-<name>.md` | <component> | AC-1.1, AC-1.2 | — |
+| 2 | `task-02-<name>.md` | <component> | AC-2.1 | 1 |
 
-**Interfaces:**
-- Consumes: exact names and signatures from earlier tasks (none for Task 1)
-- Produces: exact names and signatures later tasks rely on
+## Coverage
 
-**Covers:** AC-1.1, AC-1.2
+Every criterion id in the spec, and the task that covers it. A criterion
+with no task is a plan defect.
 
-- [ ] **Step 1: Write the failing test** — create `exact/path.test.js`:
-
-```js
-test("specific behaviour", () => {
-  expect(fn(input)).toBe(expected);
-});
-```
-
-- [ ] **Step 2: Run it, expect FAIL** — `npm test -- exact/path.test.js`, fails with "fn is not defined"
-- [ ] **Step 3: Minimal implementation** — create `exact/path.js`:
-
-```js
-export function fn(input) {
-  return expected;
-}
-```
-
-- [ ] **Step 4: Run it, expect PASS** — same command; the full suite stays green
-- [ ] **Step 5: Commit** — `git add exact/path.js exact/path.test.js && git commit -m "feat({{SLUG}}): <what>"`
-
-### Task 2: <component>
-
-(same shape: Files, Interfaces, Covers, five checkbox steps with real code)
+| Criterion | Task |
+| --- | --- |
+| AC-1.1 | 1 |
 
 ## Rulings
 
-(appended by executing-tasks: `- Task N · <decision> — <why> — <cost if wrong>`)
+(appended by executing-tasks for decisions that cross tasks: `- Task N · <decision> — <why> — <cost if wrong>`)

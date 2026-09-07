@@ -1,60 +1,82 @@
 ---
 name: executing-tasks
-description: Use when the factory's unit C takes the next unchecked task from a plan in docs/.spectomat/plans — dispatch a fresh implementer subagent, review its diff for spec compliance and quality, fix, tick the steps, commit. Unattended; decisions become rulings in the plan.
+description: Use when the factory's unit C takes the next wave of ready task files under docs/.spectomat/plans/<slug>/ — one fresh implementer per task in parallel, none running git; then per task a commit by the controller, a diff review, fixes, ticked steps and a Result. Unattended; decisions become rulings in the task file.
 ---
 
-# Executing one task
+# Executing a wave of tasks
 
-One task per iteration. A fresh implementer per task, a fresh reviewer per
-diff, at most three fix rounds, then a ruling. Nobody is asked anything.
+One wave per iteration: every ready task whose Files are disjoint from the
+others', at most three, lowest numbers first. A wave of one is the common
+case. One fresh implementer per task, in parallel; one fresh reviewer per
+diff; at most three fix rounds per task; then a ruling. Nobody is asked.
 
 ## Inputs
 
-- the plan `docs/.spectomat/plans/<slug>.md` and the spec it names
-- the first task in the plan with an unchecked `- [ ]` step
-- a scratch directory `docs/.spectomat/work/<slug>/` (gitignored) for the
-  brief, the report and the diff, so nothing large enters your context
+- the plan overview `docs/.spectomat/plans/<slug>.md` — its task table gives
+  `Depends on`; a task is *ready* when every task it depends on has all steps
+  ticked
+- the wave: ready task files `docs/.spectomat/plans/<slug>/task-NN-*.md`
+  with an unchecked step, lowest numbers first, adding a task only if its
+  Files overlap none already in the wave, stopping at three
+- a scratch directory `docs/.spectomat/work/<slug>/` (gitignored) for reports
+  and review diffs, so nothing large enters your context
+
+Each task file is its own brief, written to be executed alone. Do not paste
+the plan or the spec into any prompt.
+
+## Git rule
+
+**Implementer subagents never run git.** You stage and commit, one commit
+per task, after they report. This is what lets a wave share one working
+tree: disjoint Files, no racing index, no interleaved commits. It holds for
+a wave of one too.
 
 ## Steps
 
-1. **Brief.** Copy the task's full text from the plan into
-   `work/<slug>/task-<N>-brief.md`. Add the plan's Global Constraints and
-   the interfaces earlier tasks produced. Exact values live only in the
-   brief. Never hand a subagent the whole plan.
-2. **Record BASE** = `git rev-parse HEAD`.
-3. **Dispatch the implementer** (template below) with the brief path and the
-   report path `work/<slug>/task-<N>-report.md`. Run it on a cheap model
-   when the brief contains the code to write, a standard model otherwise.
-   Never run two implementers at once. If subagents are unavailable, do the
-   task yourself, following the brief and `spectomat:test-driven-development`,
-   and skip to step 6.
-4. **Read the report's status line.** `DONE` → step 5. `BLOCKED` or
-   `NEEDS_CONTEXT` → decide the missing point yourself, write it as a ruling
-   (below), re-dispatch once with the ruling in the prompt; a second block
-   is a strike for the factory log.
-5. **Review.** Write the diff to `work/<slug>/task-<N>-review.diff`:
-   `git log --oneline BASE..HEAD; git diff --stat BASE..HEAD; git diff -U10 BASE..HEAD`.
-   Dispatch the reviewer (template below) with brief, report and diff paths,
-   on a standard model at least — a cheap reviewer raises style nits and
-   misses real defects. Treat the report as claims; the diff is the evidence.
-6. **Fix loop.** Spec ❌ or any Critical or Important finding → send the
-   findings verbatim back to the implementer (rounds 1–2 resume it; round 3
-   is a fresh implementer on a stronger model, told to read the report file
-   for what was tried). After each fix, review the fix range only. Minor
-   findings never enter the loop; list them under the plan's `## Rulings`.
-   After round 3, rule on every open finding yourself and continue.
-7. **Tick** every step of the task in the plan, append the factory log line,
-   and commit both in one `chore(<slug>): Task N ticked` commit. The
-   implementer's commits already carry the code.
+1. **Record BASE** = `git rev-parse HEAD`. Confirm the tree is clean.
+2. **Dispatch every implementer in the wave at once** (template below), each
+   with its task file path and report path `work/<slug>/task-NN-report.md`.
+   Cheap model when the task file contains the code to write, standard
+   otherwise. If subagents are unavailable, execute the tasks yourself, one
+   at a time, under `spectomat:test-driven-development`, committing each.
+3. **Wait for all reports.** For each: `DONE` → continue. `BLOCKED` or
+   `NEEDS_CONTEXT` → decide the missing point, write it under that task's
+   `## Rulings`, re-dispatch that task once with the ruling; a second block
+   is a strike for the factory log and the task leaves the wave untouched
+   (revert its Files with `git checkout --` and delete new ones).
+4. **Commit per task, in task order.** `git add` exactly that task's Files
+   (plus any test fixture it reports creating), commit with the message its
+   Step 5 gives, record `<commit>`. Anything left unstaged after the last
+   task belongs to nobody: inspect it, then discard it.
+5. **Review every task, in parallel.** Write each diff to
+   `work/<slug>/task-NN-review.diff`: `git show --stat <commit>; git show -U10
+   <commit>`. Dispatch one reviewer per task (template below) with task file,
+   report and diff paths, on a standard model at least — a cheap reviewer
+   raises style nits and misses real defects. Treat the report as claims;
+   the diff is the evidence.
+6. **Fix loop, per task.** Spec ❌ or any Critical or Important finding →
+   send the findings verbatim back to that task's implementer (rounds 1–2
+   resume it; round 3 is a fresh implementer on a stronger model, told to
+   read the report file for what was tried). Still no git for them: after
+   each fix you `git add` the task's Files and commit `fix(<slug>): Task NN
+   round R`, then review that commit only. Minor findings never enter the
+   loop; list them under the task's `## Rulings`. After round 3, rule on
+   every open finding and continue. Fix loops of different tasks may run
+   concurrently; their commits are yours and sequential.
+7. **Close every task file.** Tick every step, fill `## Result` (commit
+   range, test count, review verdict). Run the full suite once. Append one
+   factory log line for the wave naming its tasks, and commit the task files
+   and log together: `chore(<slug>): wave NN,NN ticked`. A ruling that
+   affects other tasks goes to the plan overview's `## Rulings` as well.
 
 ## Rulings
 
-A ruling is a decision the spec or plan did not make: an ambiguity, a plan
-defect, a reviewer finding you overrule or park. Append it to the plan under
-a `## Rulings` heading at the end:
+A ruling is a decision the spec, plan or task did not make: an ambiguity, a
+defect in the brief, a reviewer finding you overrule or park. Append it to
+the task file under `## Rulings`:
 
 ```
-- Task 3 · <what you decided> — <why> — <what it costs if wrong>
+- <what you decided> — <why> — <what it costs if wrong>
 ```
 
 The spec binds; the plan argues from it; your ruling settles what neither
@@ -63,22 +85,24 @@ answers. A recorded wrong ruling is cheap to revert; a stalled task is not.
 ## Implementer prompt
 
 ```
-You are implementing Task N: <name> in <repo path>.
+You are implementing one task in <repo path>. Other implementers may be
+working in the same tree on other files at the same time.
 
-Read your brief first: <brief path>. It is your requirements; use its exact
-values verbatim. Context: <one line on where this task fits>. Interfaces from
-earlier tasks: <names and signatures>. Rulings that bind you: <list or none>.
+Read your task file first: <task file path>. It is your complete brief; use
+its exact values verbatim. Create or modify only the files it lists under
+Files; if its tests need a file it does not list, say so in your report
+rather than creating it. Rulings that bind you: <list or none>.
 
-Do the work yourself; never spawn subagents. Follow TDD: write the failing
-test, watch it fail, implement minimally, watch it pass. Run the focused
-test while iterating and the full suite once before committing. Commit with
-message "feat(<slug>): Task N — <name>". Do not touch files outside the
-brief's list unless the brief's tests require it.
+Do the work yourself; never spawn subagents. Follow the Steps in order under
+TDD: write the failing test, watch it fail, implement minimally, watch it
+pass. Run the focused test while iterating and the full suite once at the
+end. Do not run any git command: the controller commits. Do not edit the
+task file.
 
-Write your full report to <report path>: what you built, the test command
-and its output, anything you doubted and how you decided. Reply with one
-line only: DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED, the commit
-range, and the test count.
+Write your full report to <report path>: what you built, every file you
+touched, the test command and its output, anything you doubted and how you
+decided. Reply with one line only: DONE | DONE_WITH_CONCERNS |
+NEEDS_CONTEXT | BLOCKED, and the test count.
 ```
 
 ## Reviewer prompt
@@ -88,14 +112,15 @@ You are reviewing one task's implementation. Read-only: do not change the
 tree, run only a focused test if the code raises a specific doubt. Do not
 spawn subagents.
 
-Requested: <brief path>. Constraints from the spec: <verbatim lines>.
+Requested: <task file path> — its Constraints, Files, Interfaces, Covers and
+Steps are the requirements.
 Claimed: <report path> — unverified claims; judge the diff.
-Diff: <diff path> (commit list, stat, full diff with context). Read it once.
+Diff: <diff path> (stat and full diff with context of one commit). Read it once.
 
 Part 1 — Spec compliance: Missing (skipped or claimed but absent), Extra
-(not requested), Misunderstood (right feature, wrong way). Verdict ✅ or ❌
-with file:line for every finding. A requirement you cannot verify from the
-diff is a ⚠️ line, not a search.
+(not requested, or a file outside the task's Files), Misunderstood (right
+feature, wrong way). Verdict ✅ or ❌ with file:line for every finding. A
+requirement you cannot verify from the diff is a ⚠️ line, not a search.
 
 Part 2 — Quality: tests assert behaviour not mocks; edge cases covered;
 one responsibility per file; no duplication of a spec constant; error paths
@@ -110,8 +135,8 @@ severity. No preamble, no summary.
 ## Never
 
 - Ask the user. Rule, record, continue.
-- Run implementers in parallel, or let a subagent spawn its own reviewer.
+- Let an implementer run git, or put two tasks with a shared file in one wave.
+- Let a subagent spawn its own reviewer.
 - Fix findings yourself while a subagent owns the task — resume it.
 - Skip the review because the diff is small.
-- Move to the next task with an open Critical or Important finding that has
-  no ruling.
+- Close a task with an open Critical or Important finding that has no ruling.

@@ -29,7 +29,7 @@ Distilled from the Telegator build (99 commits, 94 iterations, unattended).
 docs/.spectomat/
   drafts/     ideas you drop in, one .md each — the file name becomes the slug
   specs/      written by unit A from each draft; or put a finished spec here yourself
-  plans/      written by unit B from each spec
+  plans/      unit B writes an overview per spec plus <slug>/task-NN-<name>.md per task, each a self-contained brief
   done/       spec + plan moved here by unit D after every step is ticked and gates pass
   log.md      one line per unit
   factory.md  the rules, rendered once from templates/factory.md, re-read every iteration
@@ -50,8 +50,8 @@ while a draft remains. Nobody is asked anything; every open choice becomes an
 | Skill | Use |
 | --- | --- |
 | `spectomat:writing-specs` | the shape a spec needs so code can cite it and tests can name its criteria |
-| `spectomat:writing-plans` | unit B: bite-sized TDD tasks with checkbox steps, self-reviewed against the spec |
-| `spectomat:executing-tasks` | unit C: brief, fresh implementer subagent, diff review, three fix rounds, rulings in the plan |
+| `spectomat:writing-plans` | unit B: an overview plus one self-contained task file per task, checkbox TDD steps, self-reviewed against the spec |
+| `spectomat:executing-tasks` | unit C: a wave of ready tasks with disjoint files, one fresh implementer each in parallel (no git), one commit and one review per task, three fix rounds, rulings and result in the task file |
 | `spectomat:test-driven-development` | every step: failing test first, minimal code, green suite |
 | `spectomat:systematic-debugging` | any failing gate: root cause before fix |
 | `spectomat:verification-before-completion` | every claim, commit and the promise: fresh evidence |
@@ -69,16 +69,14 @@ Then restart Claude Code.
 
 ## Layout
 
-```
-spectomat/
-  .claude-plugin/  plugin.json  marketplace.json
-  commands/   run.md  status.md  cancel.md
-  hooks/      hooks.json
-  scripts/    run.sh  stop-hook.sh  status.sh
-  skills/     writing-specs/  writing-plans/  executing-tasks/
-              test-driven-development/  systematic-debugging/  verification-before-completion/
-  templates/  factory.md  spec.md  plan.md
-```
+A Claude Code plugin, not an application. No dependencies, no build.
+
+- `.claude-plugin/` — `plugin.json` (the plugin) and `marketplace.json` (this repo as a one-plugin marketplace, source `./`).
+- `commands/` — `/spectomat:run`, `status`, `cancel`. Each `!` block runs a script before Claude reads the command.
+- `hooks/` — `hooks.json` registers the Stop hook; the hook itself is `scripts/stop-hook.sh`, which keeps the loop alive.
+- `scripts/` — bash, no other runtime. `run.sh` prepares `docs/.spectomat/`, renders `factory.md`, and writes the state file with the factory prompt and promise `FACTORY EMPTY`; `status.sh` summarises loop and floor.
+- `skills/` — `writing-specs` (spec shape), `writing-plans` (unit B), `executing-tasks` (unit C; folds superpowers' subagent-driven development and code review), `test-driven-development`, `systematic-debugging`, `verification-before-completion`. The last five are condensed from superpowers 6.3.0 for an unattended loop: keep them short, free of questions to a human, and keep every `spectomat:<name>` reference resolvable to a directory here.
+- `templates/` — `factory.md` (placeholders `{{REPO}}`, `{{GATES}}`), `spec.md` (the skeleton `writing-specs` points at), `plan.md` (overview skeleton, placeholder `{{SLUG}}`) and `task.md` (per-task brief skeleton, placeholders `{{SLUG}}`, `{{N}}`); `writing-plans` points at the last two.
 
 ## Loop mechanics
 
@@ -90,3 +88,30 @@ removes the file, and so releases the session, on
 `<promise>FACTORY EMPTY</promise>`, on the iteration cap, or on a corrupt state
 file. The state file name differs from ralph-loop's, so both plugins can be
 installed side by side.
+
+## Developing the plugin
+
+Verify:
+
+```bash
+claude plugin validate .claude-plugin/plugin.json --strict
+claude plugin validate .claude-plugin/marketplace.json --strict
+```
+
+Exercise the scripts in a scratch git repo, never in this one: `run.sh` on an
+empty floor (expect refusal), drop a draft and run again (expect armed), then
+pipe a fake hook payload (`{"session_id","transcript_path"}`) into
+`scripts/stop-hook.sh` and check `decision`, the iteration counter, and that
+the state file is removed on `<promise>FACTORY EMPTY</promise>` and at the
+cap. For a full run, `claude -p "/spectomat:run 25" --plugin-dir <this repo>`
+inside a scratch project with a draft on the floor.
+
+Rules:
+
+- The state file is `docs/.spectomat/loop.md`. Never rename it to
+  ralph-loop's: both plugins can be installed, and their Stop hooks must not
+  act on the same file.
+- `factory.md` is copied whole into user projects. A template change reaches
+  only floors created after it.
+- Keep the pointer prompt in `run.sh` one line; the loop contract lives in
+  the rendered `factory.md`.

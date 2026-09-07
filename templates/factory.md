@@ -17,8 +17,8 @@ beats a stalled factory.
 docs/.spectomat/
   drafts/      raw ideas, one .md each — the user drops them here
   specs/       normative specs, one per draft slug — you write these
-  plans/       implementation plans, one per spec slug — you write these
-  done/        finished specs and plans, moved here when a plan completes
+  plans/       one overview per spec slug, plus <slug>/task-NN-<name>.md per task — you write these
+  done/        <slug>.draft.md, <slug>.spec.md, <slug>.plan.md and <slug>/ task files, moved here when a plan completes
   log.md       append-only, one line per unit of work
   factory.md   this file
   loop.md      the Stop hook's state (iteration counter, prompt) — gitignored, never edit
@@ -40,13 +40,13 @@ Every iteration, in order:
 2. **Pick exactly one unit**, the first that applies:
    - **A · Draft → Spec**: a file exists in `drafts/` (alphabetical order,
      first one).
-   - **B · Spec → Plan**: a file in `specs/` has no counterpart in `plans/`
+   - **B · Spec → Plan**: a file in `specs/` has no `plans/<slug>.md`
      (alphabetical, first one).
-   - **C · Plan → Task**: a file in `plans/` has an unchecked `- [ ]` step
-     (alphabetical, first plan; within it, the first task with an unchecked
-     step).
-   - **D · Plan → Done**: a file in `plans/` has every step checked and is not
-     yet in `done/`.
+   - **C · Plan → Wave**: a task file under `plans/<slug>/` has an unchecked
+     `- [ ]` step (alphabetical first plan; within it, every ready task with
+     disjoint Files, lowest numbers first, at most three — see unit C).
+   - **D · Plan → Done**: every task file under `plans/<slug>/` has all steps
+     checked.
    - **E · Empty**: none of the above. Go to *Completion*.
 3. **Do that one unit** (definitions below). Not two.
 4. **Verify** with the gates, then **commit** — one commit per unit,
@@ -85,25 +85,40 @@ and record.
 
 ### B · Spec → Plan
 
-Read the spec in full. Use `spectomat:writing-plans` to write
-`plans/<slug>.md`. Every task carries checkbox steps (`- [ ]`); that is how
-unit C finds its work. Run the skill's self-review. No code in this unit.
+Read the spec in full. Use `spectomat:writing-plans` to write the overview
+`plans/<slug>.md` and one self-contained task file per task under
+`plans/<slug>/`, from the plugin's `plan.md` and `task.md` templates. Every
+task file carries checkbox steps (`- [ ]`); that is how unit C finds its work.
+Run the skill's self-review. No code in this unit.
 
-### C · Plan → Task
+### C · Plan → Wave
 
-Open the plan; find the first task with an unchecked step. Execute that task
-and only that task with `spectomat:executing-tasks`: brief, fresh implementer
-subagent, review of the diff, at most three fix rounds, then rulings recorded
-in the plan. `spectomat:test-driven-development` governs every step. Tick each
-step as it completes. If the task reveals work the plan lacks, append a new
-task at the end of the plan; do not absorb it.
+In the alphabetically first plan with open work, take the **wave**: every
+task file whose `Depends on` tasks are all closed and whose Files are
+pairwise disjoint with the others in the wave, lowest numbers first, at most
+three. Execute the wave with `spectomat:executing-tasks`: one fresh
+implementer per task in parallel, none of them running git, then one commit
+per task by you, one review per task, at most three fix rounds each, then
+rulings and the Result in each task file. A wave of one is the common case.
+`spectomat:test-driven-development` governs every step. If the task
+reveals work the plan lacks, add a new task file with the next number and a
+row in the overview; do not absorb it.
 
 Work on the current branch. Never create branches or worktrees.
 
 ### D · Plan → Done
 
-Run every gate and read the output. Then `git mv specs/<slug>.md done/` and
-`git mv plans/<slug>.md done/`. Log the unit with the gate numbers.
+Run every gate and read the output. Then move the trail into `done/` under
+names that cannot collide:
+
+```bash
+git mv specs/<slug>.md  done/<slug>.spec.md
+git mv plans/<slug>.md  done/<slug>.plan.md
+git mv plans/<slug>     done/<slug>
+```
+
+The draft is already there as `done/<slug>.draft.md`. Log the unit with the
+gate numbers.
 
 ## Verification Gates
 
