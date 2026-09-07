@@ -11,7 +11,7 @@
     {
       "name": "spectomat",
       "source": "./",
-      "description": "Spec-driven autonomous development: superpowers planning + built-in Ralph-style loop"
+      "description": "Spec-driven dark factory: drafts to specs to plans to code, unattended"
     }
   ]
 }

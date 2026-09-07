@@ -13,8 +13,8 @@ it contradicts itself.
 
 ## Shape
 
-Start from `templates/spec.md` in this plugin (`/spectomat:init` copies it when
-the spec is absent). Two parts:
+Start from `templates/spec.md` in this plugin; unit A of the factory follows it
+when turning a draft into a spec. Two parts:
 
 | Part | Role | Edited by |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ the spec is absent). Two parts:
 
 ## Review checklist
 
-Before the first `/spectomat:build`:
+Before dropping a hand-written spec into `docs/.spectomat/specs/`:
 
 - [ ] every `##` and `###` in Part I is numbered
 - [ ] every criterion has an id and a "verified by"

@@ -1,12 +1,12 @@
 #!/bin/bash
-# Spectomat status — summarise the build ledger and the Ralph loop state.
+# Spectomat status — loop state, factory floor counts, plan progress, log tail.
 
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$ROOT"
-LEDGER=".claude/build-ledger.local.md"
-STATE=".claude/spectomat-loop.local.md"
+STATE="docs/.spectomat/loop.md"
+FLOOR="docs/.spectomat"
 
 echo "--- loop ---"
 if [[ -f "$STATE" ]]; then
@@ -15,37 +15,30 @@ else
   echo "not running"
 fi
 
-if [[ ! -f "$LEDGER" ]]; then
-  echo "No ledger at $ROOT/$LEDGER - Phase 0 has not run."
+if [[ ! -d "$FLOOR" ]]; then
+  echo "No $FLOOR/ in $ROOT - /spectomat:run has not been started here."
   exit 0
 fi
 
-DONE=$(grep -cE '^- \[x\]' "$LEDGER" || true)
-OPEN=$(grep -cE '^- \[ \]' "$LEDGER" || true)
-BLOCKED=$(grep -cE '^- \[x\].*BLOCKED' "$LEDGER" || true)
-STRIKES=$(grep -cE '^- \[ \].*\(strike [0-9]\)' "$LEDGER" || true)
+count() { find "$1" -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' '; }
+echo "--- floor: $FLOOR ---"
+echo "drafts: $(count "$FLOOR/drafts")   specs: $(count "$FLOOR/specs")   plans: $(count "$FLOOR/plans")   done: $(count "$FLOOR/done")"
 
-echo "--- ledger: $LEDGER ---"
-echo "done: $DONE (blocked: $BLOCKED)   open: $OPEN   with strikes: $STRIKES"
+for p in "$FLOOR"/plans/*.md; do
+  [[ -f "$p" ]] || continue
+  printf "%-40s steps done %3d  open %3d\n" "$(basename "$p")" \
+    "$(grep -cE '^- \[x\]' "$p" || true)" "$(grep -cE '^- \[ \]' "$p" || true)"
+done
 
-echo "--- per phase ---"
-awk '
-  /^## Phase/ { if (name != "") printf "%-48s done %3d  open %3d\n", name, d, o; name = $0; d = 0; o = 0; next }
-  /^- \[x\]/ { d++ }
-  /^- \[ \]/ { o++ }
-  END { if (name != "") printf "%-48s done %3d  open %3d\n", name, d, o }
-' "$LEDGER"
-
-echo "--- next item ---"
-awk '
-  /^## Phase/ { phase = $0 }
-  /^- \[ \]/ { print phase; print $0; exit }
-' "$LEDGER"
-[[ $OPEN -gt 0 ]] || echo "(none - every item is ticked or BLOCKED)"
-
-if [[ $BLOCKED -gt 0 ]]; then
+BLOCKED=$(find "$FLOOR/done" -maxdepth 1 -name '*.blocked.md' -type f 2>/dev/null)
+if [[ -n "$BLOCKED" ]]; then
   echo "--- blocked ---"
-  grep -E '^- \[x\].*BLOCKED' "$LEDGER"
+  echo "$BLOCKED" | sed "s|^$FLOOR/done/||"
+fi
+
+if [[ -f "$FLOOR/log.md" ]]; then
+  echo "--- log tail ---"
+  grep '^- ' "$FLOOR/log.md" | tail -5
 fi
 
 echo "--- last commits ---"

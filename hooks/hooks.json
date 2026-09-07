@@ -1,12 +1,12 @@
 {
-  "description": "Spectomat Stop hook: while .claude/spectomat-loop.local.md exists, block exit and feed the same prompt back",
+  "description": "Spectomat Stop hook: while docs/.spectomat/loop.md exists, block exit and feed the same prompt back",
   "hooks": {
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/stop-hook.sh\""
           }
         ]
       }

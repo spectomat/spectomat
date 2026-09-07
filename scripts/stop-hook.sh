@@ -1,14 +1,13 @@
 #!/bin/bash
 # Spectomat loop Stop hook.
 # While the state file exists, block session exit and feed the same prompt back.
-# Derived from Anthropic's ralph-loop plugin (Apache-2.0); see NOTICE.md.
 # The state file name differs from ralph-loop's on purpose: both plugins can be
 # installed without their Stop hooks acting on the same loop.
 
 set -euo pipefail
 
 HOOK_INPUT=$(cat)
-STATE_FILE=".claude/spectomat-loop.local.md"
+STATE_FILE="docs/.spectomat/loop.md"
 
 if [[ ! -f "$STATE_FILE" ]]; then
   exit 0
@@ -18,7 +17,7 @@ stop_corrupt() {
   echo "⚠️  Spectomat loop: state file corrupted" >&2
   echo "   File: $STATE_FILE" >&2
   echo "   Problem: $1" >&2
-  echo "   The loop is stopping. Run /spectomat:build again to start fresh." >&2
+  echo "   The loop is stopping. Run /spectomat:run again to start fresh." >&2
   rm "$STATE_FILE"
   exit 0
 }
@@ -40,7 +39,7 @@ fi
 [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || stop_corrupt "'max_iterations' is not a number (got: '$MAX_ITERATIONS')"
 
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
-  echo "🛑 Spectomat loop: max iterations ($MAX_ITERATIONS) reached. Run /spectomat:build to resume from the ledger."
+  echo "🛑 Spectomat loop: max iterations ($MAX_ITERATIONS) reached. Run /spectomat:run to resume from the floor."
   rm "$STATE_FILE"
   exit 0
 fi

@@ -1,5 +1,5 @@
 ---
-description: "Show build-ledger progress: items per phase, next item, blocked items, loop iteration"
+description: "Show factory progress: loop iteration, floor counts, plan steps, blocked files, log tail"
 allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/status.sh:*)"]
 ---
 
