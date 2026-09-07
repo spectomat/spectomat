@@ -1,0 +1,15 @@
+{
+  "name": "spectomat",
+  "description": "Spec-driven autonomous development: a normative spec, a loop prompt and a build ledger. Plans once with superpowers, then a built-in Ralph-style Stop hook builds one ledger item per iteration with TDD, gates and commits.",
+  "version": "0.1.0",
+  "author": {
+    "name": "alex"
+  },
+  "keywords": [
+    "spec-driven",
+    "ralph-loop",
+    "superpowers",
+    "autonomous",
+    "tdd"
+  ]
+}

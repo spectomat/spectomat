@@ -1,0 +1,17 @@
+{
+  "name": "spectomat",
+  "metadata": {
+    "description": "Spec-driven autonomous development for Claude Code",
+    "version": "0.1.0"
+  },
+  "owner": {
+    "name": "alex"
+  },
+  "plugins": [
+    {
+      "name": "spectomat",
+      "source": "./",
+      "description": "Spec-driven autonomous development: superpowers planning + built-in Ralph-style loop"
+    }
+  ]
+}
