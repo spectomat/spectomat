@@ -79,7 +79,13 @@ git mv plans/<slug>.md  done/<slug>.plan.md
 git mv plans/<slug>     done/<slug>
 ```
 
-The draft is already there as `done/<slug>.draft.md`. Log the phase with the gate numbers.
+The draft is already there as `done/<slug>.draft.md`.
+
+If the repository has a `package.json`, set its patch version to the slug's `NNN` as an integer (`003-x` → `<major>.<minor>.3`), keeping major and minor: `npm version --no-git-tag-version <major>.<minor>.<N>`.
+
+Commit the moves and the version bump together.
+
+Log the phase with the gate numbers and the new version.
 
 ## Verification Gates
 
@@ -112,11 +118,12 @@ Emit `<promise>FACTORY EMPTY</promise>` only when, **in this loop**, you have li
 
 Never emit the promise because the flow feels long or you cannot see what is left. If you cannot see what is left, list the three directories again.
 
-## Never
+## Constraints
 
-- Ask the user anything. Decide and record.
-- Do more than one phase in a loop.
-- Edit a file under `drafts/` — only move it.
-- Delete a draft, spec or plan.
-- Weaken a gate to pass.
-- Emit a false promise.
+- DO NOT Overcomplicate things: Be concise, simple and straightforward as possible.
+- DO NOT Ask the user anything: Decide and record.
+- DO NOT more than one phase in a loop.
+- DO NOT Edit a file under `drafts/` — only move it.
+- DO NOT Delete a draft, spec or plan.
+- DO NOT Weaken a gate to pass.
+- DO NOT Emit a false promise.
