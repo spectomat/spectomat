@@ -1,0 +1,55 @@
+# User guide
+
+## Commands
+
+| Command | Does |
+| --- | --- |
+| `/spectomat:run [n]` | prepares the floor, takes in the wishlist, commits, arms the Stop hook for `n` loops (default 100) and starts loop 1 |
+| `/spectomat:status` | shows the current loop, floor counts, per-plan step progress, blocked files and the log tail |
+| `/spectomat:cancel` | removes the state file; the floor stays, `run` resumes from it |
+| `/spectomat:help` | shows this guide |
+
+## The floor
+
+```text
+docs/.spectomat/
+  drafts/     ideas, one .md each, named NNN-<name>.md; the file name is the slug
+  .inc        the last NNN issued; committed with the drafts
+  specs/      written by phase A from each draft; or put a finished spec here yourself
+  plans/      phase B writes an overview per spec plus <slug>/task-NN-<name>.md per task, each a self-contained brief
+  done/       spec + plan moved here by phase D after every step is ticked and gates pass
+  log.md      one line per phase, gitignored
+  contract.md the rules and gates, re-read every loop
+  state.md    the Stop hook's state, gitignored
+  work/       per-task briefs, reports and diffs, gitignored
+```
+
+## Flow
+
+The flow is a sequence of loops. Each loop is one fresh `general-purpose` subagent that reads `contract.md` and does exactly one phase, the first that applies:
+
+- **D** finished plan → `done/`, when every task step is ticked and the gates are green,
+- **C×n** plan → next wave of ready tasks: one fresh implementer per task in parallel, TDD, one commit and one reviewed diff per task,
+- **B** spec → plan: an overview plus one task file per task,
+- **A** draft → spec,
+- **E** nothing left: `drafts/`, `specs/` and `plans/` are empty and the tree is clean, so the loop emits `<promise>FACTORY EMPTY</promise>` and the flow ends.
+
+Work in progress is finished before a new draft is read. Drafts are read in intake order, because the `NNN` prefix makes alphabetical order equal intake order.
+
+## Mechanics
+
+The Stop hook runs when Claude tries to end its turn. While `state.md` exists for this session, the hook blocks the exit and returns the pointer prompt as the next input. The pointer launches the next loop's subagent, so every phase starts with an empty context and the session itself only accumulates one short report per loop. The hook removes the state file, and so releases the session, on the promise, on the loop cap, or on a corrupt state file.
+
+`contract.md` is rendered from the plugin template at the first run and committed. `run` never overwrites it, so edit it in the project to change the rules or the gates. Gates are detected from `package.json` scripts: a `gates` script if present, else `typecheck`, `test`, `lint` and `build`. Extra gates go into the block in `contract.md`, one command per line.
+
+Nobody is asked anything. Every open choice becomes an `assumed` row in the spec's Decisions table. Three failed attempts at a phase move the file to `done/<slug>.blocked.md` with the reason.
+
+## Operating it
+
+- **Feed it.** Drop a `.md` idea into `wishlist/` at the project root. `run` moves it into `drafts/` as `NNN-<name>.md`, oldest modification first, and commits it. The counter in `.inc` keeps numbers growing across runs. A finished spec can go straight into `specs/`; the factory then starts at planning.
+- **Steer it.** Edit a spec or a plan between loops. Edit `contract.md` to change the rules or the gates.
+- **Resume it.** After a cancel or the loop cap, run `/spectomat:run` again. The filesystem is the ledger, so nothing is re-planned.
+
+## Glossary
+
+**Plugin** is Spectomat itself: a Claude Code plugin made of commands, a Stop hook, scripts, templates and reference files. It is installed once and then used from any project. **Command** is a slash command the user types, `/spectomat:run`, `/spectomat:status` or `/spectomat:cancel`. Each runs a script first, then tells Claude what to do with its output. **Session** is the Claude Code session where `/spectomat:run` was called. It holds the flow, launches one subagent per loop and relays its report; it does no factory work itself. **Loop** is one turn of the flow between two Stop-hook responses: one fresh subagent, one phase, one commit, one log line. **Phase** is one of A (draft → spec), B (spec → plan), C (plan → wave of tasks), D (plan → done). A loop does exactly one. **Wave** is the set of ready tasks of one plan whose files do not overlap, implemented in parallel within one phase C loop. **Flow** is the sequence of loops from the first `run` until the promise `FACTORY EMPTY`. **Strike** is one failed attempt at a phase for a slug. Three strikes move the file to `done/<slug>.blocked.md` with the reason. **Slug** is a draft's file name without `.md`, including its `NNN-` prefix. Spec, plan and done entries keep it. **Floor** is `docs/.spectomat/`: the directories and files the factory works from. **Contract** is `docs/.spectomat/contract.md`: the rules, the gates and the steps every loop re-reads. **Dark factory** is a production line that runs unattended, lights off. Here: a flow that turns ideas into committed code without asking anyone.

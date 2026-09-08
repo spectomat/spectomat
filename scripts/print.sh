@@ -7,9 +7,9 @@
 # FLOOR, STATE_FILE, count and state_field from utils.sh.
 
 print_loop() {
-  echo "--- loop ---"
+  echo "--- flow ---"
   if [[ -f "$STATE_FILE" ]]; then
-    echo "active: iteration $(state_field iteration) of $(state_field max_iterations)"
+    echo "active: loop $(state_field loop) of $(state_field max_loops)"
   else
     echo "not running"
   fi

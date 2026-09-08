@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spectomat status — loop state, factory floor counts, plan progress, log tail.
+# Spectomat status — flow state, factory floor counts, plan progress, log tail.
 
 set -uo pipefail
 

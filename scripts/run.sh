@@ -1,14 +1,14 @@
 #!/bin/bash
-# Spectomat run — prepare the factory floor and arm the unattended loop.
+# Spectomat run — prepare the factory floor and arm the unattended flow.
 #
-#   run.sh [MAX_ITERATIONS]
+#   run.sh [MAX_LOOPS]
 #
 # Creates docs/.spectomat/{drafts,specs,plans,done}, moves ./wishlist/*.md into
 # drafts/ as NNN-<name>.md (oldest first, counter in docs/.spectomat/.inc), renders
 # contract.md when absent, commits what it created (contract, .inc,
 # ignore rules, new drafts), and arms the Stop hook with the state file from
-# templates/state.md. Default 100 iterations, promise "FACTORY EMPTY". Refuses
-# when a loop is already active or there is no work at all.
+# templates/state.md. Default 100 loops, promise "FACTORY EMPTY". Refuses
+# when a flow is already active or there is no work at all.
 
 set -euo pipefail
 
@@ -16,7 +16,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/gates.sh"
 cd_root
 TEMPLATES="$PLUGIN_ROOT/templates"
-MAX_ITERATIONS=100
+MAX_LOOPS=100
 STAGE=()     # files run.sh created this run, committed by commit_floor
 IGNORED=()   # .gitignore lines run.sh appended this run, staged by commit_floor
 
@@ -32,8 +32,8 @@ parse_args() {
       -h|--help) usage; exit 0 ;;
       -*) die "unknown option: $1" ;;
       *)
-        [[ "$1" =~ ^[0-9]+$ ]] || die "max iterations must be a number, got: $1"
-        MAX_ITERATIONS="$1"; shift ;;
+        [[ "$1" =~ ^[0-9]+$ ]] || die "max loops must be a number, got: $1"
+        MAX_LOOPS="$1"; shift ;;
     esac
   done
 }
@@ -100,7 +100,7 @@ stage_ignore_entries() {
 }
 
 # Commit what this run created — contract, ignore rules, new drafts — so the
-# loop starts on a clean tree. Nothing else of the user's is staged.
+# flow starts on a clean tree. Nothing else of the user's is staged.
 commit_floor() {
   git add "$FLOOR/drafts" ${STAGE[@]+"${STAGE[@]}"}
   [[ ${#IGNORED[@]} -eq 0 ]] || stage_ignore_entries
@@ -113,19 +113,15 @@ commit_floor() {
 }
 
 # Render contract.md from the template once; never overwrite a user-edited contract.
-# {{GATES}} becomes a call to gates.sh; detect_gates only feeds the summary line.
+# Only REPO is rendered; the gate command lives in the state file.
 render_factory() {
   if [[ -f "$CONTRACT" ]]; then
     echo "$CONTRACT: exists, kept"
   else
-    render_template "$TEMPLATES/contract.md" "$CONTRACT" \
-      REPO="$ROOT" \
-      GATES="bash \"$PLUGIN_ROOT/scripts/gates.sh\""
+    render_template "$TEMPLATES/contract.md" "$CONTRACT" REPO="$ROOT"
 
     STAGE+=("$CONTRACT")
-    detect_gates
-    local gates="${GATES//$'\n'/; }"
-    echo "$CONTRACT: written (gates: ${gates:-none detected})"
+    echo "$CONTRACT: written"
   fi
 }
 
@@ -137,11 +133,11 @@ report_floor() {
   git status --porcelain | head -5
 }
 
-# Refuse to arm when a loop is already active or there is nothing to work on.
+# Refuse to arm when a flow is already active or there is nothing to work on.
 require_startable() {
   if [[ -f "$STATE_FILE" ]]; then
     echo
-    echo "❌ Not starting: a loop is already active ($STATE_FILE). Run /spectomat:cancel first."
+    echo "❌ Not starting: a flow is already active ($STATE_FILE). Run /spectomat:cancel first."
     exit 1
   fi
   if [[ $((DRAFTS + SPECS + PLANS)) -eq 0 ]]; then
@@ -153,9 +149,14 @@ require_startable() {
 
 # Write the state file the Stop hook reads on every exit attempt.
 write_state() {
+  detect_gates
+  echo "gates: ${GATES:-none detected}"
   render_template "$TEMPLATES/state.md" "$STATE_FILE" \
+    REPO="$ROOT" \
+    REFS="$PLUGIN_ROOT/references" \
+    GATES="${GATES:-echo \"❌ no gates: package.json defines no gates, typecheck, test, lint or build script\"}" \
     SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}" \
-    MAX_ITERATIONS="$MAX_ITERATIONS" \
+    MAX_LOOPS="$MAX_LOOPS" \
     STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 
@@ -164,13 +165,13 @@ announce() {
 
 🏭 Spectomat factory armed in this session.
 
-Iteration: 1 of $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo "$MAX_ITERATIONS"; else echo "unlimited"; fi)
+Loop: 1 of $(if [[ $MAX_LOOPS -gt 0 ]]; then echo "$MAX_LOOPS"; else echo "unlimited"; fi)
 State: $STATE_FILE
 Cancel: /spectomat:cancel
 
 When you try to exit, the Stop hook feeds the prompt below back to you.
 To finish, output <promise>FACTORY EMPTY</promise> — ONLY when drafts/,
-specs/ and plans/ are all empty and the tree is clean, verified this iteration.
+specs/ and plans/ are all empty and the tree is clean, verified this loop.
 Never output a false promise to escape.
 EOF
   awk '/^---$/{i++; next} i>=2' "$STATE_FILE"

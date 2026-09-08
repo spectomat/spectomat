@@ -1,11 +1,8 @@
 # {{PROJECT}}
 
-One paragraph: what the system is, who uses it, and the one design idea that
-organises everything below.
+One paragraph: what the system is, who uses it, and the one design idea that organises everything below.
 
-Code cites this document by section and line (`§3.4 L316`). Part I is
-normative: the loop builds to it and never edits it. A divergence found during
-the build is a **reconciliation**, recorded in §11 with a number and a reason.
+Code cites this document by section and line (`§3.4 L316`). Part I is normative: the loop builds to it and never edits it. A divergence found during the build is a **reconciliation**, recorded in §11 with a number and a reason.
 
 # Part I — Specification
 
@@ -19,29 +16,23 @@ the build is a **reconciliation**, recorded in §11 with a number and a reason.
 
 ## 2. Domain Model
 
-One subsection per entity. For each: fields (name, type, meaning), identity,
-invariants, and which component owns writes.
+One subsection per entity. For each: fields (name, type, meaning), identity, invariants, and which component owns writes.
 
 ### 2.1 `<entity>`
 
 ## 3. Behaviour
 
-One subsection per stage, flow, or use case, in execution order. For each:
-trigger, input, algorithm (pseudocode with named constants), output, failure
-path, idempotency.
+One subsection per stage, flow, or use case, in execution order. For each: trigger, input, algorithm (pseudocode with named constants), output, failure path, idempotency.
 
 ### 3.1 `<stage>`
 
 ## 4. External Integrations
 
-One subsection per boundary. Protocol, auth, limits, and the interface the
-code sees.
+One subsection per boundary. Protocol, auth, limits, and the interface the code sees.
 
 ## 5. Normative Algorithms
 
-Algorithms given as explicit pseudocode with named constants. The loop
-implements them as written; a suspected error is a reconciliation, never a
-silent improvement.
+Algorithms given as explicit pseudocode with named constants. The loop implements them as written; a suspected error is a reconciliation, never a silent improvement.
 
 ## 6. Architecture
 
@@ -73,13 +64,11 @@ Every criterion has an id a test can name.
 
 ### 9.3 Non-functional
 
-Targets that need a running system are deploy-gated. Name the mechanism that
-will measure each one.
+Targets that need a running system are deploy-gated. Name the mechanism that will measure each one.
 
 ## 10. Decisions
 
-Numbered, dated, with the alternative rejected. The later, explicitly resolved
-section wins over an earlier one.
+Numbered, dated, with the alternative rejected. The later, explicitly resolved section wins over an earlier one.
 
 | Id | Decision | Rejected | Why |
 | --- | --- | --- | --- |
@@ -119,8 +108,7 @@ Every external boundary is an interface with an in-memory fake. List them.
 
 ## 16. Build sequence
 
-Bottom-up, numbered. Each step ends with all gates green. The loop derives its
-build phases from this list.
+Bottom-up, numbered. Each step ends with all gates green. The loop derives its build phases from this list.
 
 1. Toolchain
 2. Domain
