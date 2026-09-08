@@ -4,9 +4,9 @@ One wave per loop: every ready task whose Files are disjoint from the others', a
 
 ## Inputs
 
-- the plan overview `docs/.spectomat/plans/<slug>.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has all steps ticked
-- the wave: ready task files `docs/.spectomat/plans/<slug>/task-NN-*.md` with an unchecked step, lowest numbers first, adding a task only if its Files overlap none already in the wave, stopping at three
-- a scratch directory `docs/.spectomat/work/<slug>/` (gitignored) for reports and review diffs, so nothing large enters your context
+- the plan overview `.spectomat/plans/<slug>.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has all steps ticked
+- the wave: ready task files `.spectomat/plans/<slug>/task-NN-*.md` with an unchecked step, lowest numbers first, adding a task only if its Files overlap none already in the wave, stopping at three
+- a scratch directory `.spectomat/work/<slug>/` (gitignored) for reports and review diffs, so nothing large enters your context
 
 Each task file is its own brief, written to be executed alone. Do not paste the plan or the spec into any prompt.
 
@@ -44,9 +44,9 @@ Both briefs live in this plugin, one file each; fill the `<...>` placeholders an
 | Placeholder | Value | Used by |
 | --- | --- | --- |
 | `<repo path>` | absolute path of the repository root | implementer |
-| `<task file path>` | `docs/.spectomat/plans/<slug>/task-NN-<name>.md` | both |
-| `<report path>` | `docs/.spectomat/work/<slug>/task-NN-report.md` — the implementer writes it, the reviewer reads it | both |
-| `<diff path>` | `docs/.spectomat/work/<slug>/task-NN-review.diff` from step 5 | reviewer |
+| `<task file path>` | `.spectomat/plans/<slug>/task-NN-<name>.md` | both |
+| `<report path>` | `.spectomat/work/<slug>/task-NN-report.md` — the implementer writes it, the reviewer reads it | both |
+| `<diff path>` | `.spectomat/work/<slug>/task-NN-review.diff` from step 5 | reviewer |
 | `<rulings>` | the task file's `## Rulings` lines, or the word `none` | implementer |
 
 All paths absolute or relative to the repository root, the same for every subagent in the wave.

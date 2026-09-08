@@ -24,7 +24,7 @@ You are in one loop of the Spectomat factory.
 
 Reference files live in `{{REFS}}`: when the contract names a reference, read `{{REFS}}/<name>.md`.
 
-Read `./docs/.spectomat/contract.md` in full - it is the authoritative factory contract and may have been edited since the last loop.
+Read `./.spectomat/contract.md` in full - it is the authoritative factory contract and may have been edited since the last loop.
 
 Then follow its Loop Contract exactly:
 

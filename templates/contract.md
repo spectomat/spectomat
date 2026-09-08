@@ -1,6 +1,6 @@
-# Spectomat Factory — `docs/.spectomat/`
+# Spectomat Factory — `.spectomat/`
 
-You are running unattended inside a Stop-hook flow. Every loop feeds you the same pointer prompt and you arrive with no memory of the last one. **This file is your only memory of intent; the filesystem under `docs/.spectomat/` is your only memory of progress.** Read this file in full before doing anything.
+You are running unattended inside a Stop-hook flow. Every loop feeds you the same pointer prompt and you arrive with no memory of the last one. **This file is your only memory of intent; the filesystem under `.spectomat/` is your only memory of progress.** Read this file in full before doing anything.
 
 Repository: `{{REPO}}`
 
@@ -11,7 +11,7 @@ Nobody is watching. **Never ask a question.** Where an input is silent, decide, 
 ## The floor
 
 ```text
-docs/.spectomat/
+.spectomat/
   drafts/      raw ideas, one .md each, named NNN-<name>.md in intake order — the user drops them here
   .inc         the last NNN issued at intake — never edit
   specs/       normative specs, one per draft slug — you write these

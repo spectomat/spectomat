@@ -45,7 +45,7 @@ Two parts:
 
 ## Review checklist
 
-Before dropping a hand-written spec into `docs/.spectomat/specs/`:
+Before dropping a hand-written spec into `.spectomat/specs/`:
 
 - [ ] every `##` and `###` in Part I is numbered
 - [ ] every criterion has an id and a "verified by"

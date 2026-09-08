@@ -6,7 +6,7 @@
 # Sets no shell options; each script chooses its own set -e/-u/pipefail.
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FLOOR="docs/.spectomat"
+FLOOR=".spectomat"
 STATE_FILE="$FLOOR/state.md"
 CONTRACT="$FLOOR/contract.md"
 INC="$FLOOR/.inc"   # last intake number issued to a wish

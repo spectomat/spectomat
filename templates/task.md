@@ -1,6 +1,6 @@
 # {{SLUG}} · Task {{N}}: <component>
 
-**Plan:** docs/.spectomat/plans/{{SLUG}}.md **Spec:** docs/.spectomat/specs/{{SLUG}}.md — §<sections this task implements> **Covers:** AC-1.1, AC-1.2 **Depends on:** Task <M> (or none)
+**Plan:** .spectomat/plans/{{SLUG}}.md **Spec:** .spectomat/specs/{{SLUG}}.md — §<sections this task implements> **Covers:** AC-1.1, AC-1.2 **Depends on:** Task <M> (or none)
 
 ## Goal
 

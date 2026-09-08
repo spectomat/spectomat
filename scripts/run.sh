@@ -3,8 +3,8 @@
 #
 #   run.sh [MAX_LOOPS]
 #
-# Creates docs/.spectomat/{drafts,specs,plans,done}, moves ./wishlist/*.md into
-# drafts/ as NNN-<name>.md (oldest first, counter in docs/.spectomat/.inc), renders
+# Creates .spectomat/{drafts,specs,plans,done}, moves ./wishlist/*.md into
+# drafts/ as NNN-<name>.md (oldest first, counter in .spectomat/.inc), renders
 # contract.md when absent, commits what it created (contract, .inc,
 # ignore rules, new drafts), and arms the Stop hook with the state file from
 # templates/state.md. Default 100 loops, promise "FACTORY EMPTY". Refuses

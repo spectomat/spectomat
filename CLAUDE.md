@@ -22,7 +22,7 @@ The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`,
 
 Each command in `commands/` runs a script in its `!` block, then tells Claude what to do with the output. All scripts source `scripts/utils.sh` (paths, `cd_root`, `state_field`, `render_template`) and set their own `set -e/-u` options; bash 3.2 compatible, no GNU-only flags.
 
-`run.sh` prepares the floor `docs/.spectomat/` in the user's project: moves `wishlist/*.md` into `drafts/` as `NNN-<name>.md` in modification order with the counter in `.inc`, renders `contract.md` once (placeholder `REPO` only, never overwritten afterwards), commits what it created, then renders the state file from `templates/state.md` on every run and refuses if a state file already exists or the floor is empty.
+`run.sh` prepares the floor `.spectomat/` in the user's project: moves `wishlist/*.md` into `drafts/` as `NNN-<name>.md` in modification order with the counter in `.inc`, renders `contract.md` once (placeholder `REPO` only, never overwritten afterwards), commits what it created, then renders the state file from `templates/state.md` on every run and refuses if a state file already exists or the floor is empty.
 
 The two rendered files split what they carry on purpose:
 

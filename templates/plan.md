@@ -1,6 +1,6 @@
 # {{SLUG}} — Implementation Plan
 
-**Goal:** one sentence. **Architecture:** two or three sentences. **Tech stack:** the libraries and tools. **Spec:** docs/.spectomat/specs/{{SLUG}}.md
+**Goal:** one sentence. **Architecture:** two or three sentences. **Tech stack:** the libraries and tools. **Spec:** .spectomat/specs/{{SLUG}}.md
 
 ## Global Constraints
 
@@ -14,7 +14,7 @@
 
 ## Tasks
 
-One file per task under `docs/.spectomat/plans/{{SLUG}}/`, from `templates/task.md`, executed in this order. Tasks with no dependency between them and disjoint Files run in parallel as one wave.
+One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`, executed in this order. Tasks with no dependency between them and disjoint Files run in parallel as one wave.
 
 | # | File | Component | Covers | Depends on |
 | --- | --- | --- | --- | --- |

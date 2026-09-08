@@ -1,6 +1,6 @@
 #!/bin/bash
 # Spectomat cancel — remove the flow's state file so the Stop hook releases the session.
-# The floor under docs/.spectomat/ stays; run.sh resumes from it.
+# The floor under .spectomat/ stays; run.sh resumes from it.
 
 set -uo pipefail
 

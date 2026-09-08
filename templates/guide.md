@@ -12,7 +12,7 @@
 ## The Floor
 
 ```text
-docs/.spectomat/
+.spectomat/
   drafts/     ideas, one .md each, named NNN-<name>.md; the file name is the slug
   .inc        the last NNN issued; committed with the drafts
   specs/      written by phase A from each draft; or put a finished spec here yourself
@@ -68,7 +68,7 @@ The hook removes the state file, and so releases the session, on the promise, on
 - **Flow** is the sequence of loops from the first `/spectomat:run` until the promise `FACTORY EMPTY`.
 - **Strike** is one failed attempt at a phase for a slug. Three strikes move the file to `done/<slug>.blocked.md` with the reason.
 - **Slug** is a draft's file name without `.md`, including its `NNN-` prefix. Spec, plan and done entries keep it.
-- **Floor** is `docs/.spectomat/`: the directories and files the factory works from.
-- **Contract** is `docs/.spectomat/contract.md`: the rules, the gates and the steps every loop re-reads.
+- **Floor** is `.spectomat/`: the directories and files the factory works from.
+- **Contract** is `.spectomat/contract.md`: the rules, the gates and the steps every loop re-reads.
 - **Verification Gate** is one command in the Verification Gates block of the contract that must exit 0 once per wave in phase `C` and once in phase `D`. A loop may never weaken a gate to pass.
 - **Dark factory** is a production line that runs *unattended*, lights off. Here: a flow that turns ideas into committed code without asking anyone.

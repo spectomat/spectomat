@@ -16,12 +16,12 @@ If the output ends in `❌ Not starting`, report why and stop.
 
 If the factory is armed, begin loop 1 now: follow the prompt printed at the end of the output. Every loop is one fresh `general-purpose` subagent that reads the contract and does one phase; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every loop until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
 
-**This flow is unattended.** Nobody answers questions. Decide, record the decision where `docs/.spectomat/contract.md` says, and continue. Emit the  promise only when `drafts/`, `specs/` and `plans/` are all empty and the tree is clean, checked this loop.
+**This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue. Emit the  promise only when `drafts/`, `specs/` and `plans/` are all empty and the tree is clean, checked this loop.
 
 ## The floor
 
 ```
-docs/.spectomat/
+.spectomat/
   drafts/     ideas the user drops in, one .md each — the file name is the slug;
   specs/      phase A writes one per draft; or a finished spec placed by hand
   plans/      phase B writes an overview per spec plus <slug>/task-NN-<name>.md per task

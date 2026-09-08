@@ -7,8 +7,8 @@ A plan is an overview plus one file per task. Each task file is a complete brief
 **Save to:**
 
 ```
-docs/.spectomat/plans/<slug>.md                 overview
-docs/.spectomat/plans/<slug>/task-01-<name>.md  one per task, zero-padded, in execution order
+.spectomat/plans/<slug>.md                 overview
+.spectomat/plans/<slug>/task-01-<name>.md  one per task, zero-padded, in execution order
 ```
 
 ## Before the tasks
