@@ -41,8 +41,9 @@ guess-and-check, especially when it feels too urgent for it.
 
 1. A failing test that reproduces the bug (`spectomat:test-driven-development`).
 2. One change addressing the root cause. No bundled refactoring.
-3. Verify: the new test passes, the suite passes, the symptom is gone
-   (`spectomat:verification-before-completion`).
+3. Verify, fresh: run the new test, then the whole suite, and read the
+   output. The symptom is gone when the output says so, not when the code
+   changed.
 4. Did not work → count your attempts. Under three: back to phase 1 with the
    new evidence. Three failed fixes → the design is wrong, not the fix:
    record a ruling about the smallest structural change and take that path.

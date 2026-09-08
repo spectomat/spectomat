@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Use when the factory's unit B turns a spec in docs/.spectomat/specs into a plan — an overview file plus one self-contained task file per task, each a brief an implementer can execute later without the plan or the spec.
+description: Use when the factory's phase B turns a spec in docs/.spectomat/specs into a plan — an overview file plus one self-contained task file per task, each a brief an implementer can execute later without the plan or the spec.
 ---
 
 # Writing a plan
@@ -32,7 +32,7 @@ docs/.spectomat/plans/<slug>/task-01-<name>.md  one per task, zero-padded, in ex
    this task Consumes, and nothing else. Two tasks that touch the same file
    depend on each other — give the file to one of them, or order them. Tasks
    with no dependency and disjoint Files run in parallel as one wave in
-   unit C, so a plan of independent tasks finishes in fewer iterations.
+   phase C, so a plan of independent tasks finishes in fewer iterations.
 5. Write the overview: header, Global Constraints, file map, the task table,
    and the coverage table mapping every criterion id to a task.
 
@@ -48,9 +48,9 @@ that sees nothing else, so it repeats what it needs:
 - **Covers** — the criterion ids this task's tests name.
 - **Steps** — five checkbox steps: failing test, run and see it fail, minimal
   implementation, run and see it pass, commit. Each is one action of a few
-  minutes and shows its code. The checkboxes are how unit C finds its work
-  and how unit D knows the plan is finished: never omit them.
-- **Rulings** and **Result** — left empty; unit C fills them.
+  minutes and shows its code. The checkboxes are how phase C finds its work
+  and how phase D knows the plan is finished: never omit them.
+- **Rulings** and **Result** — left empty; phase C fills them.
 
 ## No placeholders
 

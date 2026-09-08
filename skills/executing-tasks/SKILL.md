@@ -1,6 +1,6 @@
 ---
 name: executing-tasks
-description: Use when the factory's unit C takes the next wave of ready task files under docs/.spectomat/plans/<slug>/ — one fresh implementer per task in parallel, none running git; then per task a commit by the controller, a diff review, fixes, ticked steps and a Result. Unattended; decisions become rulings in the task file.
+description: Use when the factory's phase C takes the next wave of ready task files under docs/.spectomat/plans/<slug>/ — one fresh implementer per task in parallel, none running git; then per task a commit by the controller, a diff review, fixes, ticked steps and a Result. Unattended; decisions become rulings in the task file.
 ---
 
 # Executing a wave of tasks
@@ -34,8 +34,9 @@ a wave of one too.
 ## Steps
 
 1. **Record BASE** = `git rev-parse HEAD`. Confirm the tree is clean.
-2. **Dispatch every implementer in the wave at once** (template below), each
-   with its task file path and report path `work/<slug>/task-NN-report.md`.
+2. **Dispatch every implementer in the wave at once** using
+   `prompts/implementer.md`, each with its task file path and report path
+   `work/<slug>/task-NN-report.md`.
    Cheap model when the task file contains the code to write, standard
    otherwise. If subagents are unavailable, execute the tasks yourself, one
    at a time, under `spectomat:test-driven-development`, committing each.
@@ -50,10 +51,10 @@ a wave of one too.
    task belongs to nobody: inspect it, then discard it.
 5. **Review every task, in parallel.** Write each diff to
    `work/<slug>/task-NN-review.diff`: `git show --stat <commit>; git show -U10
-   <commit>`. Dispatch one reviewer per task (template below) with task file,
-   report and diff paths, on a standard model at least — a cheap reviewer
-   raises style nits and misses real defects. Treat the report as claims;
-   the diff is the evidence.
+   <commit>`. Dispatch one reviewer per task (`prompts/reviewer.md`)
+   with task file, report and diff paths, on a standard model at least — a
+   cheap reviewer raises style nits and misses real defects. Treat the report
+   as claims; the diff is the evidence.
 6. **Fix loop, per task.** Spec ❌ or any Critical or Important finding →
    send the findings verbatim back to that task's implementer (rounds 1–2
    resume it; round 3 is a fresh implementer on a stronger model, told to
@@ -64,10 +65,12 @@ a wave of one too.
    every open finding and continue. Fix loops of different tasks may run
    concurrently; their commits are yours and sequential.
 7. **Close every task file.** Tick every step, fill `## Result` (commit
-   range, test count, review verdict). Run the full suite once. Append one
-   factory log line for the wave naming its tasks, and commit the task files
-   and log together: `chore(<slug>): wave NN,NN ticked`. A ruling that
-   affects other tasks goes to the plan overview's `## Rulings` as well.
+   range, test count, review verdict). Run the full suite once and take the
+   numbers from that output, not from the reports. Commit the task files:
+   `chore(<slug>): wave NN,NN ticked`. Then append one factory log line for
+   the wave naming its tasks; the log is gitignored and never committed. A
+   ruling that affects other tasks goes to the plan overview's `## Rulings`
+   as well.
 
 ## Rulings
 
@@ -82,55 +85,25 @@ the task file under `## Rulings`:
 The spec binds; the plan argues from it; your ruling settles what neither
 answers. A recorded wrong ruling is cheap to revert; a stalled task is not.
 
-## Implementer prompt
+## Prompts
 
-```
-You are implementing one task in <repo path>. Other implementers may be
-working in the same tree on other files at the same time.
+Both briefs live in this plugin, one file each; fill the `<...>` placeholders
+and send the text verbatim, nothing else:
 
-Read your task file first: <task file path>. It is your complete brief; use
-its exact values verbatim. Create or modify only the files it lists under
-Files; if its tests need a file it does not list, say so in your report
-rather than creating it. Rulings that bind you: <list or none>.
+- `prompts/implementer.md` — one per task in the wave (step 2, and each fix
+  round in step 6)
+- `prompts/reviewer.md` — one per commit (step 5, and each fix commit)
 
-Do the work yourself; never spawn subagents. Follow the Steps in order under
-TDD: write the failing test, watch it fail, implement minimally, watch it
-pass. Run the focused test while iterating and the full suite once at the
-end. Do not run any git command: the controller commits. Do not edit the
-task file.
+| Placeholder | Value | Used by |
+| --- | --- | --- |
+| `<repo path>` | absolute path of the repository root | implementer |
+| `<task file path>` | `docs/.spectomat/plans/<slug>/task-NN-<name>.md` | both |
+| `<report path>` | `docs/.spectomat/work/<slug>/task-NN-report.md` — the implementer writes it, the reviewer reads it | both |
+| `<diff path>` | `docs/.spectomat/work/<slug>/task-NN-review.diff` from step 5 | reviewer |
+| `<rulings>` | the task file's `## Rulings` lines, or the word `none` | implementer |
 
-Write your full report to <report path>: what you built, every file you
-touched, the test command and its output, anything you doubted and how you
-decided. Reply with one line only: DONE | DONE_WITH_CONCERNS |
-NEEDS_CONTEXT | BLOCKED, and the test count.
-```
-
-## Reviewer prompt
-
-```
-You are reviewing one task's implementation. Read-only: do not change the
-tree, run only a focused test if the code raises a specific doubt. Do not
-spawn subagents.
-
-Requested: <task file path> — its Constraints, Files, Interfaces, Covers and
-Steps are the requirements.
-Claimed: <report path> — unverified claims; judge the diff.
-Diff: <diff path> (stat and full diff with context of one commit). Read it once.
-
-Part 1 — Spec compliance: Missing (skipped or claimed but absent), Extra
-(not requested, or a file outside the task's Files), Misunderstood (right
-feature, wrong way). Verdict ✅ or ❌ with file:line for every finding. A
-requirement you cannot verify from the diff is a ⚠️ line, not a search.
-
-Part 2 — Quality: tests assert behaviour not mocks; edge cases covered;
-one responsibility per file; no duplication of a spec constant; error paths
-handled; test output pristine. Severity: Critical (wrong or unsafe),
-Important (task cannot be trusted until fixed), Minor (everything else).
-Cite file:line for each.
-
-Reply with the report only: the two verdicts, then findings grouped by
-severity. No preamble, no summary.
-```
+All paths absolute or relative to the repository root, the same for every
+subagent in the wave.
 
 ## Never
 

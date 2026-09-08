@@ -1,5 +1,5 @@
 {
-  "description": "Spectomat Stop hook: while docs/.spectomat/loop.md exists, block exit and feed the same prompt back",
+  "description": "Hooks",
   "hooks": {
     "Stop": [
       {

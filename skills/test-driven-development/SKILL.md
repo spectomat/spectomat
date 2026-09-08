@@ -59,3 +59,5 @@ the fix and pins the regression. Never fix a bug without one.
 - the test existed first and was seen failing for the right reason
 - minimal code made it pass; the whole suite is green and clean
 - tests use real code; edge cases and error paths are covered
+- the proving command ran in this iteration; its output, not a memory of an
+  earlier run, backs the tick

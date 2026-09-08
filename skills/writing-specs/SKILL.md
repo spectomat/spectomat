@@ -7,19 +7,26 @@ metadata:
 
 # Writing a buildable spec
 
-A spec the loop can build from is a contract, not a story. The loop reads it
-once in full, plans from it, cites it from code, and reconciles against it when
-it contradicts itself.
+A spec is a contract, not a story. 
+
+You should be able then
+
+- reads it once in full
+- build executable plan from it, 
+- cite it from code, 
+- and reconcile against it when it contradicts itself.
 
 ## Shape
 
-Start from `templates/spec.md` in this plugin; unit A of the factory follows it
-when turning a draft into a spec. Two parts:
+Start from `templates/spec.md` in this plugin; 
 
+phase A of the factory follows it when turning a draft into a spec. 
+
+Two parts:
 | Part | Role | Edited by |
 | --- | --- | --- |
-| Part I — Specification | normative: domain, behaviour, algorithms, architecture, acceptance criteria, decisions | user only |
-| Part II — Building it | toolchain, boundaries, gates, invariants, build sequence | user, and the loop's README/CLAUDE phase may cite it |
+| Part I — Functional Specification | normative: domain, behaviour, algorithms, architecture, acceptance criteria, decisions | user only |
+| Part II — Design Document | toolchain, boundaries, gates, invariants, build sequence | user, and the loop's README/CLAUDE phase may cite it |
 
 ## Rules
 
