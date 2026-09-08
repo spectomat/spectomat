@@ -28,7 +28,7 @@ Each task file is its own brief, written to be executed alone. Do not paste the 
 
 A ruling is a decision the spec, plan or task did not make: an ambiguity, a defect in the brief, a reviewer finding you overrule or park. Append it to the task file under `## Rulings`:
 
-```
+```text
 - <what you decided> — <why> — <what it costs if wrong>
 ```
 

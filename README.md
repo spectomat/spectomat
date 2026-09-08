@@ -14,14 +14,29 @@ Commands, the floor, the flow and the skills are in `templates/guide.md` with a 
 
 - `jq` and `perl` on PATH.
 
-## Install
+## Workflow
+
+Install
 
 ```bash
 claude plugin marketplace add ~/Projects/spectomat
 claude plugin install spectomat@spectomat
 ```
 
-Then restart Claude Code.
+Update
+
+```bash
+claude plugin update spectomat@spectomat
+```
+
+Restart Claude Code to apply an install or update: the plugin runs from a cache copy, so a live session keeps the old one.
+
+Verify
+
+```bash
+claude plugin validate .claude-plugin/plugin.json --strict
+claude plugin validate .claude-plugin/marketplace.json --strict
+```
 
 ## File Layout
 
@@ -56,13 +71,6 @@ A Claude Code plugin, not an application. No dependencies, no build.
 - `prompts/` — `implementer.md` and `reviewer.md`, the subagent briefs `executing-tasks` sends verbatim, placeholders in `<...>`.
 
 ## Developing
-
-Verify:
-
-```bash
-claude plugin validate .claude-plugin/plugin.json --strict
-claude plugin validate .claude-plugin/marketplace.json --strict
-```
 
 Exercise the scripts in a scratch git repo, never in this one: `run.sh` on an empty floor (expect refusal), drop a draft and run again (expect armed), then pipe a fake hook payload (`{"session_id","transcript_path"}`) into `scripts/stop-hook.sh` and check `decision`, the loop counter, and that the state file is removed on `<promise>FACTORY EMPTY</promise>` and at the cap. For a full run, `claude -p "/spectomat:run 25" --plugin-dir <this repo>` inside a scratch project with a draft on the floor.
 
