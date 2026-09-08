@@ -113,12 +113,17 @@ commit_floor() {
 }
 
 # Render contract.md from the template once; never overwrite a user-edited contract.
-# Only REPO is rendered; the gate command lives in the state file.
+# The gate command compiled from package.json is rendered into its Verification
+# Gates block, so a later package.json change is edited into the contract by hand.
 render_factory() {
   if [[ -f "$CONTRACT" ]]; then
     echo "$CONTRACT: exists, kept"
   else
-    render_template "$TEMPLATES/contract.md" "$CONTRACT" REPO="$ROOT"
+    detect_gates
+    echo "gates: ${GATES:-none detected}"
+    render_template "$TEMPLATES/contract.md" "$CONTRACT" \
+      REPO="$ROOT" \
+      GATES="${GATES:-echo \"❌ no gates: package.json defines no gates, typecheck, test, lint or build script\"}"
 
     STAGE+=("$CONTRACT")
     echo "$CONTRACT: written"
@@ -149,12 +154,8 @@ require_startable() {
 
 # Write the state file the Stop hook reads on every exit attempt.
 write_state() {
-  detect_gates
-  echo "gates: ${GATES:-none detected}"
   render_template "$TEMPLATES/state.md" "$STATE_FILE" \
-    REPO="$ROOT" \
     REFS="$PLUGIN_ROOT/references" \
-    GATES="${GATES:-echo \"❌ no gates: package.json defines no gates, typecheck, test, lint or build script\"}" \
     SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}" \
     MAX_LOOPS="$MAX_LOOPS" \
     STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

@@ -63,13 +63,17 @@ Read the spec in full. Read the `writing-plans` reference, then write the overvi
 
 ### C · Plan → Wave
 
-In the alphabetically first plan with open work, take the **wave**: every task file whose `Depends on` tasks are all closed and whose Files are pairwise disjoint with the others in the wave, lowest numbers first, at most three. Execute the wave as the `executing-tasks` reference says: one fresh implementer per task in parallel, none of them running git, then one commit per task by you, one review per task, at most three fix rounds each, then rulings and the Result in each task file. A wave of one is the common case. The `test-driven-development` reference governs every step. If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview; do not absorb it.
+In the alphabetically first plan with open work, take the **wave**: every task file whose `Depends on` tasks are all closed and whose Files are pairwise disjoint with the others in the wave, lowest numbers first, at most three.
+
+Execute the wave as the `executing-tasks` reference says: one fresh implementer per task in parallel, none of them running git, then one commit per task by you, one review per task, at most three fix rounds each, then rulings and the Result in each task file. A wave of one is the common case.
+
+The `test-driven-development` reference governs every step. If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview; do not absorb it.
 
 Work on the current branch. Never create branches or worktrees.
 
 ### D · Plan → Done
 
-Run every gate and read the output.
+Run every `Verification Gate` and read the output.
 
 Then move the trail into `done/` under names that cannot collide:
 
@@ -89,15 +93,22 @@ Log the phase with the gate numbers and the new version.
 
 ## Verification Gates
 
-Before every commit in phases C and D, run the gates command the loop brief gives, then every command in the block below. Every line must exit 0.
+Before every commit in phases C and D, run every command in the block below from the repository root. Every line must exit 0.
 
 ```bash
-# project-specific gates, one command per line
+# project-specific gates, one command per line, You may change it
+{{GATES}}
 ```
 
-The gates command is compiled at `run` from `package.json`: `npm run gates` when that script exists, otherwise every `typecheck`, `test`, `lint` and `build` script it defines, chained with `&&` in that order so it stops at the first failure. Run it from the repository root. Add a project-specific gate by appending its command to the block above.
+No completion claim without fresh evidence. A gate that has not run this loop has not passed; a partial run does not stand for the whole.
 
-No completion claim without fresh evidence. A gate that has not run this loop has not passed; a partial run does not stand for the whole. Run each gate whole, read the full output — exit code, failure count, warnings — and compare it to the claim you are about to make. Mismatch: record the real status with the output. Match: claim it with the numbers. "Should pass", "probably", "seems to" mean run it again. Never weaken a gate to pass: no `.skip`, no `any`, no suppression. If a gate fails unexpectedly, use the `systematic-debugging` reference. Phases A and B produce only Markdown and skip the gates.
+Run each gate whole, read the full output — exit code, failure count, warnings — and compare it to the claim you are about to make.
+
+Mismatch: record the real status with the output. Match: claim it with the numbers. "Should pass", "probably", "seems to" mean run it again. Never weaken a gate to pass: no `.skip`, no `any`, no suppression.
+
+If a gate fails unexpectedly, use the `systematic-debugging` reference.
+
+Phases A and B produce only Markdown and skip the gates.
 
 ## Log Format
 

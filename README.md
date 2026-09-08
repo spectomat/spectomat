@@ -32,7 +32,12 @@ A Claude Code plugin, not an application. No dependencies, no build.
 
 - `hooks/` — `hooks.json` registers the Stop hook; the hook itself is `scripts/stop-hook.sh`, which keeps the flow alive.
 
-- `scripts/` — bash, no other runtime. `utils.sh` holds the shared paths and helpers the others source; `run.sh` prepares `docs/.spectomat/`, renders `contract.md`, and writes the state file with the factory prompt and promise `FACTORY EMPTY`; `status.sh` summarises flow and floor, its sections live in `print.sh`; `cancel.sh` removes the state file and reports the loop it was at; `gates.sh` compiles the gate command from `package.json` scripts; `run` puts it into the state file and the contract says when to run it.
+- `scripts/` — bash, no other runtime:
+  - `utils.sh` holds the shared paths and helpers the others source,
+  - `run.sh` prepares `docs/.spectomat/`, renders `contract.md`, and writes the state file with the factory prompt and promise `FACTORY EMPTY`,
+  - `status.sh` summarises flow and floor; its sections live in `print.sh`,
+  - `cancel.sh` removes the state file and reports the loop it was at,
+  - `gates.sh` compiles the gate command from `package.json` scripts; `run` renders it into the contract's Verification Gates block.
 
 - `references/` — plain instruction files, not skills. The contract names them by short name and the state file, rendered on every run, carries their absolute path (`{{REFS}}`), so nothing is exposed to the user's session and no plugin path is committed:
   - `writing-specs.md` (spec shape),
@@ -43,8 +48,8 @@ A Claude Code plugin, not an application. No dependencies, no build.
 
 - `templates/`
   - `guide.md` (the user guide `/spectomat:help` prints),
-  - `contract.md` (placeholder `{{REPO}}`),
-  - `state.md` (the state file: frontmatter with `{{SESSION_ID}}`, `{{MAX_LOOPS}}`, `{{STARTED_AT}}`, then the pointer prompt the Stop hook feeds back, with `{{REPO}}`, `{{REFS}}` and `{{GATES}}` in the subagent brief),
+  - `contract.md` (placeholders `{{REPO}}` and `{{GATES}}`),
+  - `state.md` (the state file: frontmatter with `{{SESSION_ID}}`, `{{MAX_LOOPS}}`, `{{STARTED_AT}}`, then the pointer prompt the Stop hook feeds back, with `{{REFS}}` in the subagent brief),
   - `spec.md` (the skeleton `writing-specs` points at),
   - `plan.md` (overview skeleton, placeholder `{{SLUG}}`)
   - `task.md` (per-task brief skeleton, placeholders `{{SLUG}}`, `{{N}}`); `writing-plans` points at the last two.
