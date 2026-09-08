@@ -15,7 +15,8 @@ beats a stalled factory.
 
 ```!
 docs/.spectomat/
-  drafts/      raw ideas, one .md each — the user drops them here
+  drafts/      raw ideas, one .md each, named NNN-<name>.md in intake order — the user drops them here
+  .inc         the last NNN issued at intake — never edit
   specs/       normative specs, one per draft slug — you write these
   plans/       one overview per spec slug, plus <slug>/task-NN-<name>.md per task — you write these
   done/        <slug>.draft.md, <slug>.spec.md, <slug>.plan.md and <slug>/ task files, moved here when a plan completes

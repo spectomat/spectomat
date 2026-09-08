@@ -19,7 +19,7 @@ Distilled from the Telegator build (99 commits, 94 iterations, unattended).
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares `docs/.spectomat/`, moves `wishlist/*.md` into drafts, renders `contract.md`, commits what it created, arms the Stop hook (`n` iterations, default 100, promise `FACTORY EMPTY`) and starts iteration 1 |
+| `/spectomat:run [n]` | prepares `docs/.spectomat/`, moves `wishlist/*.md` into drafts as `NNN-<name>.md` (oldest first), renders `contract.md`, commits what it created, arms the Stop hook (`n` iterations, default 100, promise `FACTORY EMPTY`) and starts iteration 1 |
 | `/spectomat:status` | loop iteration, floor counts, per-plan step progress, blocked files, log tail |
 | `/spectomat:cancel` | removes the loop state file; the floor stays, `run` resumes from it |
 
@@ -27,7 +27,8 @@ Distilled from the Telegator build (99 commits, 94 iterations, unattended).
 
 ```
 docs/.spectomat/
-  drafts/     ideas, one .md each — the file name becomes the slug; `run` moves `wishlist/*.md` here
+  drafts/     ideas, one .md each — the file name becomes the slug; `run` moves `wishlist/*.md` here as NNN-<name>.md, oldest first
+  .inc        the last NNN issued; committed with the drafts
   specs/      written by phase A from each draft; or put a finished spec here yourself
   plans/      phase B writes an overview per spec plus <slug>/task-NN-<name>.md per task, each a self-contained brief
   done/       spec + plan moved here by phase D after every step is ticked and gates pass

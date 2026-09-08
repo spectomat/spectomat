@@ -4,7 +4,8 @@
 #   run.sh [MAX_ITERATIONS]
 #
 # Creates docs/.spectomat/{drafts,specs,plans,done}, moves ./wishlist/*.md into
-# drafts/, renders contract.md when absent, commits what it created (contract,
+# drafts/ as NNN-<name>.md (oldest first, counter in docs/.spectomat/.inc), renders
+# contract.md when absent, commits what it created (contract, .inc,
 # ignore rules, new drafts), and arms the Stop hook with the state file from
 # templates/state.md. Default 100 iterations, promise "FACTORY EMPTY". Refuses
 # when a loop is already active or there is no work at all.
@@ -61,20 +62,32 @@ prepare_floor() {
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
 }
 
-# Move wishes from ./wishlist/ into drafts/. A wish whose slug already exists in
-# drafts/ waits.
+# Move wishes from ./wishlist/ into drafts/, oldest modification first, each
+# renamed to NNN-<name>.md so the alphabetical order the contract uses equals
+# intake order. NNN continues from $INC, which holds the last number issued and
+# is committed with the drafts. A wish whose name is already in drafts/ under
+# any prefix waits and takes no number.
 intake_wishes() {
-  local wish slug
-  for wish in wishlist/*.md; do
+  local wish name slug n start
+  n=$(cat "$INC" 2>/dev/null || echo 0)
+  [[ "$n" =~ ^[0-9]+$ ]] || die "$INC: expected a number, got: $n"
+  n=$((10#$n)); start=$n
+  while IFS= read -r wish; do
     [[ -f "$wish" ]] || continue
-    slug="$(basename "$wish")"
-    if [[ -e "$FLOOR/drafts/$slug" ]]; then
-      echo "wishlist: $slug kept, drafts/$slug already exists"
+    name="$(basename "$wish")"
+    if compgen -G "$FLOOR/drafts/[0-9]*-$name" > /dev/null || [[ -e "$FLOOR/drafts/$name" ]]; then
+      echo "wishlist: $name kept, drafts/ already has it"
       continue
     fi
+    n=$((n + 1))
+    printf -v slug '%03d-%s' "$n" "$name"
     mv "$wish" "$FLOOR/drafts/$slug"
-    echo "wishlist: $slug moved to drafts/"
-  done
+    echo "wishlist: $name moved to drafts/$slug"
+  done < <(ls -tr wishlist/*.md 2>/dev/null)
+  if [[ $n -ne $start ]]; then
+    printf '%d\n' "$n" > "$INC"
+    STAGE+=("$INC")
+  fi
 }
 
 # Stage .gitignore as "what the index had + the lines run.sh appended", leaving

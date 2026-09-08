@@ -9,6 +9,7 @@ PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR="docs/.spectomat"
 STATE_FILE="$FLOOR/state.md"
 CONTRACT="$FLOOR/contract.md"
+INC="$FLOOR/.inc"   # last intake number issued to a wish
 
 # Move to the git root (or stay put outside a repo); sets ROOT.
 cd_root() {
