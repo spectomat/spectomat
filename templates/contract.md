@@ -32,11 +32,14 @@ keep that slug so the whole trail of one idea is greppable.
 
 Every iteration, in order:
 
-1. **Orient.** Read this file. Run `git status --porcelain`. If the tree is
-   dirty, the previous iteration died mid-phase: inspect the changes and either
-   finish and commit that phase or `git checkout -- .` and `git clean -fd` the
-   paths you own. `state.md`, `log.md` and `work/` are gitignored and never count as dirt. Never start a
-   phase on a dirty tree. Never touch `drafts/` files except to move them.
+1. **Orient.**
+   Read this file.
+   Run `git status --porcelain`.
+   If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either
+   finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own.
+   Check `state.md`, `log.md` and `work/` are gitignored and never count as dirt.
+   Never start a phase on a dirty tree.
+   Never touch `drafts/` files except to move them.
 2. **Pick exactly one phase**, the first that applies — finish work in
    progress before taking on anything new:
    - **D · Plan → Done**: every task file under `plans/<slug>/` has all steps
@@ -50,16 +53,14 @@ Every iteration, in order:
      one).
    - **E · Empty**: none of the above. Go to *Completion*.
 3. **Do that one phase** (definitions below). Not two.
-4. **Verify** with the gates, then **commit** — one commit per phase,
-   `<type>(<slug>): <what changed>`.
-5. **Log** one line to `log.md`, then stop the iteration. The log is
+4. **Verify** with the gates,
+5. **Commit** — one commit per phase, `<type>(<slug>): <what changed>`.
+6. **Log** one line to `log.md`, then stop the iteration. The log is
    gitignored and never enters a commit; write it after the commit, once the
    phase is on record. In phase C the plan tick is one `chore(<slug>): …`
    commit after the implementer's own commits.
 
-Work in progress always wins: a started plan is finished and archived before
-the next spec is planned, and every spec is planned before the next draft is
-read. New drafts wait until the floor ahead of them is clear.
+> Work in progress always wins: a started plan is finished and archived before the next spec is planned, and every spec is planned before the next draft is read. New drafts wait until the floor ahead of them is clear.
 
 ### Three strikes
 
@@ -153,7 +154,7 @@ Append to `log.md`, never edit earlier lines. The timestamp is the output of
 `date -u +%FT%RZ`, run in this iteration — never a time typed from memory. No
 commit SHA: `git log` is the ledger of commits, this file the ledger of phases.
 
-```
+```text
 - 2026-09-07T19:40Z · A · <slug> · spec written, 3 assumptions
 - 2026-09-07T19:52Z · C · <slug> · Task 2/6 done · tests 41/41
 - 2026-09-07T20:10Z · D · <slug> · moved to done · tsc 0, tests 58/58, lint 0

@@ -1,10 +1,11 @@
 {
   "name": "spectomat",
-  "description": "Spec-driven dark factory: drop ideas into docs/.spectomat/drafts, run one command, and an unattended loop turns each into a spec, a plan, and tested committed code. Embeds superpowers skills and a Ralph-style Stop hook. Self-contained.",
-  "version": "0.1.0",
+  "description": "Spec-driven dark factory: drop ideas into wishlist/, run one command, and an unattended loop turns each into a spec, a plan, and tested committed code.",
+  "version": "0.1.1",
   "author": {
     "name": "alex"
   },
+  "license": "MIT",
   "keywords": [
     "spec-driven",
     "dark-factory",

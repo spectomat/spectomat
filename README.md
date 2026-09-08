@@ -113,3 +113,8 @@ Rules:
   act on the same file.
 - `contract.md` is copied whole into user projects. A template change reaches
   only floors created after it.
+
+## Licence
+
+MIT, see `LICENSE`. Third-party material and its licences are listed in
+`NOTICE.md`.
