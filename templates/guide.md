@@ -54,7 +54,7 @@ The hook removes the state file, and so releases the session, on the promise, on
 
 - **Feed it.** Drop a `.md` idea into `wishlist/` at the project root. `run` moves it into `drafts/` as `NNN-<name>.md`, oldest modification first, and commits it. The counter in `.inc` keeps numbers growing across runs. A finished spec can go straight into `specs/`; the factory then starts at planning.
 - **Steer it.** Edit a spec or a plan between loops. Edit `contract.md` to change the rules.
-- **Gate it.** Every commit in phases C and D must pass the gates. `run` compiles the gate command from `package.json` scripts: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `test`, `lint` and `build` script found, chained with `&&` in that order. The command is the first line of the block under Verification Gates in `contract.md`, rendered once at the first `run`; edit it there when `package.json` changes. Gates that are not npm scripts go into the same block, one command per line; every line must exit 0. A loop may never weaken a gate to pass.
+- **Gate it.** The gates run once per wave in phase C, after the fix rounds and before the tick commit, and once in phase D before archiving. `run` compiles the gate command from `package.json` scripts: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `test`, `lint` and `build` script found, chained with `&&` in that order. The command is the first line of the block under Verification Gates in `contract.md`, rendered once at the first `run`; edit it there when `package.json` changes. Gates that are not npm scripts go into the same block, one command per line; every line must exit 0. A loop may never weaken a gate to pass.
 - **Resume it.** After a cancel or the loop cap, run `/spectomat:run` again. The filesystem is the ledger, so nothing is re-planned.
 
 ## Glossary
@@ -70,5 +70,5 @@ The hook removes the state file, and so releases the session, on the promise, on
 - **Slug** is a draft's file name without `.md`, including its `NNN-` prefix. Spec, plan and done entries keep it.
 - **Floor** is `docs/.spectomat/`: the directories and files the factory works from.
 - **Contract** is `docs/.spectomat/contract.md`: the rules, the gates and the steps every loop re-reads.
-- **Verification Gate** is one command in the Verification Gates block of the contract that must exit 0 before every commit in phases `C` and `D`. A loop may never weaken a gate to pass.
+- **Verification Gate** is one command in the Verification Gates block of the contract that must exit 0 once per wave in phase `C` and once in phase `D`. A loop may never weaken a gate to pass.
 - **Dark factory** is a production line that runs *unattended*, lights off. Here: a flow that turns ideas into committed code without asking anyone.

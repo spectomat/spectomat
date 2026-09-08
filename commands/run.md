@@ -47,7 +47,7 @@ Priority is D, C, B, A: work in progress is finished before the next spec is pla
 | B · spec → plan | `writing-plans.md` |
 | C · next wave of ready tasks (parallel implementers, disjoint files) | `executing-tasks.md`, with `test-driven-development.md` |
 | any failing gate | `systematic-debugging.md` |
-| D · plan → done, every commit, the promise | the gates in `contract.md`, run fresh this loop, numbers in the log |
+| end of a C wave, D · plan → done, the promise | the gates in `contract.md`, run fresh this loop, numbers in the log |
 
 ## Rules that make it terminate
 

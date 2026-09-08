@@ -37,7 +37,7 @@ Every loop, in order:
    - **A · Draft → Spec**: a file exists in `drafts/` (alphabetical, first one).
    - **E · Empty**: none of the above. Go to *Completion*.
 3. **Do that one phase** (definitions below). Not two.
-4. **Verify** with the gates,
+4. **Verify** with the gates — once per wave in phase C, once before the commit in phase D,
 5. **Commit** — one commit per phase, `<type>(<slug>): <what changed>`.
 6. **Log** one line to `log.md`, then stop the loop. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In phase C the plan tick is one `chore(<slug>): …` commit after the implementer's own commits.
 
@@ -67,6 +67,8 @@ In the alphabetically first plan with open work, take the **wave**: every task f
 
 Execute the wave as the `executing-tasks` reference says: one fresh implementer per task in parallel, none of them running git, then one commit per task by you, one review per task, at most three fix rounds each, then rulings and the Result in each task file. A wave of one is the common case.
 
+Run the Verification Gates once per wave, after the fix rounds and before the tick commit; the task commits inside the wave are not gated one by one, the wave is.
+
 The `test-driven-development` reference governs every step. If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview; do not absorb it.
 
 Work on the current branch. Never create branches or worktrees.
@@ -93,7 +95,7 @@ Log the phase with the gate numbers and the new version.
 
 ## Verification Gates
 
-Before every commit in phases C and D, run every command in the block below from the repository root. Every line must exit 0.
+Run every command in the block below from the repository root: once per wave in phase C, after the fix rounds and before the `chore(<slug>)` tick commit, and once in phase D before archiving. Every line must exit 0.
 
 ```bash
 # project-specific gates, one command per line, You may change it
