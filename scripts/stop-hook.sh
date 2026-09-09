@@ -86,10 +86,7 @@ read_last_output() {
 
 # Finish when the last output carries the exact completion promise.
 check_promise() {
-  local promise_text
-  # First <promise> tag, whitespace normalised. Literal compare, not glob.
-  promise_text=$(echo "$LAST_OUTPUT" | perl -0777 -pe 's/.*?<promise>(.*?)<\/promise>.*/$1/s; s/^\s+|\s+$//g; s/\s+/ /g' 2>/dev/null || echo "")
-  if [[ -n "$promise_text" ]] && [[ "$promise_text" = "FACTORY EMPTY" ]]; then
+  if promised_empty "$LAST_OUTPUT"; then
     finish "✅ Spectomat flow: detected <promise>FACTORY EMPTY</promise>"
   fi
 }

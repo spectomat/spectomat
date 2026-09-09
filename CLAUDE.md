@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Claude Code plugin, not an application: bash scripts, Markdown commands, templates and reference files. No dependencies, no build, no tests of its own. `jq` and `perl` must be on PATH. `README.md` covers layout and licensing; `templates/guide.md` is the user guide (printed by `/spectomat:help`) and holds the glossary whose terms (flow, loop, phase, wave, floor, contract, slug, strike) this repo uses consistently. Use those words, not synonyms.
+A Claude Code plugin, not an application: bash scripts, Markdown commands, templates and reference files. No dependencies and no build; `scripts/selftest.sh` covers the text helpers in `utils.sh`, everything else is exercised by hand. `jq` must be on PATH. `README.md` covers layout and licensing; `templates/guide.md` is the user guide (printed by `/spectomat:help`) and holds the glossary whose terms (flow, loop, phase, wave, floor, contract, slug, strike) this repo uses consistently. Use those words, not synonyms.
 
 ## Verifying changes
 
@@ -12,6 +12,7 @@ A Claude Code plugin, not an application: bash scripts, Markdown commands, templ
 claude plugin validate .claude-plugin/plugin.json --strict      # run from this directory
 claude plugin validate .claude-plugin/marketplace.json --strict
 bash -n scripts/*.sh                                             # syntax only
+scripts/selftest.sh                                              # utils.sh text helpers
 ```
 
 Exercise the scripts in a scratch git repo, never here: `run.sh` on an empty floor must refuse, with a draft it must arm; pipe a fake Stop payload (`{"session_id","transcript_path"}`) into `scripts/stop-hook.sh` and check `decision`, the `loop:` counter, and that the state file disappears on `<promise>FACTORY EMPTY</promise>` and at the cap. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.

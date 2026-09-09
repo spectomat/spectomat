@@ -12,7 +12,7 @@ Commands, the floor, the flow and the skills are in `templates/guide.md` with a 
 
 ## Requires
 
-- `jq` and `perl` on PATH.
+- `jq` on PATH.
 
 ## Workflow
 

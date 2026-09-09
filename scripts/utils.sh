@@ -30,15 +30,26 @@ state_field() {
 
 # Render a template, replacing every {{KEY}} with its value:
 #   render_template SRC DEST KEY=value ...
-# Values are inserted literally; the env vars live only for the perl call.
+# Values are inserted literally - bash pattern substitution gives no meaning to
+# & or \ in a replacement, which is why this needs no escaping pass. Keys are
+# applied in the order given, so a value holding {{X}} is still expanded by a
+# later X= argument.
 render_template() {
-  local src="$1" dest="$2" kv key expr=""
+  local src="$1" dest="$2" kv key val body
   shift 2
-  local -a envs=()
+  body=$(cat "$src"; printf X)   # X guards the trailing newlines $() would strip
+  body="${body%X}"
   for kv in "$@"; do
     key="${kv%%=*}"
-    envs+=("TPL_$key=${kv#*=}")
-    expr+="s/\\{\\{$key\\}\\}/\$ENV{TPL_$key}/g;"
+    val="${kv#*=}"
+    body="${body//\{\{$key\}\}/$val}"
   done
-  env ${envs[@]+"${envs[@]}"} perl -pe "$expr" "$src" > "$dest"
+  printf '%s' "$body" > "$dest"
 }
+
+# True when $1 carries the completion promise. Whitespace is stripped from the
+# haystack rather than parsed out of the tags, so any line breaks or indentation
+# the model puts inside <promise>...</promise> still match. That also makes the
+# test lenient about spacing within the words themselves, which costs nothing:
+# no other wording ends the flow.
+promised_empty() { [[ "${1//[[:space:]]/}" == *"<promise>FACTORYEMPTY</promise>"* ]]; }
