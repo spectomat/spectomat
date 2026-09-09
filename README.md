@@ -49,7 +49,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
 
 - `scripts/` — bash, no other runtime:
   - `utils.sh` holds the shared paths and helpers the others source,
-  - `run.sh` prepares `.spectomat/`, renders `contract.md`, and writes the state file with the factory prompt and promise `FACTORY EMPTY`,
+  - `run.sh` prepares `.spectomat/`, renders `contract.md` and `memory.md`, and writes the state file with the factory prompt and promise `FACTORY EMPTY`,
   - `status.sh` summarises flow and floor; its sections live in `print.sh`,
   - `cancel.sh` removes the state file and reports the loop it was at,
   - `gates.sh` compiles the gate command from `package.json` scripts; `run` renders it into the contract's Verification Gates block.
@@ -64,6 +64,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
 - `templates/`
   - `guide.md` (the user guide `/spectomat:help` prints),
   - `contract.md` (placeholders `{{REPO}}` and `{{GATES}}`),
+  - `memory.md` (placeholder `{{REPO}}`; the codebase facts every loop reads and adds to, committed in the project),
   - `state.md` (the state file: frontmatter with `{{SESSION_ID}}`, `{{MAX_LOOPS}}`, `{{STARTED_AT}}`, then the pointer prompt the Stop hook feeds back, with `{{REFS}}` in the subagent brief),
   - `spec.md` (the skeleton `writing-specs` points at),
   - `plan.md` (overview skeleton, placeholder `{{SLUG}}`)

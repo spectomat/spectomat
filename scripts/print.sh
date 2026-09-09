@@ -4,7 +4,7 @@
 #   source "$(dirname "${BASH_SOURCE[0]}")/print.sh"
 #
 # Every print_* writes one "--- section ---" block to stdout and needs
-# FLOOR, STATE_FILE, count and state_field from utils.sh.
+# FLOOR, STATE_FILE, MEMORY, count and state_field from utils.sh.
 
 print_loop() {
   echo "--- flow ---"
@@ -17,7 +17,14 @@ print_loop() {
 
 print_floor() {
   echo "--- floor: $FLOOR ---"
-  echo "drafts: $(count "$FLOOR/drafts")   specs: $(count "$FLOOR/specs")   plans: $(count "$FLOOR/plans")   done: $(count "$FLOOR/done")"
+  echo "drafts: $(count "$FLOOR/drafts")   specs: $(count "$FLOOR/specs")   plans: $(count "$FLOOR/plans")   done: $(count "$FLOOR/done")   memory: $(memory_entries) entries"
+}
+
+# Entries in memory.md: list items, which is what the contract asks a memory to be.
+# grep -c exits 1 on no match, so the file check comes first and the count stands alone.
+memory_entries() {
+  [[ -f "$MEMORY" ]] || { echo 0; return; }
+  grep -c '^- ' "$MEMORY" | tr -d ' '
 }
 
 # One line per plan: task count, ticked/open steps across its task files, next open task.

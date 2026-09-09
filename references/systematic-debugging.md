@@ -1,10 +1,10 @@
 # Systematic debugging
 
-```
+Symptom fixes are failures that come back.
+
+```text
 NO FIX WITHOUT A ROOT CAUSE FIRST
 ```
-
-Symptom fixes are failures that come back. This process is faster than guess-and-check, especially when it feels too urgent for it.
 
 ## Four phases, in order
 

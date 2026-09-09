@@ -8,6 +8,8 @@
 
 *Diff*: <diff path> (stat and full diff with context of one commit). Read it once.
 
+*Context*: `.spectomat/memory.md` — how this codebase does things. It is context, not a requirement: cite it when the diff departs from a pattern it records.
+
 ## Part 1 - **Spec compliance**
 
 Missing (skipped or claimed but absent), Extra (not requested, or a file outside the task's Files), Misunderstood (right feature, wrong way). Verdict ✅ or ❌ with file:line for every finding. A requirement you cannot verify from the diff is a ⚠️ line, not a search.

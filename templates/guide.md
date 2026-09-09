@@ -20,6 +20,7 @@
   done/       spec + plan moved here by phase D after every step is ticked and gates pass
   log.md      one line per phase, gitignored
   contract.md the rules and gates, re-read every loop
+  memory.md   durable valuable facts about the codebase, accumulated all along the time
   state.md    the Stop hook's state, gitignored
   work/       per-task briefs, reports and diffs, gitignored
 ```
@@ -28,32 +29,31 @@
 
 The flow is a sequence of loops. Each loop is one fresh `general-purpose` subagent that reads `contract.md` and does exactly one phase, the first that applies:
 
-- **D** finished plan → `done/`, when every task step is ticked and the gates are green; the patch version in `package.json` becomes the slug's `NNN`,
-- **C×n** plan → next wave of ready tasks: one fresh implementer per task in parallel, TDD, one commit and one reviewed diff per task,
-- **B** spec → plan: an overview plus one task file per task,
-- **A** draft → spec,
-- **E** nothing left: `drafts/`, `specs/` and `plans/` are empty and the tree is clean, so the loop emits `<promise>FACTORY EMPTY</promise>` and the flow ends.
+- **D** `finished plan` → `done/`, when every task step is ticked and the gates are green; the patch version in `package.json` becomes the slug's `NNN`,
+- **C×n** `plan` → `next wave of ready tasks`: one fresh implementer per task in parallel, TDD, one commit and one reviewed diff per task,
+- **B** `spec` → `plan`: an overview plus one task file per task,
+- **A** `draft` → `spec`,
+- **E** `nothing left`: `drafts/`, `specs/` and `plans/` are empty and the tree is clean, so the loop emits `<promise>FACTORY EMPTY</promise>` and the flow ends.
 
 Work in progress is finished before a new draft is read. Drafts are read in intake order, because the `NNN` prefix makes alphabetical order equal intake order.
 
 ## Loops Mechanics
 
-The Stop hook runs when Claude tries to end its turn.
-
-While `state.md` exists for this session, the hook blocks the exit and returns the state prompt as the next input.
+The Stop hook runs when Claude tries to end its turn. While `state.md` exists for this session, the hook blocks the exit and returns the state prompt as the next input.
 
 The state launches the next loop's subagent, so every phase starts with an empty context and the session itself only accumulates one short report per loop.
 
 The hook removes the state file, and so releases the session, on the promise, on the loop cap, or on a corrupt state file.
 
-`contract.md` is rendered from the plugin template at the first run and committed. Next `run`s never overwrites it, so edit it in the project to change the rules or the gates.
+`contract.md` and `memory.md` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the factory believes about the codebase. Each is checked on its own, so a floor armed before `memory.md` existed gets it on the next `run`.
 
 > It is dark! Nobody is asked anything. Every open choice becomes an `assumed` row in the spec's Decisions table. Three failed attempts at a phase move the file to `done/<slug>.blocked.md` with the reason.
 
 ## Operating it
 
 - **Feed it.** Drop a `.md` idea into `wishlist/` at the project root. `run` moves it into `drafts/` as `NNN-<name>.md`, oldest modification first, and commits it. The counter in `.inc` keeps numbers growing across runs. A finished spec can go straight into `specs/`; the factory then starts at planning.
-- **Steer it.** Edit a spec or a plan between loops. Edit `contract.md` to change the rules.
+- **Steer it.** Edit a spec or a plan between loops. Edit `contract.md` to change the rules, `memory.md` to correct what the factory believes about the codebase.
+- **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every loop reads before working and adds to before committing. Seed it by hand before the first run and the factory starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
 - **Gate it.** The gates run once per wave in phase C, after the fix rounds and before the tick commit, and once in phase D before archiving. `run` compiles the gate command from `package.json` scripts: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `test`, `lint` and `build` script found, chained with `&&` in that order. The command is the first line of the block under Verification Gates in `contract.md`, rendered once at the first `run`; edit it there when `package.json` changes. Gates that are not npm scripts go into the same block, one command per line; every line must exit 0. A loop may never weaken a gate to pass.
 - **Resume it.** After a cancel or the loop cap, run `/spectomat:run` again. The filesystem is the ledger, so nothing is re-planned.
 
@@ -70,5 +70,6 @@ The hook removes the state file, and so releases the session, on the promise, on
 - **Slug** is a draft's file name without `.md`, including its `NNN-` prefix. Spec, plan and done entries keep it.
 - **Floor** is `.spectomat/`: the directories and files the factory works from.
 - **Contract** is `.spectomat/contract.md`: the rules, the gates and the steps every loop re-reads.
-- **Verification Gate** is one command in the Verification Gates block of the contract that must exit 0 once per wave in phase `C` and once in phase `D`. A loop may never weaken a gate to pass.
+- **Memory** is `.spectomat/memory.md`: durable facts about the codebase — map, commands, patterns, traps — read by every loop and every implementer, added to inside the phase commit. The contract is what the factory knows about the job, the memory what it knows about the project.
+- **Verification Gate** is one command in the Verification Gates block of the contract that must exit 0 once per wave in phase `C` and once in phase `D`.
 - **Dark factory** is a production line that runs *unattended*, lights off. Here: a flow that turns ideas into committed code without asking anyone.

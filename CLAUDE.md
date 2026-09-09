@@ -22,11 +22,12 @@ The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`,
 
 Each command in `commands/` runs a script in its `!` block, then tells Claude what to do with the output. All scripts source `scripts/utils.sh` (paths, `cd_root`, `state_field`, `render_template`) and set their own `set -e/-u` options; bash 3.2 compatible, no GNU-only flags.
 
-`run.sh` prepares the floor `.spectomat/` in the user's project: moves `wishlist/*.md` into `drafts/` as `NNN-<name>.md` in modification order with the counter in `.inc`, renders `contract.md` once (placeholder `REPO` only, never overwritten afterwards), commits what it created, then renders the state file from `templates/state.md` on every run and refuses if a state file already exists or the floor is empty.
+`run.sh` prepares the floor `.spectomat/` in the user's project: moves `wishlist/*.md` into `drafts/` as `NNN-<name>.md` in modification order with the counter in `.inc`, renders `contract.md` and `memory.md` once (never overwritten afterwards, each checked on its own so an older floor picks up a newly added file), commits what it created, then renders the state file from `templates/state.md` on every run and refuses if a state file already exists or the floor is empty.
 
-The two rendered files split what they carry on purpose:
+The three rendered files split what they carry on purpose:
 
 - `contract.md` is committed in the project and contains no plugin path. It names references by short name and says when to run the gates; project-specific gate commands live in its Verification Gates block.
+- `memory.md` is committed in the project and belongs to it after the first render: durable facts about *the codebase*, where the contract holds rules about *the job*. Every loop reads it in Orient and adds to it inside the phase commit — never after, or the next loop starts on a dirty tree. Implementers and reviewers read it; only the loop agent writes it, so it keeps one voice. Its rules live in the contract's Memory section and the template's header; keep the two in step.
 - `state.md` is gitignored and re-rendered each run. Its frontmatter (`loop`, `max_loops`, `session_id`) drives the Stop hook; its body is the pointer prompt, which carries `REFS` (absolute `references/` path) and `GATES` (one `&&` chain compiled by `gates.sh` from `package.json` scripts, or an echo when none).
 
 `hooks/hooks.json` wires `scripts/stop-hook.sh`: while the state file exists for the session that started it (session id match, so other sessions in the same project are untouched), it blocks exit, bumps `loop:` and feeds the pointer back. The pointer makes the session launch one fresh `general-purpose` subagent per loop; the session itself does no factory work. The hook releases on the exact promise, the cap or a corrupt file. Derived from Anthropic's ralph-loop; the state file name differs so both plugins coexist.

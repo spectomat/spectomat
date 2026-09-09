@@ -9,6 +9,7 @@ PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
 STATE_FILE="$FLOOR/state.md"
 CONTRACT="$FLOOR/contract.md"
+MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; committed
 INC="$FLOOR/.inc"   # last intake number issued to a wish
 
 # Move to the git root (or stay put outside a repo); sets ROOT.

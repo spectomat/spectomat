@@ -18,8 +18,8 @@ One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`, 
 
 | # | File | Component | Covers | Depends on |
 | --- | --- | --- | --- | --- |
-| 1 | `task-01-<name>.md` | <component> | AC-1.1, AC-1.2 | — |
-| 2 | `task-02-<name>.md` | <component> | AC-2.1 | 1 |
+| 1 | `task-01-<name>.md` | `<component>` | AC-1.1, AC-1.2 | — |
+| 2 | `task-02-<name>.md` | `<component>` | AC-2.1 | 1 |
 
 ## Coverage
 
@@ -31,4 +31,5 @@ Every criterion id in the spec, and the task that covers it. A criterion with no
 
 ## Rulings
 
-(appended by executing-tasks for decisions that cross tasks: `- Task N · <decision> — <why> — <cost if wrong>`)
+appended by executing-tasks for decisions that cross tasks:
+`- Task N · <decision> — <why> — <cost if wrong>`

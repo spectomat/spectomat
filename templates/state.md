@@ -32,6 +32,7 @@ Then follow its Loop Contract exactly:
 - pick exactly one phase of work (draft to spec, spec to plan, plan to task, plan to done),
 - do it,
 - verify,
+- record in `memory.md` what a future loop should know about this codebase,
 - commit,
 - log.
 

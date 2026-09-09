@@ -1,7 +1,7 @@
 {
   "name": "spectomat",
   "description": "Spec-driven dark factory: drop ideas into wishlist/, run one command, and an unattended loop turns each into a spec, a plan, and tested committed code.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": {
     "name": "alex"
   },
@@ -9,8 +9,6 @@
   "keywords": [
     "spec-driven",
     "dark-factory",
-    "ralph-loop",
-    "superpowers",
     "autonomous",
     "tdd"
   ]

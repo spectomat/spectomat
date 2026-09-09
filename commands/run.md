@@ -6,7 +6,8 @@ allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Task"]
 
 # Spectomat run
 
-Run the unattended dark factory - floor setup and the start of loops over `drafts → specs → plans → executed plans → done` phases:
+Run the unattended dark factory - floor setup
+and the start of loops over `drafts → specs → plans → executed plans → done` phases:
 
 ```!
 "${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" $ARGUMENTS
@@ -16,7 +17,9 @@ If the output ends in `❌ Not starting`, report why and stop.
 
 If the factory is armed, begin loop 1 now: follow the prompt printed at the end of the output. Every loop is one fresh `general-purpose` subagent that reads the contract and does one phase; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every loop until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
 
-**This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue. Emit the  promise only when `drafts/`, `specs/` and `plans/` are all empty and the tree is clean, checked this loop.
+**This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue.
+
+Emit the promise only when `drafts/`, `specs/` and `plans/` are all empty and the tree is clean, checked this loop.
 
 ## The floor
 
@@ -28,6 +31,7 @@ If the factory is armed, begin loop 1 now: follow the prompt printed at the end 
   done/       phase D moves spec + plan here when every step is ticked and gates pass
   work/       per-task briefs, reports and diffs, gitignored
   contract.md the rules, rendered once from the plugin template, re-read every loop
+  memory.md   codebase facts the factory has learned, read every loop, added to before every commit
   state.md    the Stop hook's state, gitignored
   log.md      one line per phase, gitignored
   .inc        the last NNN issued to a wish; committed with the drafts

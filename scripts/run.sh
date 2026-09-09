@@ -5,8 +5,8 @@
 #
 # Creates .spectomat/{drafts,specs,plans,done}, moves ./wishlist/*.md into
 # drafts/ as NNN-<name>.md (oldest first, counter in .spectomat/.inc), renders
-# contract.md when absent, commits what it created (contract, .inc,
-# ignore rules, new drafts), and arms the Stop hook with the state file from
+# contract.md and memory.md when absent, commits what it created (contract,
+# memory, .inc, ignore rules, new drafts), and arms the Stop hook from
 # templates/state.md. Default 100 loops, promise "FACTORY EMPTY". Refuses
 # when a flow is already active or there is no work at all.
 
@@ -99,7 +99,7 @@ stage_ignore_entries() {
   git update-index --add --cacheinfo "100644,$blob,.gitignore"
 }
 
-# Commit what this run created — contract, ignore rules, new drafts — so the
+# Commit what this run created — contract, memory, ignore rules, new drafts — so the
 # flow starts on a clean tree. Nothing else of the user's is staged.
 commit_floor() {
   git add "$FLOOR/drafts" ${STAGE[@]+"${STAGE[@]}"}
@@ -112,10 +112,20 @@ commit_floor() {
   echo "committed: $(git log --oneline -1)"
 }
 
-# Render contract.md from the template once; never overwrite a user-edited contract.
-# The gate command compiled from package.json is rendered into its Verification
-# Gates block, so a later package.json change is edited into the contract by hand.
+# Render contract.md and memory.md from the templates once; never overwrite what
+# the project has edited. The gate command compiled from package.json is rendered
+# into the contract's Verification Gates block, so a later package.json change is
+# edited into the contract by hand. Each file is checked on its own, so a floor
+# armed before memory.md existed picks it up on the next run.
 render_factory() {
+  if [[ -f "$MEMORY" ]]; then
+    echo "$MEMORY: exists, kept"
+  else
+    render_template "$TEMPLATES/memory.md" "$MEMORY" REPO="$ROOT"
+    STAGE+=("$MEMORY")
+    echo "$MEMORY: written"
+  fi
+
   if [[ -f "$CONTRACT" ]]; then
     echo "$CONTRACT: exists, kept"
   else
