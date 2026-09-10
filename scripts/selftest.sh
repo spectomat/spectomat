@@ -4,7 +4,7 @@
 #   scripts/selftest.sh          tests the utils.sh next to it
 #
 # No dependencies and no network; runs in under a second. Everything else in
-# scripts/ is orchestration, exercised by hand in a scratch repo (see CLAUDE.md).
+# scripts/ is orchestration, exercised by hand in a scratch repo (see .claude/CLAUDE.md).
 
 set -uo pipefail
 

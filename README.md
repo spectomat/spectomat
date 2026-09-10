@@ -45,6 +45,8 @@ A Claude Code plugin, not an application. No dependencies, no build.
 - `.claude-plugin/` — `plugin.json` (the plugin) and `marketplace.json` (this repo as a one-plugin marketplace, source `./`).
 - `commands/` — `/spectomat:run`, `status`, `cancel`, `help`. Each `!` block runs a script before Claude reads the command.
 
+- `agents/` — `looper.md`, the subagent that runs one loop: the pointer launches it as `spectomat:looper`, or as `general-purpose` with this file's body as the brief when the plugin's agents are not listed.
+
 - `hooks/` — `hooks.json` registers the Stop hook; the hook itself is `scripts/stop-hook.sh`, which keeps the flow alive.
 
 - `scripts/` — bash, no other runtime:
@@ -54,7 +56,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
   - `cancel.sh` removes the state file and reports the loop it was at,
   - `gates.sh` compiles the gate command from `package.json` scripts; `run` renders it into the contract's Verification Gates block.
 
-- `references/` — plain instruction files, not skills. The contract names them by short name and the state file, rendered on every run, carries their absolute path (`{{REFS}}`), so nothing is exposed to the user's session and no plugin path is committed:
+- `references/` — plain instruction files, not skills. The contract names them by short name and the state file, rendered on every run, carries their absolute path (`{{PLUGIN_ROOT}}/references`), so nothing is exposed to the user's session and no plugin path is committed:
   - `writing-specs.md` (spec shape),
   - `writing-plans.md` (phase B),
   - `executing-tasks.md` (phase C; subagent-driven development and code review),
@@ -65,7 +67,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
   - `guide.md` (the user guide `/spectomat:help` prints),
   - `contract.md` (placeholders `{{REPO}}` and `{{GATES}}`),
   - `memory.md` (placeholder `{{REPO}}`; the codebase facts every loop reads and adds to, committed in the project),
-  - `state.md` (the state file: frontmatter with `{{SESSION_ID}}`, `{{MAX_LOOPS}}`, `{{STARTED_AT}}`, then the pointer prompt the Stop hook feeds back, with `{{REFS}}` in the subagent brief),
+  - `state.md` (the state file: frontmatter with `{{SESSION_ID}}`, `{{MAX_LOOPS}}`, `{{STARTED_AT}}`, then the pointer prompt the Stop hook feeds back, with `{{PLUGIN_ROOT}}` locating `agents/looper.md` and `references/`),
   - `spec.md` (the skeleton `writing-specs` points at),
   - `plan.md` (overview skeleton, placeholder `{{SLUG}}`)
   - `task.md` (per-task brief skeleton, placeholders `{{SLUG}}`, `{{N}}`); `writing-plans` points at the last two.

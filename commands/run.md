@@ -1,7 +1,7 @@
 ---
 description: "Run the unattended dark factory"
 argument-hint: "[max-loops]  (default 100)"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Task"]
+allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Agent", "Task"]
 ---
 
 # Spectomat run
@@ -15,7 +15,7 @@ and the start of loops over `drafts → specs → plans → executed plans → d
 
 If the output ends in `❌ Not starting`, report why and stop.
 
-If the factory is armed, begin loop 1 now: follow the prompt printed at the end of the output. Every loop is one fresh `general-purpose` subagent that reads the contract and does one phase; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every loop until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
+If the factory is armed, begin loop 1 now: follow the prompt printed at the end of the output. Every loop is one fresh `spectomat:looper` subagent (or `general-purpose` carrying the looper's brief, when that type is not listed) that reads the contract and does one phase; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every loop until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
 
 **This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue.
 

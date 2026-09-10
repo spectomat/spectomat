@@ -162,10 +162,11 @@ require_startable() {
   fi
 }
 
-# Write the state file the Stop hook reads on every exit attempt.
+# Write the state file the Stop hook reads on every exit attempt. PLUGIN_ROOT
+# lets the pointer name agents/looper.md and references/ by absolute path.
 write_state() {
   render_template "$TEMPLATES/state.md" "$STATE_FILE" \
-    REFS="$PLUGIN_ROOT/references" \
+    PLUGIN_ROOT="$PLUGIN_ROOT" \
     SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}" \
     MAX_LOOPS="$MAX_LOOPS" \
     STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
