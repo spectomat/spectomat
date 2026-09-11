@@ -3,7 +3,7 @@
 #
 #   scripts/selftest.sh          tests the utils.sh next to it
 #
-# No dependencies and no network; runs in under a second. Everything else in
+# No dependencies and no network; runs in under 8 seconds. Everything else in
 # scripts/ is orchestration, exercised by hand in a scratch repo (see .claude/CLAUDE.md).
 
 set -uo pipefail
@@ -417,6 +417,21 @@ is "status predicts the verdict"    "$(printf '%s\n' "$st_out" | grep -c '^C 001
 floor st2
 st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
 is "an empty floor predicts E"      "$(printf '%s\n' "$st_out" | grep -c '^E$')" "1"
+
+# The retired vocabulary. This file names the retired words in order to scan
+# for them, so it leaves itself out of its own scan, as the perl check does.
+# docs/ is excluded: it records the design that removed them.
+echo "vocabulary"
+REPO_ROOT="$(dirname "$SCRIPTS")"
+stale=$(cd "$REPO_ROOT" && grep -rl --exclude-dir=.git --exclude-dir=docs --exclude-dir=.superpowers \
+          -e 'looper' -e 'references/' . 2>/dev/null | grep -v 'selftest\.sh$' | tr '\n' ' ')
+is "nothing names the looper or references/" "${stale% }" ""
+missing=$(cd "$REPO_ROOT" && for f in $(grep -oE '`[a-zA-Z0-9_./-]+\.(md|sh|json)`' NOTICE.md | tr -d '`'); do
+            # `.spectomat/` paths are written into the user's project at runtime,
+            # so they are not files of this repo and are not checked here.
+            [[ "$f" == .spectomat/* ]] && continue
+            [[ -e "$f" ]] || printf '%s ' "$f"; done)
+is "NOTICE.md names only files that exist" "${missing% }" ""
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]

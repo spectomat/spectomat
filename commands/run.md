@@ -15,7 +15,7 @@ and the start of loops over `drafts → specs → plans → executed plans → d
 
 If the output ends in `❌ Not starting`, report why and stop.
 
-If the factory is armed, begin loop 1 now: follow the prompt printed at the end of the output. Every loop is one fresh `spectomat:looper` subagent (or `general-purpose` carrying the looper's brief, when that type is not listed) that reads the contract and does one phase; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every loop until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
+If the factory is armed, begin loop 1 now: follow the prompt printed at the end of the output. Each loop is one picker verdict, dispatched to a fresh phase agent (`spectomat:phase-a|b|c`, or `general-purpose` carrying the brief when that type is not listed), to `scripts/archive.sh`, or to the janitor; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every loop until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
 
 **This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue.
 
@@ -45,7 +45,7 @@ drafts/*.md  ──A──▶  specs/<slug>.md  ──B──▶  plans/<slug>.m
 
 Priority is D, C, B, A: work in progress is finished before the next spec is planned, and every spec is planned before the next draft is read. Every phase is a commit and a log line.
 
-| Phase | Reference (plugin `references/`, absolute path in `contract.md`) |
+| Phase | Reference (agent brief name, absolute path rendered into `contract.md`) |
 | --- | --- |
 | A · draft → spec | `writing-specs.md` |
 | B · spec → plan | `writing-plans.md` |

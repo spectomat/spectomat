@@ -168,7 +168,7 @@ require_startable() {
 }
 
 # Write the state file the Stop hook reads on every exit attempt. PLUGIN_ROOT
-# lets the pointer name agents/looper.md and references/ by absolute path.
+# lets the pointer name the phase briefs by absolute path.
 write_state() {
   render_template "$TEMPLATES/state.md" "$STATE_FILE" \
     PLUGIN_ROOT="$PLUGIN_ROOT" \

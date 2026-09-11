@@ -27,7 +27,7 @@
 
 ## The Flow
 
-The flow is a sequence of loops. Each loop is one fresh looper subagent that reads `contract.md` and does exactly one phase, the first that applies:
+The flow is a sequence of loops. Each loop is one picker verdict, dispatched to a fresh phase agent, to the archiver, or to the janitor. The picker reads the floor and prints one verdict per loop: `A <slug>`, `B <slug>`, `C <slug>`, `D <slug>`, `R`, or `E`.
 
 - **D** `finished plan` → `done/`, when every task step is ticked and the gates are green; the patch version in `package.json` becomes the slug's `NNN`,
 - **C×n** `plan` → `next wave of ready tasks`: one fresh implementer per task in parallel, TDD, one commit and one reviewed diff per task,
@@ -41,9 +41,7 @@ Work in progress is finished before a new draft is read. Drafts are read in inta
 
 The Stop hook runs when Claude tries to end its turn. While `state.md` exists for this session, the hook blocks the exit and returns the state prompt as the next input.
 
-The state launches the next loop's looper, so every phase starts with an empty context and the session itself only accumulates one short report per loop. The looper is the plugin agent `spectomat:looper`; where that type is not listed, a `general-purpose` subagent gets the same brief from `agents/looper.md`.
-
-The hook removes the state file, and so releases the session, on the promise, on the loop cap, or on a corrupt state file.
+The picker dispatches to exactly one phase per loop: `A <slug>` → a fresh phase agent writes an overview plus one task file per task (`phase-a.md`); `B <slug>` → a fresh phase agent writes spec → plan (`phase-b.md`); `C <slug>` → phase agent implements tasks with TDD and code review (`phase-c.md`); `D <slug>` → `scripts/archive.sh` ticks all steps, verifies gates, and moves the trail to `done/`; `R` → the archiver recovers from a dirty tree; `E` → the picker answered `E`, the floor is empty and the flow ends. Each loop emits one short report and the state file is removed.
 
 `contract.md` and `memory.md` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the factory believes about the codebase. Each is checked on its own, so a floor armed before `memory.md` existed gets it on the next `run`.
 
@@ -62,8 +60,12 @@ The hook removes the state file, and so releases the session, on the promise, on
 - **Plugin** a Claude Code plugin made of commands, a hooks, skills, scripts, templates and reference files etc.
 - **Command** is a slash command the user types: `/spectomat:run`, `/spectomat:status`, `/spectomat:cancel` or `/spectomat:help`. Each runs a script first, then tells Claude what to do with its output.
 - **Session** is the Claude Code session where `/spectomat:run` was called. It holds the flow, launches one subagent per loop and relays its report; it does no factory work itself.
-- **Loop** is one turn of the flow between two `Stop`-hook responses: one fresh looper, one phase, one commit, one log line.
-- **Looper** is the subagent that runs one loop: the plugin agent `spectomat:looper` (`agents/looper.md`), or `general-purpose` given that file's body as its brief when the plugin's agents are not listed.
+- **Loop** is one picker verdict, one phase, one commit, one log line.
+- **Picker** is the script `scripts/phase.sh` that prints one verdict per loop: `A <slug>`, `B <slug>`, `C <slug>`, `D <slug>`, `R`, or `E`.
+- **Phase agent** is a fresh subagent per phase: `spectomat:phase-a|b|c` or `spectomat:recover`; each brief contains the craft of its phase (`agents/phase-a.md`, `phase-b.md`, `phase-c.md`, `recover.md`).
+- **Archiver** is the script `scripts/archive.sh` that performs phase D: ticks all steps, verifies gates, moves the trail to `done/` and commits.
+- **Janitor** is the same as the Archiver: the script `scripts/archive.sh` recovers from a dirty tree by moving the current trail to `done/` and committing a blocked file.
+- **Verdict** is the one-line output of the picker: `A <slug>`, `B <slug>`, `C <slug>`, `D <slug>`, `R`, or `E`.
 - **Phase** is one of `A` (draft → spec), `B` (spec → plan), `C` (plan → wave of tasks), `D` (plan → done). A loop does exactly one.
 - **Wave** is the set of ready tasks of one plan whose files do not overlap, implemented in parallel within one phase `C` loop.
 - **Flow** is the sequence of loops from the first `/spectomat:run` until the promise `FACTORY EMPTY`.
