@@ -56,7 +56,10 @@ floor() {
 fixture_commit() {
   (
     cd "$FIXTURE" 2>/dev/null || { printf 'fixture_commit: no such fixture: %s\n' "$FIXTURE" >&2; exit 0; }
-    git add -A .spectomat >/dev/null 2>&1
+    # A failing `git add` stages nothing, which is indistinguishable from the
+    # normal no-op two lines down, so it gets its own diagnostic first.
+    git add -A .spectomat >/dev/null 2>&1 ||
+      { printf 'fixture_commit: git add failed in %s\n' "$FIXTURE" >&2; exit 0; }
     git diff --cached --quiet 2>/dev/null && exit 0
     git commit -qm fixture >/dev/null 2>&1 || printf 'fixture_commit: commit failed in %s\n' "$FIXTURE" >&2
   )
@@ -422,16 +425,30 @@ is "an empty floor predicts E"      "$(printf '%s\n' "$st_out" | grep -c '^E$')"
 # answers R to any dirt, so a wishlist move that stages the new draft but not
 # the removal of the file it came from burns loop 1 on the janitor.
 echo "run.sh intake"
-INTAKE="$TMP/intake"
-mkdir -p "$INTAKE/wishlist"
+
+# One `git init` for both cases, copied like floor() does: the two runs differ
+# only in whether the wish is in the index when run.sh moves it.
+INTAKE_TEMPLATE="$TMP/intake-template"
+mkdir -p "$INTAKE_TEMPLATE"
 (
-  cd "$INTAKE" || exit 1
+  cd "$INTAKE_TEMPLATE" || exit 1
   git init -q .
   git config user.email t@example.com
   git config user.name t
-  printf 'idea\n' > wishlist/thing.md
-  git add -A
+  printf 'x\n' > README.md
+  git add README.md
   git commit -qm init
+) >/dev/null 2>&1
+
+INTAKE="$TMP/intake"
+mkdir -p "$INTAKE"
+cp -R "$INTAKE_TEMPLATE/." "$INTAKE"
+mkdir -p "$INTAKE/wishlist"
+(
+  cd "$INTAKE" || exit 1
+  printf 'idea\n' > wishlist/thing.md
+  git add wishlist/thing.md
+  git commit -qm wish
 ) >/dev/null 2>&1
 (cd "$INTAKE" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
 is "intake leaves a clean tree" "$(cd "$INTAKE" && git status --porcelain)" ""
@@ -442,17 +459,10 @@ is "loop 1 is phase A"          "$(cd "$INTAKE" && bash "$SCRIPTS/phase.sh")" "A
 # An untracked wish has no removal to stage; arming must still leave a clean
 # tree and must not fail on a `git add` of a path that was never in the index.
 INTAKE2="$TMP/intake-untracked"
+mkdir -p "$INTAKE2"
+cp -R "$INTAKE_TEMPLATE/." "$INTAKE2"
 mkdir -p "$INTAKE2/wishlist"
-(
-  cd "$INTAKE2" || exit 1
-  git init -q .
-  git config user.email t@example.com
-  git config user.name t
-  printf 'x\n' > README.md
-  git add README.md
-  git commit -qm init
-  printf 'idea\n' > wishlist/thing.md
-) >/dev/null 2>&1
+printf 'idea\n' > "$INTAKE2/wishlist/thing.md"
 (cd "$INTAKE2" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
 is "an untracked wish arms cleanly" "$(cd "$INTAKE2" && git status --porcelain)" ""
 is "an untracked wish reaches A"    "$(cd "$INTAKE2" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
