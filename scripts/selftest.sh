@@ -77,6 +77,21 @@ logline() { printf '%s\n' "$1" >> "$FIXTURE/.spectomat/log.md"; }
 # dirty — leave an untracked file so `git status --porcelain` is not silent.
 dirty() { printf 'x\n' > "$FIXTURE/untracked.txt"; }
 
+# gates_block LINE... — a contract.md whose Verification Gates block holds LINE...
+gates_block() {
+  {
+    printf '# Contract\n\n## Verification Gates\n\nProse the parser must skip.\n\n'
+    printf '```bash\n'
+    printf '# project-specific gates, one command per line, You may change it\n'
+    printf '%s\n' "$@"
+    printf '```\n\n## Memory\n\n'
+    printf '```bash\n'
+    printf 'echo a later fence that must be ignored\n'
+    printf '```\n'
+  } > "$FIXTURE/.spectomat/contract.md"
+  fixture_commit
+}
+
 PASS=0; FAIL=0
 
 ok() { PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
@@ -161,6 +176,27 @@ err=$(fixture_commit 2>&1 1>/dev/null); rc=$?
 case "$err" in *"fixture_commit"*) got=yes ;; *) got=no ;; esac
 is "fixture_commit reports a broken fixture on stderr" "$got" "yes"
 is "fixture_commit still returns 0 on a broken fixture" "$rc" "0"
+
+echo "gate_block"
+gb() { is "$1" "$(cd "$FIXTURE" && gate_block | tr '\n' '|')" "$2"; }
+
+floor gb1; gates_block 'echo one' 'echo two'
+gb "two gate lines"            'echo one|echo two|'
+floor gb2; gates_block '# a comment' '' '   ' 'echo one'
+gb "comments and blanks drop"  'echo one|'
+floor gb3
+gb "no contract yields nothing" ''
+floor gb4; gates_block 'echo one'
+gb "a later fence is ignored"  'echo one|'
+
+echo "run_gates"
+floor rg1; gates_block 'true' 'true'
+( cd "$FIXTURE" && run_gates ); is "all gates pass" "$?" "0"
+floor rg2; gates_block 'false' 'touch ran'
+( cd "$FIXTURE" && run_gates ); is "a failing gate fails" "$?" "1"
+is "it stops at the first failure" "$([[ -e "$FIXTURE/ran" ]] && echo yes || echo no)" "no"
+( cd "$FIXTURE" && run_gates; printf '%s' "$GATE_FAILED" ) > "$TMP/gf"
+is "it names the failing gate" "$(cat "$TMP/gf")" "false"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
