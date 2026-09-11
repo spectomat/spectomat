@@ -91,12 +91,15 @@ run_gates() {
 }
 
 # How many times phase LETTER was struck on SLUG, per the factory log. The log
-# is gitignored and append-only, so this is the only record of a strike. A slug
-# containing a regex metacharacter can only over-match, never under-match.
+# is gitignored and append-only, so this is the only record of a strike. Both
+# matches are fixed-string (grep -F), so a slug carrying regex metacharacters
+# such as parentheses or an unclosed bracket is matched literally, never as a
+# pattern: it cannot fail to compile and it cannot accidentally match less
+# than the literal text.
 strike_count() {
   local letter="$1" slug="$2" n
   [[ -f "$FLOOR/log.md" ]] || { echo 0; return 0; }
-  n=$(grep -cE "^- .* · $letter · $slug · .*\(strike " "$FLOOR/log.md" 2>/dev/null) || n=0
+  n=$(grep -F " · $letter · $slug · " "$FLOOR/log.md" 2>/dev/null | grep -cF '(strike ') || n=0
   printf '%s\n' "${n// /}"
 }
 

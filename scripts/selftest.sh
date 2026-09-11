@@ -224,6 +224,12 @@ is "another slug is separate"  "$(cd "$FIXTURE" && strike_count C 002-b)" "0"
 logline '- 2026-09-11T10:20Z · C · 001-a · wave 2 done'
 is "a clean line is not a strike" "$(cd "$FIXTURE" && strike_count C 001-a)" "2"
 
+floor sc2
+logline '- t · C · 001-my idea (draft) · x (strike 1: gate red)'
+is "a slug with a balanced metachar counts" "$(cd "$FIXTURE" && strike_count C '001-my idea (draft)')" "1"
+logline '- t · C · 001-a[ · x (strike 1: gate red)'
+is "a slug with an unbalanced bracket counts" "$(cd "$FIXTURE" && strike_count C '001-a[')" "1"
+
 echo "least_struck"
 floor ls1
 ls_pick() { ( cd "$FIXTURE" && printf '%s\n' "$@" | least_struck C ); }
