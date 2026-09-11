@@ -443,6 +443,8 @@ Filled during the build. One row per divergence from Part I.
 
 | Id | Sections | Contradiction | Reading built to |
 | --- | --- | --- | --- |
+| R1 | §5.1, §3.5 | The `pick_phase` pseudocode prints `E` once no stage matches, but §3.5 and AC-1.6 require `E` to mean all three directories are empty. A floor can match no stage and still hold files: an orphan plan overview whose spec was deleted, or a slug parked at `STRIKE_LIMIT` that was never blocked. | After the four stages the picker prints `E` only when `drafts/`, `specs/` and `plans/` are empty; anything left over prints `R`. The janitor's brief widens from "a dirty tree" to "a dirty tree, or a floor the picker could not classify", and gains the two block-moves that clear those cases. |
+| R2 | §3.3, §6.4 | The task line is specified as the verdict line verbatim, but phase A must read `templates/spec.md`, phase B `templates/plan.md` and `templates/task.md`, and phase C `prompts/implementer.md` and `prompts/reviewer.md` — all plugin files reachable only by absolute path. | The task line is two lines: the verdict, then `Plugin root: <absolute path>`. §6.3 is unaffected — a brief still carries no plugin path of its own; it is told one at dispatch, exactly as the old task line told the looper where `references/` lived. |
 
 # Part II — Building it
 
