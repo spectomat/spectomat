@@ -212,5 +212,42 @@ is "it stops at the first failure" "$([[ -e "$FIXTURE/ran" ]] && echo yes || ech
 ( cd "$FIXTURE" && run_gates; printf '%s' "$GATE_FAILED" ) > "$TMP/gf"
 is "it names the failing gate" "$(cat "$TMP/gf")" "false"
 
+echo "strike_count"
+floor sc1
+is "no log entry is zero" "$(cd "$FIXTURE" && strike_count C 001-a)" "0"
+logline '- 2026-09-11T10:00Z · C · 001-a · wave 1 (strike 1: gate red)'
+is "one strike counts"    "$(cd "$FIXTURE" && strike_count C 001-a)" "1"
+logline '- 2026-09-11T10:10Z · C · 001-a · wave 1 (strike 2: gate red)'
+is "two strikes count"    "$(cd "$FIXTURE" && strike_count C 001-a)" "2"
+is "another phase is separate" "$(cd "$FIXTURE" && strike_count B 001-a)" "0"
+is "another slug is separate"  "$(cd "$FIXTURE" && strike_count C 002-b)" "0"
+logline '- 2026-09-11T10:20Z · C · 001-a · wave 2 done'
+is "a clean line is not a strike" "$(cd "$FIXTURE" && strike_count C 001-a)" "2"
+
+echo "least_struck"
+floor ls1
+ls_pick() { ( cd "$FIXTURE" && printf '%s\n' "$@" | least_struck C ); }
+is "single candidate"        "$(ls_pick 001-a)" "001-a"
+is "no candidates"           "$(ls_pick)" ""
+is "ties go alphabetically"  "$(ls_pick 001-a 002-b)" "001-a"
+logline '- t · C · 001-a · x (strike 1)'
+is "fewer strikes wins"      "$(ls_pick 001-a 002-b)" "002-b"
+logline '- t · C · 002-b · x (strike 1)'
+logline '- t · C · 002-b · x (strike 2)'
+is "fewest strikes wins"     "$(ls_pick 001-a 002-b)" "001-a"
+logline '- t · C · 001-a · x (strike 2)'
+logline '- t · C · 001-a · x (strike 3)'
+is "a slug at the limit is skipped" "$(ls_pick 001-a 002-b)" "002-b"
+logline '- t · C · 002-b · x (strike 3)'
+is "all at the limit yields nothing" "$(ls_pick 001-a 002-b)" ""
+is "a slug with a space survives" "$(ls_pick '003-my idea')" "003-my idea"
+
+echo "next_version"
+is "patch becomes NNN"      "$(next_version 0.1.8 003-auth)" "0.1.3"
+is "leading zeros are decimal" "$(next_version 2.4.0 008-x)" "2.4.8"
+is "no octal surprise"      "$(next_version 1.0.0 009-x)" "1.0.9"
+is "three digits"           "$(next_version 1.2.3 120-x)" "1.2.120"
+next_version 1.0.0 no-number >/dev/null 2>&1; is "a slug with no NNN fails" "$?" "1"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
