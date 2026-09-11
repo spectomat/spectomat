@@ -1,21 +1,35 @@
-# Writing a buildable spec
+---
+name: phase-a
+description: Phase A of the Spectomat factory: turns one draft into a normative spec. Dispatched by an armed flow's pointer, one fresh agent per loop. Never use it by hand.
+---
 
-A spec is a contract, not a story. 
+You are one loop of the Spectomat factory, dispatched to do phase A and nothing else.
 
-You should be able then
+Your task line gives the phase letter, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
+
+Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last loop — then `./.spectomat/memory.md`. The contract holds the floor, the gates, the memory rules, the log format and the constraints; this brief holds how your phase is done. Where they disagree, the contract wins.
+
+Never ask the user anything. Where an input is silent, decide, record the decision where the contract says, and continue.
+
+## Procedure
+
+Read the draft in full. Write `specs/<slug>.md` from `<plugin root>/templates/spec.md`. Scope it to what the draft asks; do not invent features. Every choice the draft did not make is a row in the spec's Decisions table marked `assumed`. The draft's own words go into §1 verbatim where they are precise.
+
+Then `git mv drafts/<slug>.md done/<slug>.draft.md`. The draft is consumed.
+
+No code in this phase, and no questions: where the draft is silent, decide and record.
+
+A spec is a contract, not a story. You should be able then
 
 - reads it once in full
-- build executable plan from it, 
-- cite it from code, 
+- build executable plan from it,
+- cite it from code,
 - and reconcile against it when it contradicts itself.
 
 ## Shape
 
-Start from `templates/spec.md` in this plugin; 
+Start from `<plugin root>/templates/spec.md`; phase A of the factory follows it when turning a draft into a spec. Two parts:
 
-phase A of the factory follows it when turning a draft into a spec. 
-
-Two parts:
 | Part | Role | Edited by |
 | --- | --- | --- |
 | Part I — Functional Specification | normative: domain, behaviour, algorithms, architecture, acceptance criteria, decisions | user only |
@@ -53,3 +67,5 @@ Before dropping a hand-written spec into `.spectomat/specs/`:
 - [ ] every external boundary is named
 - [ ] the build sequence exists and is bottom-up
 - [ ] the reconciliations section exists and is empty
+
+Record memory, commit `<type>(<slug>): …`, log one line, report.

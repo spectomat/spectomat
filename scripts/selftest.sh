@@ -366,5 +366,21 @@ n0=$(commits); arc 001-a
 is "both destinations blocked exits non-zero" "$?" "1"
 is "zero new commits when nothing could move" "$(( $(commits) - n0 ))" "0"
 
+echo "briefs"
+AGENTS="$(dirname "$SCRIPTS")/agents"
+for a in phase-a phase-b phase-c recover; do
+  is "agents/$a.md exists" "$([[ -f "$AGENTS/$a.md" ]] && echo yes || echo no)" "yes"
+  is "agents/$a.md is named $a" "$(sed -n 's/^name: *//p' "$AGENTS/$a.md" | head -1)" "$a"
+  is "agents/$a.md has a description" \
+    "$(grep -c '^description: ' "$AGENTS/$a.md")" "1"
+done
+is "AGENT_COUNT is 4" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "4"
+is "the looper is gone"     "$([[ -e "$AGENTS/looper.md" ]] && echo yes || echo no)" "no"
+is "references/ is gone"    "$([[ -d "$(dirname "$SCRIPTS")/references" ]] && echo yes || echo no)" "no"
+is "no brief names references/" "$(grep -l 'references/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
+is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
+is "phase-c names both prompts" \
+  "$(grep -cE 'prompts/(implementer|reviewer)\.md' "$AGENTS/phase-c.md" | tr -d ' ')" "2"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
