@@ -14,6 +14,7 @@ main() {
     exit 0
   fi
   print_floor
+  print_next
   print_plans
   print_blocked
   print_log_tail

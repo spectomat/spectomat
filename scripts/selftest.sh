@@ -409,5 +409,14 @@ is "the memory rules came back"  "$(grep -c '^## Memory' "$C")" "1"
 floor mig2
 ( cd "$FIXTURE" && migrate_contract ); is "no contract is nothing to do" "$?" "1"
 
+echo "status"
+floor st; spec 001-a; plan 001-a 2 1
+st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
+is "status prints the next section" "$(printf '%s\n' "$st_out" | grep -c '^--- next ---$')" "1"
+is "status predicts the verdict"    "$(printf '%s\n' "$st_out" | grep -c '^C 001-a$')" "1"
+floor st2
+st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
+is "an empty floor predicts E"      "$(printf '%s\n' "$st_out" | grep -c '^E$')" "1"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]

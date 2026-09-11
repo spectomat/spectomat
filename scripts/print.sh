@@ -61,3 +61,10 @@ print_commits() {
   echo "--- last commits ---"
   git log --oneline -5 2>/dev/null || echo "(no git)"
 }
+
+# What the next loop will do. This runs the picker itself rather than
+# re-deriving the answer, so the prediction cannot drift from the decision.
+print_next() {
+  echo "--- next ---"
+  bash "$PLUGIN_ROOT/scripts/phase.sh"
+}

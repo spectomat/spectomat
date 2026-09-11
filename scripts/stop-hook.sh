@@ -104,7 +104,7 @@ continue_loop() {
   sed "s/^loop: .*/loop: $next_loop/" "$STATE_FILE" > "$temp_file"
   mv "$temp_file" "$STATE_FILE"
 
-  system_msg="🔄 Spectomat loop $next_loop | To stop: output <promise>FACTORY EMPTY</promise> (ONLY when the statement is TRUE - do not lie to exit!)"
+  system_msg="🔄 Spectomat loop $next_loop | Ends when scripts/phase.sh answers E, or at the cap ($MAX_LOOPS)"
 
   jq -n \
     --arg prompt "$prompt_text" \

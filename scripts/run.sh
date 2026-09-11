@@ -187,9 +187,8 @@ State: $STATE_FILE
 Cancel: /spectomat:cancel
 
 When you try to exit, the Stop hook feeds the prompt below back to you.
-To finish, output <promise>FACTORY EMPTY</promise> — ONLY when drafts/,
-specs/ and plans/ are all empty and the tree is clean, verified this loop.
-Never output a false promise to escape.
+Each loop asks scripts/phase.sh which phase applies and dispatches it.
+The flow ends when the picker answers E, or at the loop cap.
 EOF
   awk '/^---$/{i++; next} i>=2' "$STATE_FILE"
 }
