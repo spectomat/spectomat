@@ -127,7 +127,12 @@ render_factory() {
   fi
 
   if [[ -f "$CONTRACT" ]]; then
-    echo "$CONTRACT: exists, kept"
+    if migrate_contract; then
+      STAGE+=("$CONTRACT")
+      echo "$CONTRACT: migrated to the phase-agent contract (gates preserved)"
+    else
+      echo "$CONTRACT: exists, kept"
+    fi
   else
     detect_gates
     echo "gates: ${GATES:-none detected}"

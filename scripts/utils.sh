@@ -132,3 +132,18 @@ next_version() {
     "$(printf '%s' "$cur" | cut -d. -f2)" \
     "$((10#$n))"
 }
+
+# Rewrite a pre-migration contract from the current template, carrying the
+# operator's gate lines across verbatim. A contract that no longer has a
+# "## Phases" section is already current and is left alone. Exit 0 when it
+# rewrote the file, 1 when there was nothing to do. The previous text stays in
+# git history, because the contract is committed.
+migrate_contract() {
+  local gates
+  [[ -f "$CONTRACT" ]] || return 1
+  grep -q '^## Phases' "$CONTRACT" || return 1
+  gates=$(gate_block)
+  render_template "$PLUGIN_ROOT/templates/contract.md" "$CONTRACT" \
+    REPO="$(pwd)" \
+    GATES="$gates"
+}

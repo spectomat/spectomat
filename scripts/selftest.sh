@@ -106,6 +106,20 @@ gates_block() {
   fixture_commit
 }
 
+# old_contract LINE... — a pre-migration contract: a "## Phases" section and a
+# Verification Gates block holding LINE...
+old_contract() {
+  {
+    printf '# Spectomat Factory\n\n## The floor\n\nfloor text\n\n'
+    printf '## Phases\n\n### A · Draft → Spec\n\nold phase craft\n\n'
+    printf '## Verification Gates\n\n'
+    printf '```bash\n# project-specific gates, one command per line\n'
+    printf '%s\n' "$@"
+    printf '```\n\n## Memory\n\nmemory rules\n'
+  } > "$FIXTURE/.spectomat/contract.md"
+  fixture_commit
+}
+
 PASS=0; FAIL=0
 
 ok() { PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
@@ -381,6 +395,19 @@ is "no brief names references/" "$(grep -l 'references/' "$AGENTS"/*.md | wc -l 
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "phase-c names both prompts" \
   "$(grep -cE 'prompts/(implementer|reviewer)\.md' "$AGENTS/phase-c.md" | tr -d ' ')" "2"
+
+echo "migrate_contract"
+floor mig; old_contract 'npm run custom-gate' 'bash ci/extra.sh'
+( cd "$FIXTURE" && migrate_contract ); is "an old contract migrates" "$?" "0"
+C="$FIXTURE/.spectomat/contract.md"
+is "the phases section is gone"  "$(grep -c '^## Phases' "$C")" "0"
+is "the marker is there"         "$(grep -c '^<!-- spectomat-contract: 2 -->' "$C")" "1"
+is "the first gate survived"     "$(grep -c '^npm run custom-gate$' "$C")" "1"
+is "the second gate survived"    "$(grep -c '^bash ci/extra.sh$' "$C")" "1"
+is "the memory rules came back"  "$(grep -c '^## Memory' "$C")" "1"
+( cd "$FIXTURE" && migrate_contract ); is "a migrated contract is left alone" "$?" "1"
+floor mig2
+( cd "$FIXTURE" && migrate_contract ); is "no contract is nothing to do" "$?" "1"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
