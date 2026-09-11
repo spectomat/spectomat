@@ -58,7 +58,6 @@ A Claude Code plugin, not an application. No dependencies, no build.
   - `cancel.sh` removes the state file and reports the loop it was at,
   - `gates.sh` compiles the gate command from `package.json` scripts; `run` renders it into the contract's Verification Gates block.
 
-
 - `templates/`
   - `guide.md` (the user guide `/spectomat:help` prints),
   - `contract.md` (placeholders `{{REPO}}` and `{{GATES}}`),
