@@ -18,13 +18,17 @@ TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 # input to the picker and must not be stubbed.
 
 FIXTURE=""
+TEMPLATE=""
 
-# floor NAME — fresh repo with an empty, clean floor. Sets FIXTURE.
-floor() {
-  FIXTURE="$TMP/floor-$1"
-  mkdir -p "$FIXTURE/.spectomat"/{drafts,specs,plans,done}
+# Build the one pristine floor repo the whole suite copies from. A `git init`
+# plus commit is expensive next to the rest of this suite, and floor() runs
+# dozens of times across all the fixtures below, so it pays to do it once and
+# `cp -R` a real repo instead of re-running git init/config/commit per call.
+floor_template() {
+  TEMPLATE="$TMP/floor-template"
+  mkdir -p "$TEMPLATE/.spectomat"/{drafts,specs,plans,done}
   (
-    cd "$FIXTURE" || exit 1
+    cd "$TEMPLATE" || exit 1
     git init -q .
     git config user.email t@example.com
     git config user.name t
@@ -33,6 +37,16 @@ floor() {
     git add .gitignore
     git commit -qm init
   )
+}
+
+# floor NAME — fresh repo with an empty, clean floor. Sets FIXTURE.
+# A copy of a real git repo is still a real git repo: `git status --porcelain`
+# in the copy reports exactly what it would in a freshly `git init`ed one.
+floor() {
+  [[ -n "$TEMPLATE" ]] || floor_template
+  FIXTURE="$TMP/floor-$1"
+  mkdir -p "$FIXTURE"
+  cp -R "$TEMPLATE/." "$FIXTURE"
 }
 
 # Commit whatever the last fixture helper created, so the tree stays clean.
