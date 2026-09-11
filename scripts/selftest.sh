@@ -418,6 +418,45 @@ floor st2
 st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
 is "an empty floor predicts E"      "$(printf '%s\n' "$st_out" | grep -c '^E$')" "1"
 
+# Arming a floor must leave a clean tree. The picker reads `git status` and
+# answers R to any dirt, so a wishlist move that stages the new draft but not
+# the removal of the file it came from burns loop 1 on the janitor.
+echo "run.sh intake"
+INTAKE="$TMP/intake"
+mkdir -p "$INTAKE/wishlist"
+(
+  cd "$INTAKE" || exit 1
+  git init -q .
+  git config user.email t@example.com
+  git config user.name t
+  printf 'idea\n' > wishlist/thing.md
+  git add -A
+  git commit -qm init
+) >/dev/null 2>&1
+(cd "$INTAKE" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
+is "intake leaves a clean tree" "$(cd "$INTAKE" && git status --porcelain)" ""
+is "the draft is committed"     "$(cd "$INTAKE" && git log -1 --name-only --format= | grep -c 'drafts/001-thing.md')" "1"
+is "the wish is gone from HEAD" "$(cd "$INTAKE" && git ls-tree -r --name-only HEAD | grep -c '^wishlist/')" "0"
+is "loop 1 is phase A"          "$(cd "$INTAKE" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
+
+# An untracked wish has no removal to stage; arming must still leave a clean
+# tree and must not fail on a `git add` of a path that was never in the index.
+INTAKE2="$TMP/intake-untracked"
+mkdir -p "$INTAKE2/wishlist"
+(
+  cd "$INTAKE2" || exit 1
+  git init -q .
+  git config user.email t@example.com
+  git config user.name t
+  printf 'x\n' > README.md
+  git add README.md
+  git commit -qm init
+  printf 'idea\n' > wishlist/thing.md
+) >/dev/null 2>&1
+(cd "$INTAKE2" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
+is "an untracked wish arms cleanly" "$(cd "$INTAKE2" && git status --porcelain)" ""
+is "an untracked wish reaches A"    "$(cd "$INTAKE2" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
+
 # The retired vocabulary. This file names the retired words in order to scan
 # for them, so it leaves itself out of its own scan, as the perl check does.
 # docs/ is excluded: it records the design that removed them.

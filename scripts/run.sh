@@ -19,6 +19,7 @@ TEMPLATES="$PLUGIN_ROOT/templates"
 MAX_LOOPS=100
 STAGE=()     # files run.sh created this run, committed by commit_floor
 IGNORED=()   # .gitignore lines run.sh appended this run, staged by commit_floor
+MOVED=()     # tracked wishes this run moved out of wishlist/; their removal is staged too
 
 # --- helpers ---
 
@@ -81,6 +82,13 @@ intake_wishes() {
     fi
     n=$((n + 1))
     printf -v slug '%03d-%s' "$n" "$name"
+    # A wish already in the index leaves a staged removal behind when it moves.
+    # Nothing stages that for us, and the picker answers R to any dirty tree, so
+    # the path is remembered here and added alongside the new draft. An untracked
+    # wish is skipped: `git add` on a path that was never in the index fails.
+    if git ls-files --error-unmatch -- "$wish" >/dev/null 2>&1; then
+      MOVED+=("$wish")
+    fi
     mv "$wish" "$FLOOR/drafts/$slug"
     echo "wishlist: $name moved to drafts/$slug"
   done < <(ls -tr wishlist/*.md 2>/dev/null)
@@ -99,10 +107,11 @@ stage_ignore_entries() {
   git update-index --add --cacheinfo "100644,$blob,.gitignore"
 }
 
-# Commit what this run created — contract, memory, ignore rules, new drafts — so the
-# flow starts on a clean tree. Nothing else of the user's is staged.
+# Commit what this run created — contract, memory, ignore rules, new drafts — plus
+# the removal of the wishes those drafts came from, so the flow starts on a clean
+# tree. Nothing else of the user's is staged.
 commit_floor() {
-  git add "$FLOOR/drafts" ${STAGE[@]+"${STAGE[@]}"}
+  git add "$FLOOR/drafts" ${STAGE[@]+"${STAGE[@]}"} ${MOVED[@]+"${MOVED[@]}"}
   [[ ${#IGNORED[@]} -eq 0 ]] || stage_ignore_entries
   git diff --cached --quiet && return 0
   local n msg="chore(spectomat): floor setup"
