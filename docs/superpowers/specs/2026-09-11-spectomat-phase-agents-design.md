@@ -421,7 +421,7 @@ The new contract carries a marker `<!-- spectomat-contract: 2 -->` as its first 
 | Target | Measured by |
 | --- | --- |
 | `phase.sh` completes in under 200 ms on a floor of 20 plans | `time` in the scratch repo; it is on the path of every loop and of `status` |
-| `selftest.sh` still runs in under a second | its own wall time |
+| `selftest.sh` runs in under three seconds, and one `floor()` call costs at or below ~20ms | its own wall time; the per-call figure by A/B against a run with extra calls appended |
 | bash 3.2 compatible, no GNU-only flags, `jq` the only non-base dependency | the existing dependency test in `selftest.sh`, extended |
 
 ## 10. Decisions
@@ -445,6 +445,7 @@ Filled during the build. One row per divergence from Part I.
 | --- | --- | --- | --- |
 | R1 | §5.1, §3.5 | The `pick_phase` pseudocode prints `E` once no stage matches, but §3.5 and AC-1.6 require `E` to mean all three directories are empty. A floor can match no stage and still hold files: an orphan plan overview whose spec was deleted, or a slug parked at `STRIKE_LIMIT` that was never blocked. | After the four stages the picker prints `E` only when `drafts/`, `specs/` and `plans/` are empty; anything left over prints `R`. The janitor's brief widens from "a dirty tree" to "a dirty tree, or a floor the picker could not classify", and gains the two block-moves that clear those cases. |
 | R2 | §3.3, §6.4 | The task line is specified as the verdict line verbatim, but phase A must read `templates/spec.md`, phase B `templates/plan.md` and `templates/task.md`, and phase C `prompts/implementer.md` and `prompts/reviewer.md` — all plugin files reachable only by absolute path. | The task line is two lines: the verdict, then `Plugin root: <absolute path>`. §6.3 is unaffected — a brief still carries no plugin path of its own; it is told one at dispatch, exactly as the old task line told the looper where `references/` lived. |
+| R3 | §9.3 | The non-functional target "`selftest.sh` still runs in under a second" was carried over from the file's own header, written when the suite was 29 pure-text assertions that spawned no subprocesses. The suite this spec designs creates roughly 36 real repositories and runs ~120 assertions, most through command substitutions that spawn a subprocess each. At Task 3 it measured 0.904s, 1.213s and 1.295s across three runs, with user time steady at 0.35-0.39s — the variance is filesystem and process-spawn time, not computation. | The target becomes three seconds, and gains a second half the one-second figure never had: the marginal cost of one `floor()` call must stay at or below ~20ms. This is a recalibration to what is being measured, not a weakened gate — the per-call cost IMPROVED 8-10x in Task 2 (from ~150ms), and the per-call clause is what would catch a real regression, which a wall-clock total cannot once the suite's scope grows. The "no network" half of the constraint is untouched. |
 
 # Part II — Building it
 
