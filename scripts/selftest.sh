@@ -255,5 +255,58 @@ is "no octal surprise"      "$(next_version 1.0.0 009-x)" "1.0.9"
 is "three digits"           "$(next_version 1.2.3 120-x)" "1.2.120"
 next_version 1.0.0 no-number >/dev/null 2>&1; is "a slug with no NNN fails" "$?" "1"
 
+echo "phase.sh"
+pk() { is "$1" "$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")" "$2"; }
+
+floor p_empty
+pk "empty floor is E" "E"
+
+floor p_a; draft 001-a
+pk "a draft is A" "A 001-a"
+
+floor p_b; spec 001-a
+pk "a spec with no plan is B" "B 001-a"
+
+floor p_bare; spec 001-a; plan_bare 001-a
+pk "an overview with no task files is B" "B 001-a"
+
+floor p_c; spec 001-a; plan 001-a 3 1
+pk "an open step is C" "C 001-a"
+
+floor p_d; spec 001-a; plan 001-a 3 0
+pk "every step ticked is D" "D 001-a"
+
+floor p_vacuous; spec 001-a; plan_bare 001-a
+mkdir -p "$FIXTURE/.spectomat/plans/001-a"
+pk "an empty task dir is never D" "B 001-a"
+
+floor p_order; draft 004-d; spec 003-c; plan 002-b 2 1; spec 002-b; spec 001-a; plan 001-a 2 0
+pk "D outranks C, B and A" "D 001-a"
+
+floor p_dirty; draft 001-a; dirty
+pk "a dirty tree is R" "R"
+
+floor p_dirty_empty; dirty
+pk "a dirty tree beats E" "R"
+
+floor p_strike; draft 001-a; draft 002-b
+logline '- t · A · 001-a · x (strike 1)'
+pk "the less-struck draft wins" "A 002-b"
+
+floor p_blocked; draft 001-a
+logline '- t · A · 001-a · x (strike 1)'
+logline '- t · A · 001-a · x (strike 2)'
+logline '- t · A · 001-a · x (strike 3)'
+pk "a leftover at the limit is R, not E" "R"
+
+floor p_orphan; plan_bare 001-a
+pk "an orphan overview is R, not E" "R"
+
+floor p_pure; spec 001-a; plan 001-a 2 1
+before=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "$FIXTURE" && git status --porcelain)
+pk "the picker still says C" "C 001-a"
+after=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "$FIXTURE" && git status --porcelain)
+is "the picker mutates nothing" "$after" "$before"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
