@@ -12,6 +12,60 @@ SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 source "$SCRIPTS/utils.sh"
 
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+
+# --- floor fixtures -------------------------------------------------------
+# Every fixture is a real git repo: `git status --porcelain` is normative
+# input to the picker and must not be stubbed.
+
+FIXTURE=""
+
+# floor NAME — fresh repo with an empty, clean floor. Sets FIXTURE.
+floor() {
+  FIXTURE="$TMP/floor-$1"
+  mkdir -p "$FIXTURE/.spectomat"/{drafts,specs,plans,done}
+  (
+    cd "$FIXTURE" || exit 1
+    git init -q .
+    git config user.email t@example.com
+    git config user.name t
+    printf '%s\n' '.spectomat/state.md' '.spectomat/work/' '.spectomat/log.md' > .gitignore
+    printf '# Spectomat factory log\n\n' > .spectomat/log.md
+    git add .gitignore
+    git commit -qm init
+  )
+}
+
+# Commit whatever the last fixture helper created, so the tree stays clean.
+fixture_commit() { ( cd "$FIXTURE" && git add -A .spectomat && git commit -qm fixture >/dev/null 2>&1 ); return 0; }
+
+draft() { printf 'idea\n' > "$FIXTURE/.spectomat/drafts/$1.md"; fixture_commit; }
+spec()  { printf 'spec\n' > "$FIXTURE/.spectomat/specs/$1.md";  fixture_commit; }
+
+# plan SLUG TASKS OPEN — an overview plus TASKS task files, the first OPEN
+# of them carrying an unchecked step and the rest ticked.
+plan() {
+  local slug="$1" tasks="$2" open="$3" i box f
+  printf 'overview\n' > "$FIXTURE/.spectomat/plans/$slug.md"
+  mkdir -p "$FIXTURE/.spectomat/plans/$slug"
+  i=1
+  while [[ $i -le $tasks ]]; do
+    if [[ $i -le $open ]]; then box='- [ ] step'; else box='- [x] step'; fi
+    printf -v f '%s/.spectomat/plans/%s/task-%02d-x.md' "$FIXTURE" "$slug" "$i"
+    printf '%s\n' "$box" > "$f"
+    i=$((i + 1))
+  done
+  fixture_commit
+}
+
+# plan_bare SLUG — an overview with no task directory: a phase B that died.
+plan_bare() { printf 'overview\n' > "$FIXTURE/.spectomat/plans/$1.md"; fixture_commit; }
+
+# logline TEXT — append to the gitignored factory log; never committed.
+logline() { printf '%s\n' "$1" >> "$FIXTURE/.spectomat/log.md"; }
+
+# dirty — leave an untracked file so `git status --porcelain` is not silent.
+dirty() { printf 'x\n' > "$FIXTURE/untracked.txt"; }
+
 PASS=0; FAIL=0
 
 ok() { PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
@@ -74,6 +128,18 @@ ep "empty tag"         '<promise></promise>'                              no
 echo "dependencies"
 hits=$(grep -ln 'perl' "$SCRIPTS"/*.sh 2>/dev/null | grep -v '/selftest\.sh$' | tr '\n' ' ')
 is "scripts invoke no perl" "${hits% }" ""
+
+echo "fixtures"
+floor clean
+is "fresh fixture is clean"     "$(cd "$FIXTURE" && git status --porcelain)" ""
+floor dirt; dirty
+is "dirty() dirties the tree"   "$(cd "$FIXTURE" && git status --porcelain)" "?? untracked.txt"
+floor counted; plan 001-a 3 1
+is "plan() writes N task files" "$(ls "$FIXTURE/.spectomat/plans/001-a" | wc -l | tr -d ' ')" "3"
+is "plan() leaves OPEN open"    "$(grep -lE '^- \[ \]' "$FIXTURE"/.spectomat/plans/001-a/*.md | wc -l | tr -d ' ')" "1"
+is "plan() ticks the rest"      "$(grep -lE '^- \[x\]' "$FIXTURE"/.spectomat/plans/001-a/*.md | wc -l | tr -d ' ')" "2"
+floor bare; plan_bare 002-b
+is "plan_bare() has no task dir" "$([[ -d "$FIXTURE/.spectomat/plans/002-b" ]] && echo yes || echo no)" "no"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
