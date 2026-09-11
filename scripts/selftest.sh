@@ -36,7 +36,18 @@ floor() {
 }
 
 # Commit whatever the last fixture helper created, so the tree stays clean.
-fixture_commit() { ( cd "$FIXTURE" && git add -A .spectomat && git commit -qm fixture >/dev/null 2>&1 ); return 0; }
+# Staging only gitignored paths (e.g. logline's log.md) is a normal no-op and
+# must stay silent. A real failure — bad $FIXTURE, a git error — must not
+# vanish into that same silence, so it gets a diagnostic on stderr instead.
+fixture_commit() {
+  (
+    cd "$FIXTURE" 2>/dev/null || { printf 'fixture_commit: no such fixture: %s\n' "$FIXTURE" >&2; exit 0; }
+    git add -A .spectomat >/dev/null 2>&1
+    git diff --cached --quiet 2>/dev/null && exit 0
+    git commit -qm fixture >/dev/null 2>&1 || printf 'fixture_commit: commit failed in %s\n' "$FIXTURE" >&2
+  )
+  return 0
+}
 
 draft() { printf 'idea\n' > "$FIXTURE/.spectomat/drafts/$1.md"; fixture_commit; }
 spec()  { printf 'spec\n' > "$FIXTURE/.spectomat/specs/$1.md";  fixture_commit; }
@@ -140,6 +151,16 @@ is "plan() leaves OPEN open"    "$(grep -lE '^- \[ \]' "$FIXTURE"/.spectomat/pla
 is "plan() ticks the rest"      "$(grep -lE '^- \[x\]' "$FIXTURE"/.spectomat/plans/001-a/*.md | wc -l | tr -d ' ')" "2"
 floor bare; plan_bare 002-b
 is "plan_bare() has no task dir" "$([[ -d "$FIXTURE/.spectomat/plans/002-b" ]] && echo yes || echo no)" "no"
+
+floor quiet; logline note
+out=$(fixture_commit 2>&1)
+is "fixture_commit is silent for a gitignored-only change" "$out" ""
+
+FIXTURE="$TMP/no-such-fixture"
+err=$(fixture_commit 2>&1 1>/dev/null); rc=$?
+case "$err" in *"fixture_commit"*) got=yes ;; *) got=no ;; esac
+is "fixture_commit reports a broken fixture on stderr" "$got" "yes"
+is "fixture_commit still returns 0 on a broken fixture" "$rc" "0"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
