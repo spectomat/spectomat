@@ -175,7 +175,7 @@ Normative notes, each of which a naive reading would get wrong:
 1. **`D` is tested before `C`**, matching the contract's priority: work in progress is finished before anything new starts.
 2. **`D` requires at least one task file.** A plan directory with no task files has no unchecked step and would otherwise satisfy `D` vacuously, archiving an unbuilt plan.
 3. **`B` also claims a plan overview with no task files.** Phase B's output is the overview plus the task files; an overview without them is a phase B that did not finish, and re-running B overwrites it. Without this clause such a plan matches no stage and is stranded for the life of the floor. This is a defect in the current contract, fixed here.
-4. **`R` precedes every stage test and `E`**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit.
+4. **`R` precedes every stage test and `E`**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit. That reading is only sound because §5.5 checks every mutation: an unchecked failure there can commit a partial move and leave the tree CLEAN, in which case `R` never fires and the janitor never runs. The picker cannot detect that state — the archiver has to not create it.
 5. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
 
 ### 5.2 `least_struck` — `scripts/utils.sh`
@@ -237,15 +237,27 @@ archive(slug):
   else:
       block = ''
 
-  git mv specs/<slug>.md  done/<slug>.spec<block>.md
-  git mv plans/<slug>.md  done/<slug>.plan<block>.md
-  git mv plans/<slug>     done/<slug>
+  # Every mutation below is checked. Under `set -uo pipefail` with no `-e` a
+  # failed command does not abort, and an unchecked failure here is the one
+  # defect this whole design cannot survive: a partial move that still commits
+  # leaves a CLEAN tree, so the picker never answers `R`, the janitor never
+  # runs, and a spec whose plan was already archived reads as a fresh phase B.
+  # `strike_and_exit` logs a strike in the same shape `gate_or_strike` uses, so
+  # `strike_count` counts it and the slug blocks after three, then exits 1
+  # leaving the tree exactly as it landed — dirty for the janitor if a move
+  # partially applied, unchanged and safe to retry if none did.
+
+  git mv specs/<slug>.md  done/<slug>.spec<block>.md  or strike_and_exit
+  git mv plans/<slug>.md  done/<slug>.plan<block>.md  or strike_and_exit
+  if isdir(plans/<slug>):
+      git mv plans/<slug>  done/<slug>              or strike_and_exit
 
   if exists(package.json) and block == '':
       N = slug's NNN prefix as an integer
       npm version --no-git-tag-version <major>.<minor>.<N>
 
   git commit -m 'chore(<slug>): archived' (or '… blocked after 3 strikes')
+      or strike_and_exit
   log '- <ts> · D · <slug> · archived · gates <total>/<total> · v<version>'
 ```
 
@@ -447,6 +459,7 @@ Filled during the build. One row per divergence from Part I.
 | R2 | §3.3, §6.4 | The task line is specified as the verdict line verbatim, but phase A must read `templates/spec.md`, phase B `templates/plan.md` and `templates/task.md`, and phase C `prompts/implementer.md` and `prompts/reviewer.md` — all plugin files reachable only by absolute path. | The task line is two lines: the verdict, then `Plugin root: <absolute path>`. §6.3 is unaffected — a brief still carries no plugin path of its own; it is told one at dispatch, exactly as the old task line told the looper where `references/` lived. |
 | R3 | §9.3 | The non-functional target "`selftest.sh` still runs in under a second" was carried over from the file's own header, written when the suite was 29 pure-text assertions that spawned no subprocesses. The suite this spec designs creates roughly 36 real repositories and runs ~120 assertions, most through command substitutions that spawn a subprocess each. At Task 3 it measured 0.904s, 1.213s and 1.295s across three runs, with user time steady at 0.35-0.39s — the variance is filesystem and process-spawn time, not computation. | The target becomes three seconds, and gains a second half the one-second figure never had: the marginal cost of one `floor()` call must stay at or below ~20ms. This is a recalibration to what is being measured, not a weakened gate — the per-call cost IMPROVED 8-10x in Task 2 (from ~150ms), and the per-call clause is what would catch a real regression, which a wall-clock total cannot once the suite's scope grows. The "no network" half of the constraint is untouched. |
 | R4 | §9.3, R3 | R3 kept a wall-clock total and added a per-`floor()`-call clause, on a measurement of ~15-20ms per call. That measurement was sound but measured the wrong unit: it appended BARE `floor()` calls, and a bare floor is the cheap part. Task 4 added ~14 real cases and the suite rose ~2s — ~140ms per case, seven times the figure R3 was built on. A guard aimed at the wrong quantity gives false assurance, which is worse than a guard set too loose. | Measured attribution, N=14 per case on a scratch harness: a bare `floor()` costs ~17ms; each fixture helper that commits (`draft`, `spec`, `plan`, `plan_bare`) costs ~52ms, spawning three subprocesses; and one `phase.sh` invocation costs ~68ms on an empty floor and ~94ms on a populated one. The subject under test is therefore as expensive as the fixtures, and its cost is irreducible without deleting coverage. So the unit changes from `floor()` calls to test cases, and the total becomes a generous 8s that the suite's real scope can meet. The per-case 200ms figure is what detects a regression; the total only detects unbounded growth. The "no network" half remains untouched. |
+| R5 | §5.5, §5.1 note 4, §9.1 AC-3.5 | §5.5's pseudocode ran three moves and a commit with no failure check, under a script that sets `-uo pipefail` and deliberately not `-e`. Task 5's reviewer reproduced the consequence twice against the real script: a conflict at one destination lets the first move fail and the second succeed, after which the version bump, the commit and the log line all run and the script exits 0 reporting success — with half the trail archived and the tree CLEAN. A second variant fails both moves, fails the commit with "nothing to commit", and still exits 0 having made zero commits, violating AC-3.5. | Every mutation is checked, and a failure logs a strike for phase D in the same shape `gate_or_strike` writes — so `strike_count` counts it and the slug blocks after three — then exits non-zero leaving the tree exactly as it landed. Both halves are required: exiting without a strike wedges the flow, because the picker answers `D` again next loop and the same move fails again until the cap. §5.1 note 4 is amended too: it stated the dirty-tree recovery assumption as fact, when it is conditional on precisely this check. The picker cannot detect a clean-but-corrupt floor; only the archiver can avoid creating one. |
 
 # Part II — Building it
 
