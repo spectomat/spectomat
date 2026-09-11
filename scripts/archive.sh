@@ -28,6 +28,18 @@ require_ready() {
   [[ -f "$FLOOR/plans/$SLUG.md" ]] || die "no $FLOOR/plans/$SLUG.md"
 }
 
+# Log one phase D strike for this slug and print the new count. Shared by
+# every way phase D can fail - a red gate and a failed move or commit both
+# count against the same STRIKE_LIMIT for this slug, so a slug that keeps
+# failing archival for any reason eventually drops out of the picker's D
+# candidates instead of burning every remaining loop.
+strike() {
+  local reason="$1" n
+  n=$(( $(strike_count D "$SLUG") + 1 ))
+  log_line "- $(now) · D · $SLUG · $reason (strike $n)"
+  printf '%s\n' "$n"
+}
+
 # Run the gates. A failure logs a strike and stops, unless it is the third:
 # then the trail is archived blocked instead of stranding the floor.
 gate_or_strike() {
@@ -37,8 +49,7 @@ gate_or_strike() {
     GATE_RESULT="$total/$total"
     return 0
   fi
-  n=$(( $(strike_count D "$SLUG") + 1 ))
-  log_line "- $(now) · D · $SLUG · gate failed: $GATE_FAILED (strike $n)"
+  n=$(strike "gate failed: $GATE_FAILED")
   if [[ $n -lt $STRIKE_LIMIT ]]; then
     echo "❌ gate failed: $GATE_FAILED (strike $n of $STRIKE_LIMIT)" >&2
     exit 1
@@ -47,10 +58,26 @@ gate_or_strike() {
   GATE_RESULT="failed"
 }
 
+# Every move is checked: an unchecked git mv can fail silently (a stray file
+# already at the destination) while a later move in the same run succeeds,
+# leaving a half-moved trail that a bare `git status --porcelain` marks dirty
+# but that commit_archive would otherwise commit as a clean, confident
+# "archived". A failed move strikes and exits, leaving the tree exactly as it
+# landed: dirty if a later move already ran, clean if this was the first. The
+# janitor's recovery path is designed for the dirty case; the clean case is
+# safe to retry as-is once the destination conflict is cleared.
 move_trail() {
-  git mv "$FLOOR/specs/$SLUG.md" "$FLOOR/done/$SLUG.spec$BLOCK.md"
-  git mv "$FLOOR/plans/$SLUG.md" "$FLOOR/done/$SLUG.plan$BLOCK.md"
-  [[ ! -d "$FLOOR/plans/$SLUG" ]] || git mv "$FLOOR/plans/$SLUG" "$FLOOR/done/$SLUG"
+  git mv "$FLOOR/specs/$SLUG.md" "$FLOOR/done/$SLUG.spec$BLOCK.md" || fail_move "specs/$SLUG.md"
+  git mv "$FLOOR/plans/$SLUG.md" "$FLOOR/done/$SLUG.plan$BLOCK.md" || fail_move "plans/$SLUG.md"
+  if [[ -d "$FLOOR/plans/$SLUG" ]]; then
+    git mv "$FLOOR/plans/$SLUG" "$FLOOR/done/$SLUG" || fail_move "plans/$SLUG"
+  fi
+}
+
+fail_move() {
+  strike "move failed: git mv $1" >/dev/null
+  echo "❌ move failed: git mv $1" >&2
+  exit 1
 }
 
 # The patch version becomes the slug's NNN; major and minor are kept. Blocked
@@ -76,7 +103,11 @@ commit_archive() {
   git add -A "$FLOOR/done" "$FLOOR/specs" "$FLOOR/plans"
   [[ ! -f package.json ]] || git add package.json
   [[ ! -f package-lock.json ]] || git add package-lock.json
-  git commit -q -m "$msg"
+  if ! git commit -q -m "$msg"; then
+    strike "commit failed" >/dev/null
+    echo "❌ commit failed after moving $SLUG's trail" >&2
+    exit 1
+  fi
 }
 
 log_result() {

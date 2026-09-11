@@ -344,5 +344,27 @@ is "nothing moved on a dirty tree" "$(there done/001-a.spec.md)" "no"
 ready nosuch 001-a 'true'
 arc 002-b; is "an unknown slug is refused" "$?" "1"
 
+echo "archive.sh: unchecked move/commit failures (regression)"
+# conflict PATH — pre-place and commit a file at a done/ destination so the
+# git mv that targets it is refused; the tree must stay clean going in, or
+# require_ready would reject it for the wrong reason.
+conflict() { printf 'conflict\n' > "$FIXTURE/.spectomat/$1"; fixture_commit; }
+
+ready blk1 001-a 'true'
+conflict done/001-a.spec.md
+n0=$(commits); arc 001-a
+is "a blocked spec move exits non-zero"        "$?" "1"
+is "no commit is made when the spec can't move" "$(( $(commits) - n0 ))" "0"
+is "a strike is logged for the failed move"    "$(grep -c '(strike 1)' "$FIXTURE/.spectomat/log.md")" "1"
+is "the spec never moved"                      "$(there specs/001-a.md)" "yes"
+is "the plan never moved either"               "$(there plans/001-a.md)" "yes"
+
+ready blk2 001-a 'true'
+conflict done/001-a.spec.md
+conflict done/001-a.plan.md
+n0=$(commits); arc 001-a
+is "both destinations blocked exits non-zero" "$?" "1"
+is "zero new commits when nothing could move" "$(( $(commits) - n0 ))" "0"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [[ $FAIL -eq 0 ]]
