@@ -11,6 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 ITERATION=""
 MAX_ITERATIONS=""
 STATE_SESSION=""
+STATE_BROKEN=""   # why the state file could not be parsed, when it could not
 # Set by require_transcript / read_last_output
 TRANSCRIPT_PATH=""
 LAST_OUTPUT=""
@@ -38,10 +39,14 @@ stop_corrupt() {
 # separate state_field calls would spawn three processes for one small file.
 # @tsv renders a null or missing value as an empty field, which
 # require_own_session and require_sane_state already handle.
+#
+# A parse failure is recorded rather than acted on. This runs before the session
+# guard, and disarming here would let any session in the project delete a flow
+# it does not own - see require_readable_state.
 read_state() {
   local tsv
   tsv=$(jq -r '[.iteration, .max_iterations, .session_id] | @tsv' "$STATE_FILE" 2>/dev/null) \
-    || stop_corrupt "$STATE_FILE is not valid JSON"
+    || { STATE_BROKEN="not valid JSON"; tsv=""; }
   IFS=$'\t' read -r ITERATION MAX_ITERATIONS STATE_SESSION <<< "$tsv"
 }
 
@@ -53,6 +58,18 @@ require_own_session() {
   if [[ -n "$STATE_SESSION" ]] && [[ "$STATE_SESSION" != "$hook_session" ]]; then
     exit 0
   fi
+}
+
+# An unparsable state file names no owner, so this session cannot prove the flow
+# is its own. Report and leave both files in place: ending it is the operator's
+# call, via /spectomat:cancel.
+require_readable_state() {
+  [[ -z "$STATE_BROKEN" ]] || {
+    echo "⚠️  Spectomat flow: $STATE_FILE is $STATE_BROKEN." >&2
+    echo "   The flow is stopping, and its files are kept because the session that armed it" >&2
+    echo "   cannot be identified. Run /spectomat:cancel, then /spectomat:run to start fresh." >&2
+    exit 0
+  }
 }
 
 require_sane_state() {
@@ -125,6 +142,7 @@ main() {
   [[ -f "$STATE_FILE" ]] || exit 0
   read_state
   require_own_session
+  require_readable_state
   require_sane_state
   require_below_max
   require_transcript

@@ -56,6 +56,7 @@ ensure_gitignored() {
 prepare_floor() {
   mkdir -p "$FLOOR"/{drafts,specs,plans,done}
   ensure_gitignored "$STATE_FILE"
+  ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
   ensure_gitignored "$POINTER"
   ensure_gitignored "$FLOOR/work/"
   ensure_gitignored "$FLOOR/log.md"
@@ -131,6 +132,19 @@ require_startable() {
   if [[ $((DRAFTS + SPECS + PLANS)) -eq 0 ]]; then
     echo
     echo "❌ Not starting: nothing to do. Drop a .md idea into $FLOOR/drafts/ and run /spectomat:run again."
+    exit 1
+  fi
+  # Whatever commit_floor did not commit is the user's own work in progress. The
+  # picker answers R to any dirt, so arming now would send every iteration to the
+  # janitor - which reports and stops rather than discarding work it does not own,
+  # burning the whole cap.
+  local dirt
+  dirt="$(git status --porcelain)"
+  if [[ -n "$dirt" ]]; then
+    echo
+    echo "❌ Not starting: the tree is dirty. Every iteration would go to the janitor."
+    printf '%s\n' "$dirt" | head -10
+    echo "Commit or stash the above, then run /spectomat:run again."
     exit 1
   fi
 }

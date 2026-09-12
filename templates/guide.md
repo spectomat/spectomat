@@ -4,7 +4,7 @@
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100) and starts iteration 1 |
+| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100) and starts iteration 1; refuses on a dirty tree |
 | `/spectomat:status` | shows the current iteration, floor counts, per-plan step progress, blocked files and the log tail |
 | `/spectomat:cancel` | disarms the flow; the floor stays, `run` resumes from it |
 | `/spectomat:help` | shows this guide |
@@ -41,7 +41,7 @@ Work in progress is finished before a new draft is read. Drafts are read in alph
 
 The Stop hook runs when Claude tries to end its turn. While `state.json` exists for this session, the hook blocks the exit and returns `pointer.md` as the next input.
 
-The picker dispatches to exactly one phase per iteration: `A <slug>` → a fresh phase agent writes an overview plus one task file per task (`phase-a.md`); `B <slug>` → a fresh phase agent writes spec → plan (`phase-b.md`); `C <slug>` → a phase agent implements the next ready task with TDD and code review (`phase-c.md`); `D <slug>` → `scripts/archive.sh` ticks all steps, verifies gates, and moves the trail to `done/`; `R` → the archiver recovers from a dirty tree; `E` → the picker answered `E`, the floor is empty and the flow ends. Each iteration emits one short report; when the flow ends, `state.json` and `pointer.md` are both removed.
+The picker dispatches to exactly one phase per iteration: `A <slug>` → a fresh phase agent writes draft → spec (`phase-a.md`); `B <slug>` → a fresh phase agent writes an overview plus one task file per task (`phase-b.md`); `C <slug>` → a phase agent implements the next ready task with TDD and code review (`phase-c.md`); `D <slug>` → `scripts/archive.sh` ticks all steps, verifies gates, and moves the trail to `done/`; `R` → the janitor recovers from a dirty tree; `E` → the picker answered `E`, the floor is empty and the flow ends. Each iteration emits one short report; when the flow ends, `state.json` and `pointer.md` are both removed.
 
 `contract.md` and `memory.md` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the factory believes about the codebase. Each is checked on its own, so a floor armed before `memory.md` existed gets it on the next `run`.
 
@@ -54,6 +54,7 @@ The picker dispatches to exactly one phase per iteration: `A <slug>` → a fresh
 - **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every iteration reads before working and adds to before committing. Seed it by hand before the first run and the factory starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
 - **Gate it.** The gates run once per task in phase C, after the fix rounds and before the tick commit, and once in phase D before archiving. `run` compiles the gate command from `package.json` scripts: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `test`, `lint` and `build` script found, chained with `&&` in that order. The command is the first line of the block under Verification Gates in `contract.md`, rendered once at the first `run`; edit it there when `package.json` changes. Gates that are not npm scripts go into the same block, one command per line; every line must exit 0. An iteration may never weaken a gate to pass.
 - **Resume it.** After a cancel or the iteration cap, run `/spectomat:run` again. The filesystem is the ledger, so nothing is re-planned.
+- **Start clean.** `run` refuses to arm while anything outside the floor is uncommitted: the picker answers `R` to any dirt, so a flow armed over work in progress would send every iteration to the janitor. Commit or stash first.
 
 ## Glossary
 

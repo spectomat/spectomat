@@ -12,10 +12,10 @@ A Claude Code plugin, not an application: bash scripts, Markdown commands, agent
 claude plugin validate .claude-plugin/plugin.json --strict      # run from this directory
 claude plugin validate .claude-plugin/marketplace.json --strict
 bash -n scripts/*.sh                                             # syntax only
-scripts/selftest.sh                                              # utils.sh text helpers
+scripts/selftest.sh                                              # utils.sh, picker, archiver, run.sh, Stop hook
 ```
 
-Exercise the scripts in a scratch git repo, never here: `run.sh` on an empty floor must refuse, with a draft it must arm; pipe a fake Stop payload (`{"session_id","transcript_path"}`) into `scripts/stop-hook.sh` and check `decision`, the `iteration` counter in `state.json`, and that both `state.json` and `pointer.md` disappear on `<promise>FACTORY EMPTY</promise>` and at the cap. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.
+`selftest.sh` covers all of that — the picker, the archiver, `run.sh` arming and refusing, and the Stop hook driven with a fabricated `{"session_id","transcript_path"}` payload. What it cannot cover is the live runtime: exercise a real flow in a scratch git repo, never here. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.
 
 The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`, so edits here are not live until the version in `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run` again.
 

@@ -70,7 +70,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
 
 ## Developing
 
-Exercise the scripts in a scratch git repo, never in this one: `run.sh` on an empty floor (expect refusal), drop a draft and run again (expect armed), then pipe a fake hook payload (`{"session_id","transcript_path"}`) into `scripts/stop-hook.sh` and check `decision`, the iteration counter in `state.json`, and that both `state.json` and `pointer.md` are removed on `<promise>FACTORY EMPTY</promise>` and at the cap. For a full run, `claude -p "/spectomat:run 25" --plugin-dir <this repo>` inside a scratch project with a draft on the floor.
+`scripts/selftest.sh` covers the helpers, the picker, the archiver, `run.sh` and the Stop hook, all against real throwaway git repos. For the live runtime, `claude -p "/spectomat:run 25" --plugin-dir <this repo>` inside a scratch project with a draft on the floor.
 
 ## Licence
 

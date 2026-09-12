@@ -303,7 +303,7 @@ Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). T
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1 |
+| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1; refuses when a flow is armed, the floor is empty, or the tree is dirty |
 | `/spectomat:status` | the next verdict, the current iteration, floor counts, per-plan step progress, blocked files, log tail |
 | `/spectomat:cancel` | disarms the flow; the floor stays and `run` resumes from it |
 | `/spectomat:help` | prints `templates/guide.md` |
@@ -364,6 +364,10 @@ Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from A
 | AC-4.2 | Arming writes a valid `state.json` with `iteration` 1 and a numeric `max_iterations`, and a `pointer.md` with no frontmatter and no unresolved `{{KEY}}` | selftest |
 | AC-4.3 | `/spectomat:cancel` removes both `state.json` and `pointer.md`, and keeps the floor | selftest |
 | AC-4.4 | `run.sh` commits a draft dropped into `drafts/`, tracked or not, and leaves a clean tree | selftest |
+| AC-4.6 | `run.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
+| AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, and feeds back `pointer.md` verbatim | selftest |
+| AC-4.8 | A session that did not arm the flow neither advances nor ends it, and an unreadable state file is left in place for `/spectomat:cancel` | selftest |
+| AC-4.9 | The promise and the iteration cap both disarm the flow | selftest |
 | AC-4.5 | Drafts are taken in alphabetical order of the file name, whatever their modification times | selftest |
 | AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
 | AC-5.2 | Both plugin manifests validate `--strict` | manual |
@@ -431,8 +435,8 @@ claude plugin validate .claude-plugin/marketplace.json --strict
 | --- | --- |
 | whether the runtime loads four agents | `claude -p … --debug-file <f> --model opus`, then grep `<f>` for `Loaded 4 agents from plugin`; a `-p` prompt asking Claude to list agent types reports NONE even when they are loaded, so it must not be used |
 | whether a full flow reaches the promise | `claude -p "/spectomat:run 25" --plugin-dir . --model opus` in a scratch repo with two drafts |
-| whether the Stop hook still releases | piping a fabricated `{"session_id","transcript_path"}` payload into `scripts/stop-hook.sh` |
-| whether `run.sh` leaves a clean tree and keeps an edited contract | arming twice in a scratch repo, editing `contract.md` between runs |
+| whether the Stop hook releases against the real runtime | the selftest drives it with a fabricated payload; only a live session proves Claude Code honours the `block` decision |
+| whether `run.sh` keeps an edited contract | arming twice in a scratch repo, editing `contract.md` between runs |
 
 Nested `claude -p` must always be given `--model opus`; the CLI rejects the default model.
 
@@ -445,4 +449,6 @@ Nested `claude -p` must always be given `--model opus`; the CLI rejects the defa
 | a `.blocked` trail is still listed by `print_blocked` | a blocked slug that nothing reports is a silently dropped idea |
 | no brief carries a `{{KEY}}` placeholder | briefs are never rendered, so a placeholder would reach an agent literally |
 | arming and cancelling touch both `state.json` and `pointer.md` | a pointer outliving its state would be fed back to a later flow with no counter behind it; a state without a pointer stops the flow with a corruption message |
+| only the session that armed a flow may end it, an unreadable state file included | the hook fires in every session of the project, so a guard that runs before the session check lets a stranger delete a flow it does not own |
+| `run.sh` refuses to arm on a dirty tree | the picker answers `R` to any dirt, so arming over work in progress spends the entire cap on the janitor |
 | `NOTICE.md` names only files that exist | a licence notice pointing at deleted files does not discharge the obligation |
