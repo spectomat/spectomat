@@ -14,7 +14,7 @@
 
 ## Tasks
 
-One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`. The `IMPLEMENT` phase executes them one at a time, in this order, one task per iteration. Each task is an independent piece of work; `Depends on` may name only lower-numbered tasks, and every file in the map has exactly one owning task.
+One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`. The `IMPLEMENT` phase executes them one at a time, in this order, one task per iteration; the `REVIEW` phase may append further ones after the last. Each task is an independent piece of work; `Depends on` may name only lower-numbered tasks, and every file in the map has exactly one owning task.
 
 | # | File | Component | Covers | Depends on |
 | --- | --- | --- | --- | --- |
@@ -31,5 +31,12 @@ Every criterion id in the spec, and the task that covers it. A criterion with no
 
 ## Rulings
 
-appended by the `IMPLEMENT` phase for decisions that cross tasks:
+appended by the `IMPLEMENT` phase for decisions that cross tasks, and by the `REVIEW` phase for the Minor findings it parks:
 `- Task N · <decision> — <why> — <cost if wrong>`
+
+## Review
+
+written by the `REVIEW` phase once every task is ticked, one line per round. The `Verdict:` line is what releases the plan to `ARCHIVE`; while it is absent the plan comes back for another round.
+
+`- Round R — N findings (C critical, I important, M minor) — tasks NN–MM added`
+`- Verdict: CLEAN | PARKED`

@@ -72,11 +72,14 @@ fixture_commit() {
 draft() { printf 'idea\n' > "$FIXTURE/.spectomat/drafts/$1.md"; fixture_commit; }
 spec()  { printf 'spec\n' > "$FIXTURE/.spectomat/specs/$1.md";  fixture_commit; }
 
-# plan SLUG TASKS OPEN — an overview plus TASKS task files, the first OPEN
-# of them carrying an unchecked step and the rest ticked.
+# plan SLUG TASKS OPEN [REVIEWED] — an overview plus TASKS task files, the
+# first OPEN of them carrying an unchecked step and the rest ticked. A non-empty
+# REVIEWED writes the closing verdict line the REVIEW phase leaves behind, which
+# is what releases a finished plan to ARCHIVE.
 plan() {
-  local slug="$1" tasks="$2" open="$3" i box f
+  local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i box f
   printf 'overview\n' > "$FIXTURE/.spectomat/plans/$slug.md"
+  [[ -z "$reviewed" ]] || printf '\n## Review\n\n- Verdict: CLEAN\n' >> "$FIXTURE/.spectomat/plans/$slug.md"
   mkdir -p "$FIXTURE/.spectomat/plans/$slug"
   i=1
   while [[ $i -le $tasks ]]; do
@@ -273,14 +276,28 @@ floor p_c; spec 001-a; plan 001-a 3 1
 pk "an open step is IMPLEMENT" "IMPLEMENT 001-a"
 
 floor p_d; spec 001-a; plan 001-a 3 0
-pk "every step ticked is ARCHIVE" "ARCHIVE 001-a"
+pk "every step ticked and unreviewed is REVIEW" "REVIEW 001-a"
+
+floor p_reviewed; spec 001-a; plan 001-a 3 0 yes
+pk "a closing verdict releases it to ARCHIVE" "ARCHIVE 001-a"
+
+# REVIEW round 1 adds fix tasks and writes no verdict: the plan reopens and the
+# picker sends it back to IMPLEMENT, which is the whole fix loop.
+floor p_fixtasks; spec 001-a; plan 001-a 3 0
+printf -- '- [ ] step\n' > "$FIXTURE/.spectomat/plans/001-a/task-04-fix.md"
+printf 'overview\n\n## Review\n\n- Round 1 — 2 findings (0 critical, 2 important, 0 minor) — tasks 04 added\n' > "$FIXTURE/.spectomat/plans/001-a.md"
+fixture_commit
+pk "a review round without a verdict reopens IMPLEMENT" "IMPLEMENT 001-a"
 
 floor p_vacuous; spec 001-a; plan_bare 001-a
 mkdir -p "$FIXTURE/.spectomat/plans/001-a"
-pk "an empty task dir is never ARCHIVE" "PLAN 001-a"
+pk "an empty task dir is never REVIEW or ARCHIVE" "PLAN 001-a"
 
-floor p_order; draft 004-d; spec 003-c; plan 002-b 2 1; spec 002-b; spec 001-a; plan 001-a 2 0
+floor p_order; draft 004-d; spec 003-c; plan 002-b 2 1; spec 002-b; spec 001-a; plan 001-a 2 0 yes
 pk "ARCHIVE outranks IMPLEMENT, PLAN and SPECIFY" "ARCHIVE 001-a"
+
+floor p_order2; draft 003-c; plan 002-b 2 1; spec 002-b; spec 001-a; plan 001-a 2 0
+pk "REVIEW outranks IMPLEMENT, PLAN and SPECIFY" "REVIEW 001-a"
 
 floor p_dirty; draft 001-a; dirty
 pk "a dirty tree is RECOVER" "RECOVER"
@@ -371,16 +388,20 @@ is "zero new commits when nothing could move" "$(( $(commits) - n0 ))" "0"
 
 echo "briefs"
 AGENTS="$(dirname "$SCRIPTS")/agents"
-for a in specify plan implement recover; do
+for a in specify plan implement review recover; do
   is "agents/$a.md exists" "$([[ -f "$AGENTS/$a.md" ]] && echo yes || echo no)" "yes"
   is "agents/$a.md is named $a" "$(sed -n 's/^name: *//p' "$AGENTS/$a.md" | head -1)" "$a"
   is "agents/$a.md has a description" \
     "$(grep -c '^description: ' "$AGENTS/$a.md")" "1"
 done
-is "AGENT_COUNT is 4" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "4"
+is "AGENT_COUNT is 5" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "5"
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
-is "implement.md names both prompts" \
-  "$(grep -cE 'prompts/(implementer|reviewer)\.md' "$AGENTS/implement.md" | tr -d ' ')" "2"
+is "no brief points at the deleted prompts/" \
+  "$(grep -l 'prompts/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
+# The picker greps the overview for this exact line; review.md is its only
+# writer, so the two must name the same marker or a plan never archives.
+is "review.md writes the verdict line the picker greps" \
+  "$(grep -q -- '- Verdict: ' "$AGENTS/review.md" && echo yes || echo no)" "yes"
 
 echo "status"
 floor st; spec 001-a; plan 001-a 2 1

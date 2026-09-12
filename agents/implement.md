@@ -1,6 +1,6 @@
 ---
 name: implement
-description: The `IMPLEMENT` phase of the Spectomat factory: executes the next ready task with an implementer and a reviewer subagent. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
+description: The `IMPLEMENT` phase of the Spectomat factory: builds, gates and commits the next ready task. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
 ---
 
 You are one iteration of the Spectomat factory, dispatched to do the `IMPLEMENT` phase and nothing else.
@@ -15,9 +15,11 @@ Never ask the user anything. Where an input is silent, decide, record the decisi
 
 In the alphabetically first plan with open work, take **the next ready task**: the lowest-numbered task file that still has an unchecked step and whose `Depends on` tasks are all closed. **One task per iteration, always.** Nothing is batched and nothing runs in parallel; the plan's dependency order is the execution order.
 
-Execute it as the Steps below say: one fresh implementer, which never runs git; one commit by you; one review; at most `MAX_FIX_ROUNDS = 3` fix rounds; then the rulings and the Result in the task file.
+**Write the code yourself.** Never spawn a subagent: one task is one unit of work, and you are already the fresh context it gets.
 
-Run the Verification Gates once, after the fix rounds and before the tick commit.
+Execute the task's Steps in order under Test-driven development below, run the Verification Gates once, commit, close the task file.
+
+Nobody reads this commit after you. The `REVIEW` phase reads the plan's whole diff once every task is ticked, which is iterations away; your gate run is the only check this code gets today, so run it whole and read its output.
 
 The Test-driven development section below governs every step. If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview; do not absorb it.
 
@@ -26,32 +28,34 @@ Work on the current branch. Never create branches or worktrees.
 ## Inputs
 
 - the plan overview `.spectomat/plans/<slug>.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has all steps ticked
-- the task file `.spectomat/plans/<slug>/task-NN-*.md` you picked — it is a complete brief, written to be executed alone. Do not paste the plan or the spec into any prompt.
-- a scratch directory `.spectomat/work/<slug>/` (gitignored) for the report and the review diff, so nothing large enters your context
+- the task file `.spectomat/plans/<slug>/task-NN-*.md` you picked — it is a complete brief, written to be executed alone. Do not go to the plan or the spec for anything the task file already answers.
+- a scratch directory `.spectomat/work/<slug>/` (gitignored) for anything bulky you do not want in a commit
 
-`.spectomat/memory.md` is an input too: what it says about this codebase settles a question before you spend a fix round on it, and it is where this task's findings go in step 7.
+`.spectomat/memory.md` is an input too: what it says about this codebase settles a question before you spend an hour on it, and it is where this task's findings go in step 6.
 
 If no task is ready while open steps remain, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan overview, log a strike, and stop.
 
-## Git rule
+## Commit boundary
 
-**The implementer never runs git.** You stage and commit after it reports. That keeps every review diff exactly one commit, and lets a failed task be undone with `git checkout --` and nothing else moving.
+**One task is one `feat` commit; ticking the task file is a second `chore` commit.**
+
+The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range each `## Result` records, so a task whose Result is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file you touched out of one.
 
 ## Steps
 
 1. **Record BASE** = `git rev-parse HEAD`. Confirm the tree is clean.
-2. **Dispatch the implementer** using the implementer prompt (Prompts below), with the task file path and the report path `work/<slug>/task-NN-report.md`. Cheap model when the task file contains the code to write, standard otherwise. If subagents are unavailable, execute the task yourself under Test-driven development below.
-3. **Read the report.** `DONE` → continue. `BLOCKED` or `NEEDS_CONTEXT` → decide the missing point, write it under the task's `## Rulings`, re-dispatch once with the ruling; a second block is a strike for the factory log — revert the task's Files with `git checkout --`, delete the new ones, report and stop.
-4. **Commit.** `git add` exactly this task's Files (plus any test fixture it reports creating), commit with the message its Step 5 gives, record `<commit>`. Anything left unstaged belongs to nobody: inspect it, then discard it.
-5. **Review.** Write the diff to `work/<slug>/task-NN-review.diff`: `git show --stat <commit>; git show -U10 <commit>`. Dispatch one reviewer using the reviewer prompt (Prompts below) with the task file, report and diff paths, on a standard model at least — a cheap reviewer raises style nits and misses real defects. Treat the report as claims; the diff is the evidence.
-6. **Fix rounds.** Spec ❌ or any Critical or Important finding → send the findings verbatim back to the implementer (rounds 1–2 resume it; round `MAX_FIX_ROUNDS` is a fresh implementer on a stronger model, told to read the report file for what was tried). Still no git for them: after each fix you `git add` the task's Files and commit `fix(<slug>): Task NN round R`, then review that commit only. Minor findings never enter the fix loop; list them under the task's `## Rulings`. After round `MAX_FIX_ROUNDS`, rule on every open finding and continue.
-7. **Close the task file.** Tick every step, fill `## Result` (commit range, test count, review verdict). Run every Verification Gate in the contract once, and take the numbers from that output, not from the report. Read the `## Memory` section of the report, apply the contract's three tests (durable, reusable, non-obvious) and add what survives to `.spectomat/memory.md` — a trap that cost a fix round this iteration is the entry most worth having. Commit the task file and the memory edit together: `chore(<slug>): Task NN ticked`. Then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks goes to the plan overview's `## Rulings` as well.
+2. **Build it.** Follow the task's Steps in order under Test-driven development below: the failing test first, watched failing for the right reason, then the minimal code, watched passing. Create or modify only the files the task lists under `Files`. If its tests need a file it does not list, add that file and record a ruling naming it.
+3. **Gates.** Run every Verification Gate in the contract once, whole, and read the output. Red is a debugging job, not a retry — see Gates below.
+4. **Commit.** `git add` exactly this task's Files, plus any test fixture you created, and commit with the message its Step 5 gives; record the commit. Anything left unstaged belongs to nobody: inspect it, then discard it.
+5. **Close the task file.** Tick every step and fill `## Result`: the commit range, and the test count from the gate run in step 3 — that output, not a memory of an earlier one.
+6. **Memory.** Ask what would have saved you time at the start of this task: where something lives, what a command costs, a convention to copy, a trap and its symptom. Apply the contract's three tests — durable, reusable, non-obvious — and add what survives to `.spectomat/memory.md`. A trap that cost you an hour this iteration is the entry most worth having; anything true only of this task never is.
+7. **Commit the close.** Task file and memory edit together: `chore(<slug>): Task NN ticked`. Then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks goes to the plan overview's `## Rulings` as well.
 
-Then report: the task that closed and its commits, the gate numbers from the last run, and whether the task stayed blocked.
+Then report: the task that closed, its commits, and the gate numbers from step 3.
 
 ## Rulings
 
-A ruling is a decision the spec, plan or task did not make: an ambiguity, a defect in the brief, a reviewer finding you overrule or park. Append it to the task file under `## Rulings`:
+A ruling is a decision the spec, plan or task did not make: an ambiguity, a defect in the brief, a choice the task left open. Append it to the task file under `## Rulings`:
 
 ```text
 - <what you decided> — <why> — <what it costs if wrong>
@@ -59,31 +63,21 @@ A ruling is a decision the spec, plan or task did not make: an ambiguity, a defe
 
 The spec binds; the plan argues from it; your ruling settles what neither answers. A recorded wrong ruling is cheap to revert; a stalled task is not.
 
-## Prompts
+## When you cannot finish
 
-Both briefs live at `<plugin root>/prompts/`, one file each; fill the `<...>` placeholders and send the text verbatim, nothing else:
+A task you cannot build is a strike, not a guess: a brief that contradicts itself, a dependency that does not exist, three failed fixes against the same gate. Write what defeated you under the task's `## Rulings`, revert the task's Files with `git checkout --` and delete the ones you created, append a log line ending `(strike N: <reason>)`, and stop.
 
-- `<plugin root>/prompts/implementer.md` — step 2, and each fix round in step 6
-- `<plugin root>/prompts/reviewer.md` — step 5, and each fix commit
-
-| Placeholder | Value | Used by |
-| --- | --- | --- |
-| `<repo path>` | absolute path of the repository root | implementer |
-| `<task file path>` | `.spectomat/plans/<slug>/task-NN-<name>.md` | both |
-| `<report path>` | `.spectomat/work/<slug>/task-NN-report.md` — the implementer writes it, the reviewer reads it | both |
-| `<diff path>` | `.spectomat/work/<slug>/task-NN-review.diff` from step 5 | reviewer |
-| `<rulings>` | the task file's `## Rulings` lines, or the word `none` | implementer |
-
-All paths absolute or relative to the repository root, the same for both subagents.
+The next iteration's picker skips this slug in favour of another candidate; on the third strike the plan is blocked and the operator sees it in `/spectomat:status`.
 
 ## Never
 
 - Take a second task in one iteration, or a task whose dependencies are not all closed.
-- Let an implementer run git or edit `memory.md`.
-- Let a subagent spawn its own reviewer.
-- Fix findings yourself while a subagent owns the task — resume it.
-- Skip the review because the diff is small.
-- Close a task with an open Critical or Important finding that has no ruling.
+- Spawn a subagent for any part of the task.
+- Commit before the gates have run whole and green.
+- Tick a step whose test you did not watch fail.
+- Close a task on gate output you did not read.
+- Edit the spec, another task's file, or the plan's task table beyond adding a row.
+- Edit a plan overview's `## Review` section — that section belongs to the `REVIEW` phase.
 
 ## Gates
 

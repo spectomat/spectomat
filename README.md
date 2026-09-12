@@ -5,7 +5,7 @@ Spec-driven dark factory for Claude Code.
 Drop ideas into `.spectomat/drafts/`, call one `/spectomat:run` command, and an unattended flow turns each idea into a spec, each spec into a plan and tasks, and then executes all of them to produce well-tested, committed code.
 
 ```text
-idea  ──SPECIFY──▶  specs  ──PLAN──▶  plans/tasks×n  ──IMPLEMENT×n──▶  code + commits  ──ARCHIVE──▶  done
+idea  ──SPECIFY──▶  specs  ──PLAN──▶  plans/tasks×n  ──IMPLEMENT×n──▶  code + commits  ──REVIEW──▶  verdict  ──ARCHIVE──▶  done
 ```
 
 Commands, the floor, the flow and the skills are in `templates/guide.md` with a glossary, shown by `/spectomat:help`.
@@ -45,7 +45,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
 - `.claude-plugin/` — `plugin.json` (the plugin) and `marketplace.json` (this repo as a one-plugin marketplace, source `./`).
 - `commands/` — `/spectomat:run`, `status`, `cancel`, `help`. Each `!` block runs a script before Claude reads the command.
 
-- `agents/` — `specify.md`, `plan.md`, `implement.md`, `recover.md`. The picker dispatches to one per iteration: `spectomat:specify|plan|implement`, `spectomat:recover`, or `scripts/archive.sh`.
+- `agents/` — `specify.md`, `plan.md`, `implement.md`, `review.md`, `recover.md`. The picker dispatches to one per iteration: `spectomat:specify|plan|implement|review`, `spectomat:recover`, or `scripts/archive.sh`.
 
 - `hooks/` — `hooks.json` registers the Stop hook; the hook itself is `scripts/stop-hook.sh`, which keeps the flow alive.
 
@@ -66,7 +66,6 @@ A Claude Code plugin, not an application. No dependencies, no build.
   - `spec.md` (the skeleton `writing-specs` points at),
   - `plan.md` (overview skeleton, placeholder `{{SLUG}}`)
   - `task.md` (per-task brief skeleton, placeholders `{{SLUG}}`, `{{N}}`); `writing-plans` points at the last two.
-- `prompts/` — `implementer.md` and `reviewer.md`, the subagent briefs the `IMPLEMENT` phase sends verbatim, placeholders in `<...>`.
 
 ## Developing
 

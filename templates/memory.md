@@ -24,4 +24,4 @@ Conventions a new file must follow to look like the ones around it.
 
 ## Traps
 
-Something that cost a strike or a fix round: symptom, cause, the rule that avoids it.
+Something that cost a strike or a review round: symptom, cause, the rule that avoids it.

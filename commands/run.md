@@ -15,7 +15,7 @@ and the start of iterations over `drafts → specs → plans → executed plans 
 
 If the output ends in `❌ Not starting`, report why and stop.
 
-If the factory is armed, begin iteration 1 now: follow the prompt printed at the end of the output. Each iteration is one picker verdict, dispatched to a fresh phase agent (`spectomat:specify|plan|implement`, or `general-purpose` carrying the brief when that type is not listed), to `scripts/archive.sh`, or to the janitor; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every iteration until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
+If the factory is armed, begin iteration 1 now: follow the prompt printed at the end of the output. Each iteration is one picker verdict, dispatched to a fresh phase agent (`spectomat:specify|plan|implement|review`, or `general-purpose` carrying the brief when that type is not listed), to `scripts/archive.sh`, or to the janitor; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every iteration until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
 
 **This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue.
 
@@ -40,16 +40,17 @@ Emit the promise only when `drafts/`, `specs/` and `plans/` are all empty and th
 ## One phase per iteration
 
 ```
-drafts/*.md  ──SPECIFY──▶  specs/<slug>.md  ──PLAN──▶  plans/<slug>.md  ──IMPLEMENT×n──▶  code + commits  ──ARCHIVE──▶  done/
+drafts/*.md  ──SPECIFY──▶  specs/<slug>.md  ──PLAN──▶  plans/<slug>.md  ──IMPLEMENT×n──▶  code + commits  ──REVIEW──▶  verdict  ──ARCHIVE──▶  done/
 ```
 
-Priority is `ARCHIVE`, `IMPLEMENT`, `PLAN`, `SPECIFY`: work in progress is finished before the next spec is planned, and every spec is planned before the next draft is read. Every phase is a commit and a log line.
+Priority is `ARCHIVE`, `REVIEW`, `IMPLEMENT`, `PLAN`, `SPECIFY`: work in progress is finished before the next spec is planned, and every spec is planned before the next draft is read. Every phase is a commit and a log line.
 
 | Phase | Brief |
 | --- | --- |
 | `SPECIFY` · draft → spec | `agents/specify.md` |
 | `PLAN` · spec → plan | `agents/plan.md` |
 | `IMPLEMENT` · next ready task (one per iteration, dependency order) | `agents/implement.md`, which carries TDD and systematic debugging |
+| `REVIEW` · finished plan → verdict or fix tasks | `agents/review.md`, at most two rounds |
 | any failing gate | the systematic-debugging section of `agents/implement.md` |
 | end of an `IMPLEMENT` task, `ARCHIVE` · plan → done, the promise | the gates in `contract.md`, run fresh this iteration, numbers in the log |
 

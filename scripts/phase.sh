@@ -5,7 +5,8 @@
 #                     "SPECIFY <slug>"    draft -> spec
 #                     "PLAN <slug>"       spec -> plan
 #                     "IMPLEMENT <slug>"  plan -> next task
-#                     "ARCHIVE <slug>"    plan -> done
+#                     "REVIEW <slug>"     finished plan -> verdict, or fix tasks
+#                     "ARCHIVE <slug>"    reviewed plan -> done
 #                     "RECOVER"           dirty tree, or a floor no stage claims
 #                     "FINISH"            nothing left; the flow may end
 #
@@ -40,10 +41,16 @@ task_count() {
 # True when any task file of the plan still has an unchecked step.
 has_open_step() { grep -qE '^- \[ \]' "$FLOOR/plans/$1"/task-*.md 2>/dev/null; }
 
-# ARCHIVE: a plan whose task files exist and are all ticked. The task-file count
-# is what stops an empty plan directory from satisfying "all steps ticked" for
-# free and archiving work that was never built.
-candidates_archive() {
+# True when the overview carries the REVIEW phase's closing verdict line. That
+# line is the only thing that releases a plan to the archiver, and the REVIEW
+# phase is the only writer of it.
+reviewed() { grep -qE '^- Verdict: ' "$FLOOR/plans/$1.md" 2>/dev/null; }
+
+# A plan whose task files exist and are all ticked — the input of both REVIEW
+# and ARCHIVE. The task-file count is what stops an empty plan directory from
+# satisfying "all steps ticked" for free and archiving work that was never
+# built.
+candidates_finished() {
   local s
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue
@@ -51,6 +58,24 @@ candidates_archive() {
     has_open_step "$s" && continue
     printf '%s\n' "$s"
   done < <(slugs_in plans)
+  return 0
+}
+
+# ARCHIVE: finished and reviewed. REVIEW: finished, not yet reviewed.
+candidates_archive() {
+  local s
+  while IFS= read -r s; do
+    reviewed "$s" && printf '%s\n' "$s"
+  done < <(candidates_finished)
+  return 0
+}
+
+candidates_review() {
+  local s
+  while IFS= read -r s; do
+    reviewed "$s" || printf '%s\n' "$s"
+  done < <(candidates_finished)
+  return 0
 }
 
 # IMPLEMENT: a plan with an unchecked step.
@@ -92,6 +117,7 @@ main() {
   [[ -z "$(git status --porcelain 2>/dev/null)" ]] || { echo "RECOVER"; exit 0; }
 
   pick=$(candidates_archive   | least_struck ARCHIVE);   [[ -z "$pick" ]] || { echo "ARCHIVE $pick"; exit 0; }
+  pick=$(candidates_review    | least_struck REVIEW);    [[ -z "$pick" ]] || { echo "REVIEW $pick"; exit 0; }
   pick=$(candidates_implement | least_struck IMPLEMENT); [[ -z "$pick" ]] || { echo "IMPLEMENT $pick"; exit 0; }
   pick=$(candidates_plan      | least_struck PLAN);      [[ -z "$pick" ]] || { echo "PLAN $pick"; exit 0; }
   pick=$(candidates_specify   | least_struck SPECIFY);   [[ -z "$pick" ]] || { echo "SPECIFY $pick"; exit 0; }

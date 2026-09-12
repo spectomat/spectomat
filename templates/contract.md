@@ -19,7 +19,7 @@ Nobody is watching. **Never ask a question.** Where an input is silent, decide, 
   memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit
   state.json   the flow's state: iteration counter, cap, session — gitignored, never edit
   pointer.md   the prompt the Stop hook feeds back each iteration — gitignored, never edit
-  work/        per-task briefs, reports and diffs for IMPLEMENT — gitignored
+  work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky — gitignored
 ```
 
 A `slug` is the draft's file name without `.md`. Spec, plan and done entries keep that slug so the whole trail of one idea is greppable.
@@ -30,7 +30,7 @@ Every iteration, in order:
 
 1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `pointer.md`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/` files except to move them.
 2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task line names it and the slug. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
-3. **Verify** with the gates — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase,
+3. **Verify** with the gates — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `PLAN` and `REVIEW` phases write no code and skip them,
 4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
 5. **Log** one line to `log.md`, then stop the iteration. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In the `IMPLEMENT` phase the plan tick is one `chore(<slug>): …` commit after the task commits.
 
@@ -42,7 +42,7 @@ If a phase defeats you, append `(strike N)` to its log line and skip it next tim
 
 ## Verification Gates
 
-Run every command in the block below from the repository root: once per task in the `IMPLEMENT` phase, after the fix rounds and before the `chore(<slug>)` tick commit, and once in the `ARCHIVE` phase before archiving. Every line must exit 0.
+Run every command in the block below from the repository root: once per task in the `IMPLEMENT` phase, before that task's commit, and once in the `ARCHIVE` phase before archiving. Every line must exit 0.
 
 ```bash
 # project-specific gates, one command per line, You may change it
@@ -59,7 +59,7 @@ No completion claim without fresh evidence. A gate that has not run this iterati
 
 **Add to it in step 4, before the commit**, so the entry rides inside the phase commit and the tree stays clean.
 
-Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only you write the file: implementers report candidates at the end of their reports, you apply the tests and keep it one voice.
+Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only the phase agent handling this iteration writes the file: it applies the tests itself, so the file keeps one voice.
 
 ## Log Format
 

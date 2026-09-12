@@ -42,7 +42,7 @@ export function fn(input) {
 ```
 
 - [ ] **Step 4: Run it, expect PASS** — same command; the full suite stays green
-- [ ] **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the `IMPLEMENT` phase stages this task's Files and commits — an implementer subagent never runs git
+- [ ] **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the `IMPLEMENT` phase stages exactly this task's Files and makes one commit
 
 ## Rulings
 
@@ -54,4 +54,4 @@ export function fn(input) {
 
 - Commits: <base7>..<head7>
 - Tests: <n>/<n> (<files>)
-- Review: spec ✅ · quality: <clean | K parked>
+- Gates: <n>/<n> green
