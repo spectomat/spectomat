@@ -135,7 +135,7 @@ require_startable() {
     exit 1
   fi
   # Whatever commit_floor did not commit is the user's own work in progress. The
-  # picker answers R to any dirt, so arming now would send every iteration to the
+  # picker answers RECOVER to any dirt, so arming now would send every iteration to the
   # janitor - which reports and stops rather than discarding work it does not own,
   # burning the whole cap.
   local dirt
@@ -180,7 +180,7 @@ Cancel: /spectomat:cancel
 
 When you try to exit, the Stop hook feeds the prompt below back to you.
 Each iteration asks scripts/phase.sh which phase applies and dispatches it.
-The flow ends when the picker answers E, or at the iteration cap.
+The flow ends when the picker answers FINISH, or at the iteration cap.
 EOF
   cat "$POINTER"
 }

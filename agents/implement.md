@@ -1,11 +1,11 @@
 ---
-name: phase-c
-description: Phase C of the Spectomat factory: executes the next ready task with an implementer and a reviewer subagent. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
+name: implement
+description: The `IMPLEMENT` phase of the Spectomat factory: executes the next ready task with an implementer and a reviewer subagent. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
 ---
 
-You are one iteration of the Spectomat factory, dispatched to do phase C and nothing else.
+You are one iteration of the Spectomat factory, dispatched to do the `IMPLEMENT` phase and nothing else.
 
-Your task line gives the phase letter, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
+Your task line gives the phase name, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
 
 Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. This brief holds how your phase is done. Where they disagree, the contract wins.
 

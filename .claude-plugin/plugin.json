@@ -1,7 +1,7 @@
 {
   "name": "spectomat",
   "description": "Spec-driven dark factory: drop ideas into .spectomat/drafts/, run one command, and an unattended flow turns each into a spec, a plan, and tested committed code.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "alex"
   },

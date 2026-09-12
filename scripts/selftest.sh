@@ -88,7 +88,7 @@ plan() {
   fixture_commit
 }
 
-# plan_bare SLUG — an overview with no task directory: a phase B that died.
+# plan_bare SLUG — an overview with no task directory: a PLAN phase that died.
 plan_bare() { printf 'overview\n' > "$FIXTURE/.spectomat/plans/$1.md"; fixture_commit; }
 
 # logline TEXT — append to the gitignored factory log; never committed.
@@ -220,37 +220,37 @@ is "it names the failing gate" "$(cat "$TMP/gf")" "false"
 
 echo "strike_count"
 floor sc1
-is "no log entry is zero" "$(cd "$FIXTURE" && strike_count C 001-a)" "0"
-logline '- 2026-09-11T10:00Z · C · 001-a · Task 1 (strike 1: gate red)'
-is "one strike counts"    "$(cd "$FIXTURE" && strike_count C 001-a)" "1"
-logline '- 2026-09-11T10:10Z · C · 001-a · Task 1 (strike 2: gate red)'
-is "two strikes count"    "$(cd "$FIXTURE" && strike_count C 001-a)" "2"
-is "another phase is separate" "$(cd "$FIXTURE" && strike_count B 001-a)" "0"
-is "another slug is separate"  "$(cd "$FIXTURE" && strike_count C 002-b)" "0"
-logline '- 2026-09-11T10:20Z · C · 001-a · Task 2 done'
-is "a clean line is not a strike" "$(cd "$FIXTURE" && strike_count C 001-a)" "2"
+is "no log entry is zero" "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "0"
+logline '- 2026-09-11T10:00Z · IMPLEMENT · 001-a · Task 1 (strike 1: gate red)'
+is "one strike counts"    "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "1"
+logline '- 2026-09-11T10:10Z · IMPLEMENT · 001-a · Task 1 (strike 2: gate red)'
+is "two strikes count"    "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "2"
+is "another phase is separate" "$(cd "$FIXTURE" && strike_count PLAN 001-a)" "0"
+is "another slug is separate"  "$(cd "$FIXTURE" && strike_count IMPLEMENT 002-b)" "0"
+logline '- 2026-09-11T10:20Z · IMPLEMENT · 001-a · Task 2 done'
+is "a clean line is not a strike" "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "2"
 
 floor sc2
-logline '- t · C · 001-my idea (draft) · x (strike 1: gate red)'
-is "a slug with a balanced metachar counts" "$(cd "$FIXTURE" && strike_count C '001-my idea (draft)')" "1"
-logline '- t · C · 001-a[ · x (strike 1: gate red)'
-is "a slug with an unbalanced bracket counts" "$(cd "$FIXTURE" && strike_count C '001-a[')" "1"
+logline '- t · IMPLEMENT · 001-my idea (draft) · x (strike 1: gate red)'
+is "a slug with a balanced metachar counts" "$(cd "$FIXTURE" && strike_count IMPLEMENT '001-my idea (draft)')" "1"
+logline '- t · IMPLEMENT · 001-a[ · x (strike 1: gate red)'
+is "a slug with an unbalanced bracket counts" "$(cd "$FIXTURE" && strike_count IMPLEMENT '001-a[')" "1"
 
 echo "least_struck"
 floor ls1
-ls_pick() { ( cd "$FIXTURE" && printf '%s\n' "$@" | least_struck C ); }
+ls_pick() { ( cd "$FIXTURE" && printf '%s\n' "$@" | least_struck IMPLEMENT ); }
 is "single candidate"        "$(ls_pick 001-a)" "001-a"
 is "no candidates"           "$(ls_pick)" ""
 is "ties go alphabetically"  "$(ls_pick 001-a 002-b)" "001-a"
-logline '- t · C · 001-a · x (strike 1)'
+logline '- t · IMPLEMENT · 001-a · x (strike 1)'
 is "fewer strikes wins"      "$(ls_pick 001-a 002-b)" "002-b"
-logline '- t · C · 002-b · x (strike 1)'
-logline '- t · C · 002-b · x (strike 2)'
+logline '- t · IMPLEMENT · 002-b · x (strike 1)'
+logline '- t · IMPLEMENT · 002-b · x (strike 2)'
 is "fewest strikes wins"     "$(ls_pick 001-a 002-b)" "001-a"
-logline '- t · C · 001-a · x (strike 2)'
-logline '- t · C · 001-a · x (strike 3)'
+logline '- t · IMPLEMENT · 001-a · x (strike 2)'
+logline '- t · IMPLEMENT · 001-a · x (strike 3)'
 is "a slug at the limit is skipped" "$(ls_pick 001-a 002-b)" "002-b"
-logline '- t · C · 002-b · x (strike 3)'
+logline '- t · IMPLEMENT · 002-b · x (strike 3)'
 is "all at the limit yields nothing" "$(ls_pick 001-a 002-b)" ""
 is "a slug with a space survives" "$(ls_pick '003-my idea')" "003-my idea"
 
@@ -258,52 +258,52 @@ echo "phase.sh"
 pk() { is "$1" "$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")" "$2"; }
 
 floor p_empty
-pk "empty floor is E" "E"
+pk "an empty floor is FINISH" "FINISH"
 
 floor p_a; draft 001-a
-pk "a draft is A" "A 001-a"
+pk "a draft is SPECIFY" "SPECIFY 001-a"
 
 floor p_b; spec 001-a
-pk "a spec with no plan is B" "B 001-a"
+pk "a spec with no plan is PLAN" "PLAN 001-a"
 
 floor p_bare; spec 001-a; plan_bare 001-a
-pk "an overview with no task files is B" "B 001-a"
+pk "an overview with no task files is PLAN" "PLAN 001-a"
 
 floor p_c; spec 001-a; plan 001-a 3 1
-pk "an open step is C" "C 001-a"
+pk "an open step is IMPLEMENT" "IMPLEMENT 001-a"
 
 floor p_d; spec 001-a; plan 001-a 3 0
-pk "every step ticked is D" "D 001-a"
+pk "every step ticked is ARCHIVE" "ARCHIVE 001-a"
 
 floor p_vacuous; spec 001-a; plan_bare 001-a
 mkdir -p "$FIXTURE/.spectomat/plans/001-a"
-pk "an empty task dir is never D" "B 001-a"
+pk "an empty task dir is never ARCHIVE" "PLAN 001-a"
 
 floor p_order; draft 004-d; spec 003-c; plan 002-b 2 1; spec 002-b; spec 001-a; plan 001-a 2 0
-pk "D outranks C, B and A" "D 001-a"
+pk "ARCHIVE outranks IMPLEMENT, PLAN and SPECIFY" "ARCHIVE 001-a"
 
 floor p_dirty; draft 001-a; dirty
-pk "a dirty tree is R" "R"
+pk "a dirty tree is RECOVER" "RECOVER"
 
 floor p_dirty_empty; dirty
-pk "a dirty tree beats E" "R"
+pk "a dirty tree beats FINISH" "RECOVER"
 
 floor p_strike; draft 001-a; draft 002-b
-logline '- t · A · 001-a · x (strike 1)'
-pk "the less-struck draft wins" "A 002-b"
+logline '- t · SPECIFY · 001-a · x (strike 1)'
+pk "the less-struck draft wins" "SPECIFY 002-b"
 
 floor p_blocked; draft 001-a
-logline '- t · A · 001-a · x (strike 1)'
-logline '- t · A · 001-a · x (strike 2)'
-logline '- t · A · 001-a · x (strike 3)'
-pk "a leftover at the limit is R, not E" "R"
+logline '- t · SPECIFY · 001-a · x (strike 1)'
+logline '- t · SPECIFY · 001-a · x (strike 2)'
+logline '- t · SPECIFY · 001-a · x (strike 3)'
+pk "a leftover at the limit is RECOVER, not FINISH" "RECOVER"
 
 floor p_orphan; plan_bare 001-a
-pk "an orphan overview is R, not E" "R"
+pk "an orphan overview is RECOVER, not FINISH" "RECOVER"
 
 floor p_pure; spec 001-a; plan 001-a 2 1
 before=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "$FIXTURE" && git status --porcelain)
-pk "the picker still says C" "C 001-a"
+pk "the picker still says IMPLEMENT" "IMPLEMENT 001-a"
 after=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "$FIXTURE" && git status --porcelain)
 is "the picker mutates nothing" "$after" "$before"
 
@@ -323,7 +323,7 @@ is "specs/ is empty"   "$(there specs/001-a.md)"     "no"
 is "exactly one commit" "$(( $(commits) - n0 ))"     "1"
 is "the tree is clean" "$(cd "$FIXTURE" && git status --porcelain)" ""
 is "the log names the gate count" "$(grep -c 'gates 1/1' "$FIXTURE/.spectomat/log.md")" "1"
-# Phase D owns the floor and nothing else: it must not stage a project file,
+# ARCHIVE owns the floor and nothing else: it must not stage a project file,
 # which is what the old package.json version bump did.
 is "the commit touches only the floor" \
   "$(cd "$FIXTURE" && git show --name-only --format= HEAD | grep -cv '^.spectomat/')" "0"
@@ -371,7 +371,7 @@ is "zero new commits when nothing could move" "$(( $(commits) - n0 ))" "0"
 
 echo "briefs"
 AGENTS="$(dirname "$SCRIPTS")/agents"
-for a in phase-a phase-b phase-c recover; do
+for a in specify plan implement recover; do
   is "agents/$a.md exists" "$([[ -f "$AGENTS/$a.md" ]] && echo yes || echo no)" "yes"
   is "agents/$a.md is named $a" "$(sed -n 's/^name: *//p' "$AGENTS/$a.md" | head -1)" "$a"
   is "agents/$a.md has a description" \
@@ -379,20 +379,20 @@ for a in phase-a phase-b phase-c recover; do
 done
 is "AGENT_COUNT is 4" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "4"
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
-is "phase-c names both prompts" \
-  "$(grep -cE 'prompts/(implementer|reviewer)\.md' "$AGENTS/phase-c.md" | tr -d ' ')" "2"
+is "implement.md names both prompts" \
+  "$(grep -cE 'prompts/(implementer|reviewer)\.md' "$AGENTS/implement.md" | tr -d ' ')" "2"
 
 echo "status"
 floor st; spec 001-a; plan 001-a 2 1
 st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
 is "status prints the next section" "$(printf '%s\n' "$st_out" | grep -c '^--- next ---$')" "1"
-is "status predicts the verdict"    "$(printf '%s\n' "$st_out" | grep -c '^C 001-a$')" "1"
+is "status predicts the verdict"    "$(printf '%s\n' "$st_out" | grep -c '^IMPLEMENT 001-a$')" "1"
 floor st2
 st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
-is "an empty floor predicts E"      "$(printf '%s\n' "$st_out" | grep -c '^E$')" "1"
+is "an empty floor predicts FINISH" "$(printf '%s\n' "$st_out" | grep -c '^FINISH$')" "1"
 
 # Arming a floor must leave a clean tree. The picker reads `git status` and
-# answers R to any dirt, so a draft the user dropped into drafts/ must be
+# answers RECOVER to any dirt, so a draft the user dropped into drafts/ must be
 # committed by run.sh, or iteration 1 burns on the janitor.
 echo "run.sh drafts"
 
@@ -418,10 +418,10 @@ printf 'idea\n' > "$DROP/.spectomat/drafts/001-thing.md"
 (cd "$DROP" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
 is "a dropped draft leaves a clean tree" "$(cd "$DROP" && git status --porcelain)" ""
 is "the draft is committed"     "$(cd "$DROP" && git log -1 --name-only --format= | grep -c 'drafts/001-thing.md')" "1"
-is "iteration 1 is phase A"     "$(cd "$DROP" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
+is "iteration 1 is SPECIFY"     "$(cd "$DROP" && bash "$SCRIPTS/phase.sh")" "SPECIFY 001-thing"
 
 # A draft the user already committed leaves nothing to stage; arming must still
-# succeed and reach phase A.
+# succeed and reach SPECIFY.
 DROP2="$TMP/drop-committed"
 mkdir -p "$DROP2"
 cp -R "$REPO_TEMPLATE/." "$DROP2"
@@ -434,9 +434,9 @@ mkdir -p "$DROP2/.spectomat/drafts"
 ) >/dev/null 2>&1
 (cd "$DROP2" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
 is "a committed draft arms cleanly" "$(cd "$DROP2" && git status --porcelain)" ""
-is "a committed draft reaches A"    "$(cd "$DROP2" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
+is "a committed draft reaches SPECIFY" "$(cd "$DROP2" && bash "$SCRIPTS/phase.sh")" "SPECIFY 001-thing"
 
-# Unrelated work in progress would make the picker answer R every iteration, so
+# Unrelated work in progress would make the picker answer RECOVER every iteration, so
 # run.sh refuses to arm rather than spend the whole cap on the janitor.
 DIRTY="$TMP/dirty"
 mkdir -p "$DIRTY"
@@ -459,7 +459,7 @@ printf 'b\n' > "$ORDER/.spectomat/drafts/beta.md"
 printf 'a\n' > "$ORDER/.spectomat/drafts/alpha.md"
 touch "$ORDER/.spectomat/drafts/beta.md"   # newer, but alphabetically second
 (cd "$ORDER" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
-is "drafts are read alphabetically" "$(cd "$ORDER" && bash "$SCRIPTS/phase.sh")" "A alpha"
+is "drafts are read alphabetically" "$(cd "$ORDER" && bash "$SCRIPTS/phase.sh")" "SPECIFY alpha"
 
 # Arming writes two files that must live and die together: state.json is the
 # armed flag every existence test reads, pointer.md is the prompt fed back.

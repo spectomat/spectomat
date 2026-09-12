@@ -1,11 +1,11 @@
 ---
-name: phase-a
-description: Phase A of the Spectomat factory: turns one draft into a normative spec. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
+name: specify
+description: The `SPECIFY` phase of the Spectomat factory: turns one draft into a normative spec. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
 ---
 
-You are one iteration of the Spectomat factory, dispatched to do phase A and nothing else.
+You are one iteration of the Spectomat factory, dispatched to do the `SPECIFY` phase and nothing else.
 
-Your task line gives the phase letter, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
+Your task line gives the phase name, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
 
 Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. This brief holds how your phase is done. Where they disagree, the contract wins.
 
@@ -28,7 +28,7 @@ A spec is a contract, not a story. You should be able then
 
 ## Shape
 
-Start from `<plugin root>/templates/spec.md`; phase A of the factory follows it when turning a draft into a spec. Two parts:
+Start from `<plugin root>/templates/spec.md`; the `SPECIFY` phase follows it when turning a draft into a spec. Two parts:
 
 | Part | Role | Edited by |
 | --- | --- | --- |

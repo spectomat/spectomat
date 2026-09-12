@@ -96,29 +96,29 @@ run_gates() {
   return 0
 }
 
-# How many times phase LETTER was struck on SLUG, per the factory log. The log
+# How many times PHASE was struck on SLUG, per the factory log. The log
 # is gitignored and append-only, so this is the only record of a strike. Both
 # matches are fixed-string (grep -F), so a slug carrying regex metacharacters
 # such as parentheses or an unclosed bracket is matched literally, never as a
 # pattern: it cannot fail to compile and it cannot accidentally match less
 # than the literal text.
 strike_count() {
-  local letter="$1" slug="$2" n
+  local phase="$1" slug="$2" n
   [[ -f "$FLOOR/log.md" ]] || { echo 0; return 0; }
-  n=$(grep -F " · $letter · $slug · " "$FLOOR/log.md" 2>/dev/null | grep -cF '(strike ') || n=0
+  n=$(grep -F " · $phase · $slug · " "$FLOOR/log.md" 2>/dev/null | grep -cF '(strike ') || n=0
   printf '%s\n' "${n// /}"
 }
 
-# The candidate with the fewest strikes at LETTER; candidate slugs arrive on
+# The candidate with the fewest strikes at PHASE; candidate slugs arrive on
 # stdin, one per line, already sorted, because a slug may contain spaces. Ties
 # go to the first, which is the alphabetically first. Prints nothing when there
 # are no candidates or every one has reached STRIKE_LIMIT, and the caller then
 # moves on to the next stage.
 least_struck() {
-  local letter="$1" slug n best_n=-1 best=""
+  local phase="$1" slug n best_n=-1 best=""
   while IFS= read -r slug; do
     [[ -n "$slug" ]] || continue
-    n=$(strike_count "$letter" "$slug")
+    n=$(strike_count "$phase" "$slug")
     [[ $n -lt $STRIKE_LIMIT ]] || continue
     if [[ $best_n -lt 0 ]] || [[ $n -lt $best_n ]]; then
       best_n=$n

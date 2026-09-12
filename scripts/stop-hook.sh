@@ -126,7 +126,7 @@ continue_iteration() {
     && mv "$temp_file" "$STATE_FILE" \
     || { rm -f "$temp_file"; stop_corrupt "could not write the iteration counter"; }
 
-  system_msg="🔄 Spectomat iteration $next_iteration | Ends when scripts/phase.sh answers E, or at the cap ($MAX_ITERATIONS)"
+  system_msg="🔄 Spectomat iteration $next_iteration | Ends when scripts/phase.sh answers FINISH, or at the cap ($MAX_ITERATIONS)"
 
   jq -n \
     --arg prompt "$prompt_text" \

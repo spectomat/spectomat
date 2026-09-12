@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spectomat archiver — phase D.
+# Spectomat archiver — the ARCHIVE phase.
 #
 #   archive.sh <slug>
 #
@@ -22,20 +22,20 @@ log_line() { printf '%s\n' "$1" >> "$FLOOR/log.md"; }
 
 require_ready() {
   [[ -n "$SLUG" ]] || die "usage: archive.sh <slug>"
-  [[ -z "$(git status --porcelain)" ]] || die "tree is dirty: the janitor runs before phase D"
+  [[ -z "$(git status --porcelain)" ]] || die "tree is dirty: the janitor runs before ARCHIVE"
   [[ -f "$FLOOR/specs/$SLUG.md" ]] || die "no $FLOOR/specs/$SLUG.md"
   [[ -f "$FLOOR/plans/$SLUG.md" ]] || die "no $FLOOR/plans/$SLUG.md"
 }
 
-# Log one phase D strike for this slug and print the new count. Shared by
-# every way phase D can fail - a red gate and a failed move or commit both
+# Log one ARCHIVE strike for this slug and print the new count. Shared by
+# every way ARCHIVE can fail - a red gate and a failed move or commit both
 # count against the same STRIKE_LIMIT for this slug, so a slug that keeps
-# failing archival for any reason eventually drops out of the picker's D
+# failing archival for any reason eventually drops out of the picker's ARCHIVE
 # candidates instead of burning every remaining iteration.
 strike() {
   local reason="$1" n
-  n=$(( $(strike_count D "$SLUG") + 1 ))
-  log_line "- $(now) · D · $SLUG · $reason (strike $n)"
+  n=$(( $(strike_count ARCHIVE "$SLUG") + 1 ))
+  log_line "- $(now) · ARCHIVE · $SLUG · $reason (strike $n)"
   printf '%s\n' "$n"
 }
 
@@ -96,9 +96,9 @@ commit_archive() {
 
 log_result() {
   if [[ -n "$BLOCK" ]]; then
-    log_line "- $(now) · D · $SLUG · blocked after $STRIKE_LIMIT strikes · gates $GATE_RESULT"
+    log_line "- $(now) · ARCHIVE · $SLUG · blocked after $STRIKE_LIMIT strikes · gates $GATE_RESULT"
   else
-    log_line "- $(now) · D · $SLUG · archived · gates $GATE_RESULT"
+    log_line "- $(now) · ARCHIVE · $SLUG · archived · gates $GATE_RESULT"
   fi
 }
 
@@ -108,7 +108,7 @@ main() {
   move_trail
   commit_archive
   log_result
-  echo "D $SLUG · gates $GATE_RESULT${BLOCK:+ · BLOCKED}"
+  echo "ARCHIVE $SLUG · gates $GATE_RESULT${BLOCK:+ · BLOCKED}"
 }
 
 main "$@"
