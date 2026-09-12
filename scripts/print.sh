@@ -6,10 +6,10 @@
 # Every print_* writes one "--- section ---" block to stdout and needs
 # FLOOR, STATE_FILE, MEMORY, count and state_field from utils.sh.
 
-print_loop() {
+print_iteration() {
   echo "--- flow ---"
   if [[ -f "$STATE_FILE" ]]; then
-    echo "active: loop $(state_field loop) of $(state_field max_loops)"
+    echo "active: iteration $(state_field iteration) of $(state_field max_iterations)"
   else
     echo "not running"
   fi
@@ -62,7 +62,7 @@ print_commits() {
   git log --oneline -5 2>/dev/null || echo "(no git)"
 }
 
-# What the next loop will do. This runs the picker itself rather than
+# What the next iteration will do. This runs the picker itself rather than
 # re-deriving the answer, so the prediction cannot drift from the decision.
 print_next() {
   echo "--- next ---"

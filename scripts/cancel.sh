@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spectomat cancel — remove the flow's state file so the Stop hook releases the session.
+# Spectomat cancel — disarm the flow so the Stop hook releases the session.
 # The floor under .spectomat/ stays; run.sh resumes from it.
 
 set -uo pipefail
@@ -12,10 +12,10 @@ main() {
     echo "No active Spectomat flow."
     exit 0
   fi
-  local loop
-  loop=$(state_field loop)
-  rm "$STATE_FILE"
-  echo "Cancelled Spectomat flow (was at loop ${loop:-?}). The floor stays; /spectomat:run resumes from it."
+  local iteration
+  iteration=$(state_field iteration)
+  disarm
+  echo "Cancelled Spectomat flow (was at iteration ${iteration:-?}). The floor stays; /spectomat:run resumes from it."
 }
 
 main "$@"

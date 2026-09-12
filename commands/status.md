@@ -1,5 +1,5 @@
 ---
-description: "Show factory progress: loop number, floor counts, plan steps, blocked files, log tail"
+description: "Show factory progress: iteration number, floor counts, plan steps, blocked files, log tail"
 allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/status.sh:*)"]
 ---
 

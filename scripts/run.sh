@@ -1,14 +1,13 @@
 #!/bin/bash
 # Spectomat run — prepare the factory floor and arm the unattended flow.
 #
-#   run.sh [MAX_LOOPS]
+#   run.sh [MAX_ITERATIONS]
 #
-# Creates .spectomat/{drafts,specs,plans,done}, moves ./wishlist/*.md into
-# drafts/ as NNN-<name>.md (oldest first, counter in .spectomat/.inc), renders
-# contract.md and memory.md when absent, commits what it created (contract,
-# memory, .inc, ignore rules, new drafts), and arms the Stop hook from
-# templates/state.md. Default 100 loops, promise "FACTORY EMPTY". Refuses
-# when a flow is already active or there is no work at all.
+# Creates .spectomat/{drafts,specs,plans,done}, renders contract.md and
+# memory.md when absent, commits what it created (contract, memory, ignore
+# rules, drafts the user dropped in), and arms the Stop hook by writing
+# state.json and rendering templates/pointer.md. Default 100 iterations, the
+# promise "FACTORY EMPTY". Refuses when a flow is armed or the floor is empty.
 
 set -euo pipefail
 
@@ -16,10 +15,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/gates.sh"
 cd_root
 TEMPLATES="$PLUGIN_ROOT/templates"
-MAX_LOOPS=100
+MAX_ITERATIONS=100
 STAGE=()     # files run.sh created this run, committed by commit_floor
 IGNORED=()   # .gitignore lines run.sh appended this run, staged by commit_floor
-MOVED=()     # tracked wishes this run moved out of wishlist/; their removal is staged too
 
 # --- helpers ---
 
@@ -33,8 +31,8 @@ parse_args() {
       -h|--help) usage; exit 0 ;;
       -*) die "unknown option: $1" ;;
       *)
-        [[ "$1" =~ ^[0-9]+$ ]] || die "max loops must be a number, got: $1"
-        MAX_LOOPS="$1"; shift ;;
+        [[ "$1" =~ ^[0-9]+$ ]] || die "max iterations must be a number, got: $1"
+        MAX_ITERATIONS="$1"; shift ;;
     esac
   done
 }
@@ -58,44 +56,10 @@ ensure_gitignored() {
 prepare_floor() {
   mkdir -p "$FLOOR"/{drafts,specs,plans,done}
   ensure_gitignored "$STATE_FILE"
+  ensure_gitignored "$POINTER"
   ensure_gitignored "$FLOOR/work/"
   ensure_gitignored "$FLOOR/log.md"
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
-}
-
-# Move wishes from ./wishlist/ into drafts/, oldest modification first, each
-# renamed to NNN-<name>.md so the alphabetical order the contract uses equals
-# intake order. NNN continues from $INC, which holds the last number issued and
-# is committed with the drafts. A wish whose name is already in drafts/ under
-# any prefix waits and takes no number.
-intake_wishes() {
-  local wish name slug n start
-  n=$(cat "$INC" 2>/dev/null || echo 0)
-  [[ "$n" =~ ^[0-9]+$ ]] || die "$INC: expected a number, got: $n"
-  n=$((10#$n)); start=$n
-  while IFS= read -r wish; do
-    [[ -f "$wish" ]] || continue
-    name="$(basename "$wish")"
-    if compgen -G "$FLOOR/drafts/[0-9]*-$name" > /dev/null || [[ -e "$FLOOR/drafts/$name" ]]; then
-      echo "wishlist: $name kept, drafts/ already has it"
-      continue
-    fi
-    n=$((n + 1))
-    printf -v slug '%03d-%s' "$n" "$name"
-    # A wish already in the index leaves a staged removal behind when it moves.
-    # Nothing stages that for us, and the picker answers R to any dirty tree, so
-    # the path is remembered here and added alongside the new draft. An untracked
-    # wish is skipped: `git add` on a path that was never in the index fails.
-    if git ls-files --error-unmatch -- "$wish" >/dev/null 2>&1; then
-      MOVED+=("$wish")
-    fi
-    mv "$wish" "$FLOOR/drafts/$slug"
-    echo "wishlist: $name moved to drafts/$slug"
-  done < <(ls -tr wishlist/*.md 2>/dev/null)
-  if [[ $n -ne $start ]]; then
-    printf '%d\n' "$n" > "$INC"
-    STAGE+=("$INC")
-  fi
 }
 
 # Stage .gitignore as "what the index had + the lines run.sh appended", leaving
@@ -107,11 +71,11 @@ stage_ignore_entries() {
   git update-index --add --cacheinfo "100644,$blob,.gitignore"
 }
 
-# Commit what this run created — contract, memory, ignore rules, new drafts — plus
-# the removal of the wishes those drafts came from, so the flow starts on a clean
-# tree. Nothing else of the user's is staged.
+# Commit what this run created — contract, memory, ignore rules — plus whatever
+# the user dropped into drafts/, so the flow starts on a clean tree. Nothing else
+# of the user's is staged.
 commit_floor() {
-  git add "$FLOOR/drafts" ${STAGE[@]+"${STAGE[@]}"} ${MOVED[@]+"${MOVED[@]}"}
+  git add "$FLOOR/drafts" ${STAGE[@]+"${STAGE[@]}"}
   [[ ${#IGNORED[@]} -eq 0 ]] || stage_ignore_entries
   git diff --cached --quiet && return 0
   local n msg="chore(spectomat): floor setup"
@@ -136,12 +100,7 @@ render_factory() {
   fi
 
   if [[ -f "$CONTRACT" ]]; then
-    if migrate_contract; then
-      STAGE+=("$CONTRACT")
-      echo "$CONTRACT: migrated to the phase-agent contract (gates preserved)"
-    else
-      echo "$CONTRACT: exists, kept"
-    fi
+    echo "$CONTRACT: exists, kept"
   else
     detect_gates
     echo "gates: ${GATES:-none detected}"
@@ -176,14 +135,23 @@ require_startable() {
   fi
 }
 
-# Write the state file the Stop hook reads on every exit attempt. PLUGIN_ROOT
-# lets the pointer name the phase briefs by absolute path.
-write_state() {
-  render_template "$TEMPLATES/state.md" "$STATE_FILE" \
-    PLUGIN_ROOT="$PLUGIN_ROOT" \
-    SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}" \
-    MAX_LOOPS="$MAX_LOOPS" \
-    STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# Arm the flow: the state the Stop hook reads on every exit attempt, and the
+# pointer it feeds back. Both are written on every run, so a pointer holding a
+# stale PLUGIN_ROOT - the plugin reinstalled at a new cache path - is replaced
+# rather than migrated. The state is four fields, so it is written here instead
+# of rendered from a template. MAX_ITERATIONS is unquoted in the JSON;
+# parse_args has already required it to match ^[0-9]+$.
+arm_flow() {
+  cat > "$STATE_FILE" <<EOF
+{
+  "iteration": 1,
+  "max_iterations": $MAX_ITERATIONS,
+  "session_id": "${CLAUDE_CODE_SESSION_ID:-}",
+  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+  render_template "$TEMPLATES/pointer.md" "$POINTER" \
+    PLUGIN_ROOT="$PLUGIN_ROOT"
 }
 
 announce() {
@@ -191,27 +159,27 @@ announce() {
 
 🏭 Spectomat factory armed in this session.
 
-Loop: 1 of $(if [[ $MAX_LOOPS -gt 0 ]]; then echo "$MAX_LOOPS"; else echo "unlimited"; fi)
+Iteration: 1 of $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo "$MAX_ITERATIONS"; else echo "unlimited"; fi)
 State: $STATE_FILE
+Pointer: $POINTER
 Cancel: /spectomat:cancel
 
 When you try to exit, the Stop hook feeds the prompt below back to you.
-Each loop asks scripts/phase.sh which phase applies and dispatches it.
-The flow ends when the picker answers E, or at the loop cap.
+Each iteration asks scripts/phase.sh which phase applies and dispatches it.
+The flow ends when the picker answers E, or at the iteration cap.
 EOF
-  awk '/^---$/{i++; next} i>=2' "$STATE_FILE"
+  cat "$POINTER"
 }
 
 main() {
   parse_args "$@"
   require_git_repo
   prepare_floor
-  intake_wishes
   render_factory
   commit_floor
   report_floor
   require_startable
-  write_state
+  arm_flow
   announce
 }
 

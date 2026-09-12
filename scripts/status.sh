@@ -8,7 +8,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/print.sh"
 cd_root
 
 main() {
-  print_loop
+  print_iteration
   if [[ ! -d "$FLOOR" ]]; then
     echo "No $FLOOR/ in $ROOT - /spectomat:run has not been started here."
     exit 0

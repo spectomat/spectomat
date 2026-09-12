@@ -14,13 +14,11 @@ Create or modify only the files it lists under Files; if its tests need a file i
 
 Follow the Steps in order under TDD: write the failing test, watch it fail, implement minimally, watch it pass. Run the focused test while iterating and the full suite once at the end.
 
-Do not run any git command: the controller commits. Do not edit the task file.
+Do not run any git command: phase C commits. Do not edit the task file.
 
 Write your full report to <report path>: what you built, every file you touched, the test command and its output, anything you doubted and how you decided.
 
-End the report with a `## Memory` section: at most three one-line facts about this codebase that would have saved you time had you known them at the start — where something lives, what a command costs, a convention to copy, a trap and its symptom. Durable and reusable only, nothing about this task in particular. Write `none` when there is nothing worth carrying. Do not edit `.spectomat/memory.md` yourself; the controller decides what enters it.
-
-> NOTE: Other implementers may be working in the same tree on other files at the same time.
+End the report with a `## Memory` section: at most three one-line facts about this codebase that would have saved you time had you known them at the start — where something lives, what a command costs, a convention to copy, a trap and its symptom. Durable and reusable only, nothing about this task in particular. Write `none` when there is nothing worth carrying. Do not edit `.spectomat/memory.md` yourself; phase C decides what enters it.
 
 ## Outcome
 

@@ -42,15 +42,15 @@ export function fn(input) {
 ```
 
 - [ ] **Step 4: Run it, expect PASS** — same command; the full suite stays green
-- [ ] **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the controller stages this task's Files and commits — an implementer subagent never runs git
+- [ ] **Step 5: Commit** — message `feat({{SLUG}}): <what>`; phase C stages this task's Files and commits — an implementer subagent never runs git
 
 ## Rulings
 
-(appended by executing-tasks: `- <decision> — <why> — <cost if wrong>`)
+(appended by phase C: `- <decision> — <why> — <cost if wrong>`)
 
 ## Result
 
-(filled by executing-tasks when the task is done)
+(filled by phase C when the task is done)
 
 - Commits: <base7>..<head7>
 - Tests: <n>/<n> (<files>)

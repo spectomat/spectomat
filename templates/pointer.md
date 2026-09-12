@@ -1,14 +1,6 @@
----
-active: true
-loop: 1
-session_id: {{SESSION_ID}}
-max_loops: {{MAX_LOOPS}}
-started_at: "{{STARTED_AT}}"
----
+# Spectomat pointer
 
-# State tracker
-
-Every loop runs in a fresh context. Do no factory work in this session.
+Every iteration runs in a fresh context. Do no factory work in this session.
 
 ## 1. Ask the picker
 
@@ -36,4 +28,4 @@ Plugin root: {{PLUGIN_ROOT}}
 
 Print the report in at most five lines, then stop.
 
-Do not read the contract, the floor or the code yourself. Do not retry a failed loop here — the next loop is a new picker call and a new subagent. Write `<promise>FACTORY EMPTY</promise>` only when the picker printed `E`; it is a verdict you relay, never a judgement you make.
+Do not read the contract, the floor or the code yourself. Do not retry a failed iteration here — the next iteration is a new picker call and a new subagent. Write `<promise>FACTORY EMPTY</promise>` only when the picker printed `E`; it is a verdict you relay, never a judgement you make.

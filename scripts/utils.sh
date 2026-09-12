@@ -7,10 +7,10 @@
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
-STATE_FILE="$FLOOR/state.md"
+STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
+POINTER="$FLOOR/pointer.md"      # the prompt the Stop hook feeds back; gitignored
 CONTRACT="$FLOOR/contract.md"
 MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; committed
-INC="$FLOOR/.inc"   # last intake number issued to a wish
 
 # Move to the git root (or stay put outside a repo); sets ROOT.
 cd_root() {
@@ -23,10 +23,16 @@ die() { echo "❌ $*" >&2; exit 1; }
 # Number of .md files directly inside a floor directory (0 when it is missing).
 count() { find "$1" -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' '; }
 
-# Value of a "key: value" line in the state file frontmatter; empty when absent.
+# Value of one key in the state file; empty when absent or unreadable.
+# Reading several keys at once is one jq call, not several - see read_state
+# in stop-hook.sh, which is on the path of every iteration.
 state_field() {
-  sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE" | grep "^$1:" | sed "s/$1: *//" || true
+  jq -r --arg k "$1" '.[$k] // empty' "$STATE_FILE" 2>/dev/null || true
 }
+
+# Remove both halves of an armed flow. The state file is the armed flag; the
+# pointer is its payload, and a pointer left behind would outlive its state.
+disarm() { rm -f "$STATE_FILE" "$POINTER"; }
 
 # Render a template, replacing every {{KEY}} with its value:
 #   render_template SRC DEST KEY=value ...
@@ -122,28 +128,3 @@ least_struck() {
   [[ -z "$best" ]] || printf '%s\n' "$best"
 }
 
-# CURRENT with its patch replaced by the slug's NNN as a decimal integer.
-next_version() {
-  local cur="$1" slug="$2" n
-  n=$(printf '%s' "$slug" | sed -n 's/^\([0-9][0-9]*\)-.*/\1/p')
-  [[ -n "$n" ]] || return 1
-  printf '%s.%s.%d\n' \
-    "$(printf '%s' "$cur" | cut -d. -f1)" \
-    "$(printf '%s' "$cur" | cut -d. -f2)" \
-    "$((10#$n))"
-}
-
-# Rewrite a pre-migration contract from the current template, carrying the
-# operator's gate lines across verbatim. A contract that no longer has a
-# "## Phases" section is already current and is left alone. Exit 0 when it
-# rewrote the file, 1 when there was nothing to do. The previous text stays in
-# git history, because the contract is committed.
-migrate_contract() {
-  local gates
-  [[ -f "$CONTRACT" ]] || return 1
-  grep -q '^## Phases' "$CONTRACT" || return 1
-  gates=$(gate_block)
-  render_template "$PLUGIN_ROOT/templates/contract.md" "$CONTRACT" \
-    REPO="$(pwd)" \
-    GATES="$gates"
-}

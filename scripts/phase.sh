@@ -1,16 +1,16 @@
 #!/bin/bash
-# Spectomat phase picker — which phase the next loop must do.
+# Spectomat phase picker — which phase the next iteration must do.
 #
 #   phase.sh        prints one line and exits 0:
 #                     "A <slug>"  draft -> spec
 #                     "B <slug>"  spec -> plan
-#                     "C <slug>"  plan -> wave
+#                     "C <slug>"  plan -> next task
 #                     "D <slug>"  plan -> done
 #                     "R"         dirty tree, or a floor no stage claims
 #                     "E"         nothing left; the flow may end
 #
 # Pure: reads the floor, log.md and git status, writes nothing. The session
-# runs it once per loop and /spectomat:status runs it on demand.
+# runs it once per iteration and /spectomat:status runs it on demand.
 
 set -uo pipefail
 

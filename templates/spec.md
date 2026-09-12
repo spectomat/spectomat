@@ -2,7 +2,7 @@
 
 One paragraph: what the system is, who uses it, and the one design idea that organises everything below.
 
-Code cites this document by section and line (`§3.4 L316`). Part I is normative: the loop builds to it and never edits it. A divergence found during the build is a **reconciliation**, recorded in §11 with a number and a reason.
+Code cites this document by section and line (`§3.4 L316`). Part I is normative: the factory builds to it and never edits it. A divergence found during the build is a **reconciliation**, recorded in §11 with a number and a reason.
 
 # Part I — Specification
 
@@ -32,7 +32,7 @@ One subsection per boundary. Protocol, auth, limits, and the interface the code 
 
 ## 5. Normative Algorithms
 
-Algorithms given as explicit pseudocode with named constants. The loop implements them as written; a suspected error is a reconciliation, never a silent improvement.
+Algorithms given as explicit pseudocode with named constants. The factory implements them as written; a suspected error is a reconciliation, never a silent improvement.
 
 ## 6. Architecture
 
@@ -108,7 +108,7 @@ Every external boundary is an interface with an in-memory fake. List them.
 
 ## 16. Build sequence
 
-Bottom-up, numbered. Each step ends with all gates green. The loop derives its build phases from this list.
+Bottom-up, numbered. Each step ends with all gates green. The factory derives its build phases from this list.
 
 1. Toolchain
 2. Domain

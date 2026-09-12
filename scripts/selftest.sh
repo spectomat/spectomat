@@ -32,7 +32,8 @@ floor_template() {
     git init -q .
     git config user.email t@example.com
     git config user.name t
-    printf '%s\n' '.spectomat/state.md' '.spectomat/work/' '.spectomat/log.md' > .gitignore
+    printf '%s\n' '.spectomat/state.json' '.spectomat/pointer.md' \
+                   '.spectomat/work/' '.spectomat/log.md' > .gitignore
     printf '# Spectomat factory log\n\n' > .spectomat/log.md
     git add .gitignore
     git commit -qm init
@@ -105,20 +106,6 @@ gates_block() {
     printf '```bash\n'
     printf 'echo a later fence that must be ignored\n'
     printf '```\n'
-  } > "$FIXTURE/.spectomat/contract.md"
-  fixture_commit
-}
-
-# old_contract LINE... — a pre-migration contract: a "## Phases" section and a
-# Verification Gates block holding LINE...
-old_contract() {
-  {
-    printf '# Spectomat Factory\n\n## The floor\n\nfloor text\n\n'
-    printf '## Phases\n\n### A · Draft → Spec\n\nold phase craft\n\n'
-    printf '## Verification Gates\n\n'
-    printf '```bash\n# project-specific gates, one command per line\n'
-    printf '%s\n' "$@"
-    printf '```\n\n## Memory\n\nmemory rules\n'
   } > "$FIXTURE/.spectomat/contract.md"
   fixture_commit
 }
@@ -232,13 +219,13 @@ is "it names the failing gate" "$(cat "$TMP/gf")" "false"
 echo "strike_count"
 floor sc1
 is "no log entry is zero" "$(cd "$FIXTURE" && strike_count C 001-a)" "0"
-logline '- 2026-09-11T10:00Z · C · 001-a · wave 1 (strike 1: gate red)'
+logline '- 2026-09-11T10:00Z · C · 001-a · Task 1 (strike 1: gate red)'
 is "one strike counts"    "$(cd "$FIXTURE" && strike_count C 001-a)" "1"
-logline '- 2026-09-11T10:10Z · C · 001-a · wave 1 (strike 2: gate red)'
+logline '- 2026-09-11T10:10Z · C · 001-a · Task 1 (strike 2: gate red)'
 is "two strikes count"    "$(cd "$FIXTURE" && strike_count C 001-a)" "2"
 is "another phase is separate" "$(cd "$FIXTURE" && strike_count B 001-a)" "0"
 is "another slug is separate"  "$(cd "$FIXTURE" && strike_count C 002-b)" "0"
-logline '- 2026-09-11T10:20Z · C · 001-a · wave 2 done'
+logline '- 2026-09-11T10:20Z · C · 001-a · Task 2 done'
 is "a clean line is not a strike" "$(cd "$FIXTURE" && strike_count C 001-a)" "2"
 
 floor sc2
@@ -264,13 +251,6 @@ is "a slug at the limit is skipped" "$(ls_pick 001-a 002-b)" "002-b"
 logline '- t · C · 002-b · x (strike 3)'
 is "all at the limit yields nothing" "$(ls_pick 001-a 002-b)" ""
 is "a slug with a space survives" "$(ls_pick '003-my idea')" "003-my idea"
-
-echo "next_version"
-is "patch becomes NNN"      "$(next_version 0.1.8 003-auth)" "0.1.3"
-is "leading zeros are decimal" "$(next_version 2.4.0 008-x)" "2.4.8"
-is "no octal surprise"      "$(next_version 1.0.0 009-x)" "1.0.9"
-is "three digits"           "$(next_version 1.2.3 120-x)" "1.2.120"
-next_version 1.0.0 no-number >/dev/null 2>&1; is "a slug with no NNN fails" "$?" "1"
 
 echo "phase.sh"
 pk() { is "$1" "$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")" "$2"; }
@@ -341,6 +321,10 @@ is "specs/ is empty"   "$(there specs/001-a.md)"     "no"
 is "exactly one commit" "$(( $(commits) - n0 ))"     "1"
 is "the tree is clean" "$(cd "$FIXTURE" && git status --porcelain)" ""
 is "the log names the gate count" "$(grep -c 'gates 1/1' "$FIXTURE/.spectomat/log.md")" "1"
+# Phase D owns the floor and nothing else: it must not stage a project file,
+# which is what the old package.json version bump did.
+is "the commit touches only the floor" \
+  "$(cd "$FIXTURE" && git show --name-only --format= HEAD | grep -cv '^.spectomat/')" "0"
 
 ready fail 001-a 'false'
 arc 001-a; is "a red gate exits 1" "$?" "1"
@@ -392,25 +376,9 @@ for a in phase-a phase-b phase-c recover; do
     "$(grep -c '^description: ' "$AGENTS/$a.md")" "1"
 done
 is "AGENT_COUNT is 4" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "4"
-is "the looper is gone"     "$([[ -e "$AGENTS/looper.md" ]] && echo yes || echo no)" "no"
-is "references/ is gone"    "$([[ -d "$(dirname "$SCRIPTS")/references" ]] && echo yes || echo no)" "no"
-is "no brief names references/" "$(grep -l 'references/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "phase-c names both prompts" \
   "$(grep -cE 'prompts/(implementer|reviewer)\.md' "$AGENTS/phase-c.md" | tr -d ' ')" "2"
-
-echo "migrate_contract"
-floor mig; old_contract 'npm run custom-gate' 'bash ci/extra.sh'
-( cd "$FIXTURE" && migrate_contract ); is "an old contract migrates" "$?" "0"
-C="$FIXTURE/.spectomat/contract.md"
-is "the phases section is gone"  "$(grep -c '^## Phases' "$C")" "0"
-is "the marker is there"         "$(grep -c '^<!-- spectomat-contract: 2 -->' "$C")" "1"
-is "the first gate survived"     "$(grep -c '^npm run custom-gate$' "$C")" "1"
-is "the second gate survived"    "$(grep -c '^bash ci/extra.sh$' "$C")" "1"
-is "the memory rules came back"  "$(grep -c '^## Memory' "$C")" "1"
-( cd "$FIXTURE" && migrate_contract ); is "a migrated contract is left alone" "$?" "1"
-floor mig2
-( cd "$FIXTURE" && migrate_contract ); is "no contract is nothing to do" "$?" "1"
 
 echo "status"
 floor st; spec 001-a; plan 001-a 2 1
@@ -422,16 +390,15 @@ st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
 is "an empty floor predicts E"      "$(printf '%s\n' "$st_out" | grep -c '^E$')" "1"
 
 # Arming a floor must leave a clean tree. The picker reads `git status` and
-# answers R to any dirt, so a wishlist move that stages the new draft but not
-# the removal of the file it came from burns loop 1 on the janitor.
-echo "run.sh intake"
+# answers R to any dirt, so a draft the user dropped into drafts/ must be
+# committed by run.sh, or iteration 1 burns on the janitor.
+echo "run.sh drafts"
 
-# One `git init` for both cases, copied like floor() does: the two runs differ
-# only in whether the wish is in the index when run.sh moves it.
-INTAKE_TEMPLATE="$TMP/intake-template"
-mkdir -p "$INTAKE_TEMPLATE"
+# One `git init` for every case below, copied like floor() does.
+REPO_TEMPLATE="$TMP/repo-template"
+mkdir -p "$REPO_TEMPLATE"
 (
-  cd "$INTAKE_TEMPLATE" || exit 1
+  cd "$REPO_TEMPLATE" || exit 1
   git init -q .
   git config user.email t@example.com
   git config user.name t
@@ -440,41 +407,69 @@ mkdir -p "$INTAKE_TEMPLATE"
   git commit -qm init
 ) >/dev/null 2>&1
 
-INTAKE="$TMP/intake"
-mkdir -p "$INTAKE"
-cp -R "$INTAKE_TEMPLATE/." "$INTAKE"
-mkdir -p "$INTAKE/wishlist"
+# Drop an untracked draft on the floor: run.sh commits it and arms.
+DROP="$TMP/drop"
+mkdir -p "$DROP"
+cp -R "$REPO_TEMPLATE/." "$DROP"
+mkdir -p "$DROP/.spectomat/drafts"
+printf 'idea\n' > "$DROP/.spectomat/drafts/001-thing.md"
+(cd "$DROP" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
+is "a dropped draft leaves a clean tree" "$(cd "$DROP" && git status --porcelain)" ""
+is "the draft is committed"     "$(cd "$DROP" && git log -1 --name-only --format= | grep -c 'drafts/001-thing.md')" "1"
+is "iteration 1 is phase A"     "$(cd "$DROP" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
+
+# A draft the user already committed leaves nothing to stage; arming must still
+# succeed and reach phase A.
+DROP2="$TMP/drop-committed"
+mkdir -p "$DROP2"
+cp -R "$REPO_TEMPLATE/." "$DROP2"
+mkdir -p "$DROP2/.spectomat/drafts"
 (
-  cd "$INTAKE" || exit 1
-  printf 'idea\n' > wishlist/thing.md
-  git add wishlist/thing.md
-  git commit -qm wish
+  cd "$DROP2" || exit 1
+  printf 'idea\n' > .spectomat/drafts/001-thing.md
+  git add .spectomat/drafts/001-thing.md
+  git commit -qm draft
 ) >/dev/null 2>&1
-(cd "$INTAKE" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
-is "intake leaves a clean tree" "$(cd "$INTAKE" && git status --porcelain)" ""
-is "the draft is committed"     "$(cd "$INTAKE" && git log -1 --name-only --format= | grep -c 'drafts/001-thing.md')" "1"
-is "the wish is gone from HEAD" "$(cd "$INTAKE" && git ls-tree -r --name-only HEAD | grep -c '^wishlist/')" "0"
-is "loop 1 is phase A"          "$(cd "$INTAKE" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
+(cd "$DROP2" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
+is "a committed draft arms cleanly" "$(cd "$DROP2" && git status --porcelain)" ""
+is "a committed draft reaches A"    "$(cd "$DROP2" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
 
-# An untracked wish has no removal to stage; arming must still leave a clean
-# tree and must not fail on a `git add` of a path that was never in the index.
-INTAKE2="$TMP/intake-untracked"
-mkdir -p "$INTAKE2"
-cp -R "$INTAKE_TEMPLATE/." "$INTAKE2"
-mkdir -p "$INTAKE2/wishlist"
-printf 'idea\n' > "$INTAKE2/wishlist/thing.md"
-(cd "$INTAKE2" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
-is "an untracked wish arms cleanly" "$(cd "$INTAKE2" && git status --porcelain)" ""
-is "an untracked wish reaches A"    "$(cd "$INTAKE2" && bash "$SCRIPTS/phase.sh")" "A 001-thing"
+# Drafts are taken in plain alphabetical order of the file name.
+ORDER="$TMP/order"
+mkdir -p "$ORDER"
+cp -R "$REPO_TEMPLATE/." "$ORDER"
+mkdir -p "$ORDER/.spectomat/drafts"
+printf 'b\n' > "$ORDER/.spectomat/drafts/beta.md"
+printf 'a\n' > "$ORDER/.spectomat/drafts/alpha.md"
+touch "$ORDER/.spectomat/drafts/beta.md"   # newer, but alphabetically second
+(cd "$ORDER" && bash "$SCRIPTS/run.sh" 3) >/dev/null 2>&1
+is "drafts are read alphabetically" "$(cd "$ORDER" && bash "$SCRIPTS/phase.sh")" "A alpha"
 
-# The retired vocabulary. This file names the retired words in order to scan
-# for them, so it leaves itself out of its own scan, as the perl check does.
-# docs/ is excluded: it records the design that removed them.
-echo "vocabulary"
+# Arming writes two files that must live and die together: state.json is the
+# armed flag every existence test reads, pointer.md is the prompt fed back.
+# A pointer left behind by a cancel would be fed to a later flow with no
+# counter behind it, so cancel must clear both.
+echo "arm and disarm"
+ARM="$TMP/arm"
+mkdir -p "$ARM"
+cp -R "$REPO_TEMPLATE/." "$ARM"
+mkdir -p "$ARM/.spectomat/drafts"
+printf 'idea\n' > "$ARM/.spectomat/drafts/001-thing.md"
+(cd "$ARM" && bash "$SCRIPTS/run.sh" 7) >/dev/null 2>&1
+is "state.json is valid JSON"   "$(cd "$ARM" && jq -e . .spectomat/state.json >/dev/null 2>&1 && echo y || echo n)" "y"
+is "the iteration starts at 1"       "$(cd "$ARM" && jq -r .iteration .spectomat/state.json)" "1"
+is "the cap is a JSON number"   "$(cd "$ARM" && jq -r '.max_iterations | type' .spectomat/state.json)" "number"
+is "the pointer has no frontmatter" "$(cd "$ARM" && head -1 .spectomat/pointer.md | grep -c '^---$')" "0"
+is "the pointer resolved PLUGIN_ROOT" "$(cd "$ARM" && grep -c '{{' .spectomat/pointer.md)" "0"
+is "arming leaves a clean tree" "$(cd "$ARM" && git status --porcelain)" ""
+(cd "$ARM" && bash "$SCRIPTS/cancel.sh") >/dev/null 2>&1
+is "cancel removes the state"   "$([[ -e "$ARM/.spectomat/state.json" ]] && echo yes || echo no)" "no"
+is "cancel removes the pointer" "$([[ -e "$ARM/.spectomat/pointer.md" ]] && echo yes || echo no)" "no"
+is "cancel keeps the floor"     "$([[ -d "$ARM/.spectomat/drafts" ]] && echo yes || echo no)" "yes"
+
+# The licence obligation: NOTICE.md must not point at a file that is gone.
+echo "licence"
 REPO_ROOT="$(dirname "$SCRIPTS")"
-stale=$(cd "$REPO_ROOT" && grep -rl --exclude-dir=.git --exclude-dir=docs --exclude-dir=.superpowers \
-          -e 'looper' -e 'references/' . 2>/dev/null | grep -v 'selftest\.sh$' | tr '\n' ' ')
-is "nothing names the looper or references/" "${stale% }" ""
 missing=$(cd "$REPO_ROOT" && for f in $(grep -oE '`[a-zA-Z0-9_./-]+\.(md|sh|json)`' NOTICE.md | tr -d '`'); do
             # `.spectomat/` paths are written into the user's project at runtime,
             # so they are not files of this repo and are not checked here.

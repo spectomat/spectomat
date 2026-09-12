@@ -3,10 +3,10 @@
 #
 #   archive.sh <slug>
 #
-# Runs the contract's gates, moves the slug's trail into done/, bumps the patch
-# version to the slug's NNN, makes one commit and writes one log line. A failing
-# gate moves nothing and exits 1, until the third strike: then the trail is
-# archived with a .blocked infix so the floor can move on.
+# Runs the contract's gates, moves the slug's trail into done/, makes one commit
+# and writes one log line. A failing gate moves nothing and exits 1, until the
+# third strike: then the trail is archived with a .blocked infix so the floor
+# can move on. Nothing outside the floor is touched.
 
 set -uo pipefail
 
@@ -16,7 +16,6 @@ cd_root
 SLUG="${1:-}"
 BLOCK=""      # ".blocked" once the third strike lands
 GATE_RESULT="" # "N/N" or "failed", for the log line
-VERSION=""    # the new package.json version, when there is one
 
 now() { date -u +%FT%RZ; }
 log_line() { printf '%s\n' "$1" >> "$FLOOR/log.md"; }
@@ -32,7 +31,7 @@ require_ready() {
 # every way phase D can fail - a red gate and a failed move or commit both
 # count against the same STRIKE_LIMIT for this slug, so a slug that keeps
 # failing archival for any reason eventually drops out of the picker's D
-# candidates instead of burning every remaining loop.
+# candidates instead of burning every remaining iteration.
 strike() {
   local reason="$1" n
   n=$(( $(strike_count D "$SLUG") + 1 ))
@@ -80,29 +79,14 @@ fail_move() {
   exit 1
 }
 
-# The patch version becomes the slug's NNN; major and minor are kept. Blocked
-# work ships no version. npm is used rather than a jq rewrite so package-lock
-# stays in step.
-bump_version() {
-  local cur
-  [[ -z "$BLOCK" ]] || return 0
-  [[ -f package.json ]] || return 0
-  cur=$(jq -r '.version // empty' package.json 2>/dev/null) || return 0
-  [[ -n "$cur" ]] || return 0
-  VERSION=$(next_version "$cur" "$SLUG") || { VERSION=""; return 0; }
-  npm version --no-git-tag-version "$VERSION" >/dev/null 2>&1 || VERSION=""
-}
-
 commit_archive() {
   local msg
   if [[ -n "$BLOCK" ]]; then
     msg="chore($SLUG): blocked after $STRIKE_LIMIT strikes"
   else
-    msg="chore($SLUG): archived${VERSION:+, v$VERSION}"
+    msg="chore($SLUG): archived"
   fi
   git add -A "$FLOOR/done" "$FLOOR/specs" "$FLOOR/plans"
-  [[ ! -f package.json ]] || git add package.json
-  [[ ! -f package-lock.json ]] || git add package-lock.json
   if ! git commit -q -m "$msg"; then
     strike "commit failed" >/dev/null
     echo "❌ commit failed after moving $SLUG's trail" >&2
@@ -114,7 +98,7 @@ log_result() {
   if [[ -n "$BLOCK" ]]; then
     log_line "- $(now) · D · $SLUG · blocked after $STRIKE_LIMIT strikes · gates $GATE_RESULT"
   else
-    log_line "- $(now) · D · $SLUG · archived · gates $GATE_RESULT${VERSION:+ · v$VERSION}"
+    log_line "- $(now) · D · $SLUG · archived · gates $GATE_RESULT"
   fi
 }
 
@@ -122,10 +106,9 @@ main() {
   require_ready
   gate_or_strike
   move_trail
-  bump_version
   commit_archive
   log_result
-  echo "D $SLUG · gates $GATE_RESULT${VERSION:+ · v$VERSION}${BLOCK:+ · BLOCKED}"
+  echo "D $SLUG · gates $GATE_RESULT${BLOCK:+ · BLOCKED}"
 }
 
 main "$@"

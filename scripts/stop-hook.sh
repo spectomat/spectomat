@@ -1,6 +1,6 @@
 #!/bin/bash
 # Spectomat flow Stop hook.
-# While the state file exists, block session exit and feed the same prompt back.
+# While the state file exists, block session exit and feed the pointer back.
 
 set -euo pipefail
 
@@ -8,8 +8,8 @@ HOOK_INPUT=$(cat)
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
 # Set by read_state
-LOOP=""
-MAX_LOOPS=""
+ITERATION=""
+MAX_ITERATIONS=""
 STATE_SESSION=""
 # Set by require_transcript / read_last_output
 TRANSCRIPT_PATH=""
@@ -17,27 +17,32 @@ LAST_OUTPUT=""
 
 # --- helpers ---
 
-# End the flow normally: message on stdout, state removed.
-finish() { echo "$1"; rm "$STATE_FILE"; exit 0; }
+# End the flow normally: message on stdout, flow disarmed.
+finish() { echo "$1"; disarm; exit 0; }
 
-# End the flow on a problem: message on stderr, state removed.
-abort() { echo "$1" >&2; rm "$STATE_FILE"; exit 0; }
+# End the flow on a problem: message on stderr, flow disarmed.
+abort() { echo "$1" >&2; disarm; exit 0; }
 
 stop_corrupt() {
-  echo "⚠️  Spectomat flow: state file corrupted" >&2
-  echo "   File: $STATE_FILE" >&2
+  echo "⚠️  Spectomat flow: state corrupted" >&2
+  echo "   Files: $STATE_FILE, $POINTER" >&2
   echo "   Problem: $1" >&2
   echo "   The flow is stopping. Run /spectomat:run again to start fresh." >&2
-  rm "$STATE_FILE"
+  disarm
   exit 0
 }
 
 # --- phases ---
 
+# One jq call for all three fields: this runs on every iteration, and three
+# separate state_field calls would spawn three processes for one small file.
+# @tsv renders a null or missing value as an empty field, which
+# require_own_session and require_sane_state already handle.
 read_state() {
-  LOOP=$(state_field loop)
-  MAX_LOOPS=$(state_field max_loops)
-  STATE_SESSION=$(state_field session_id)
+  local tsv
+  tsv=$(jq -r '[.iteration, .max_iterations, .session_id] | @tsv' "$STATE_FILE" 2>/dev/null) \
+    || stop_corrupt "$STATE_FILE is not valid JSON"
+  IFS=$'\t' read -r ITERATION MAX_ITERATIONS STATE_SESSION <<< "$tsv"
 }
 
 # Session isolation: the Stop hook fires in every session of this project.
@@ -51,13 +56,13 @@ require_own_session() {
 }
 
 require_sane_state() {
-  [[ "$LOOP" =~ ^[0-9]+$ ]] || stop_corrupt "'loop' is not a number (got: '$LOOP')"
-  [[ "$MAX_LOOPS" =~ ^[0-9]+$ ]] || stop_corrupt "'max_loops' is not a number (got: '$MAX_LOOPS')"
+  [[ "$ITERATION" =~ ^[0-9]+$ ]] || stop_corrupt "'iteration' is not a number (got: '$ITERATION')"
+  [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || stop_corrupt "'max_iterations' is not a number (got: '$MAX_ITERATIONS')"
 }
 
 require_below_max() {
-  if [[ $MAX_LOOPS -gt 0 ]] && [[ $LOOP -ge $MAX_LOOPS ]]; then
-    finish "🛑 Spectomat flow: max loops ($MAX_LOOPS) reached. Run /spectomat:run to resume from the floor."
+  if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
+    finish "🛑 Spectomat flow: max iterations ($MAX_ITERATIONS) reached. Run /spectomat:run to resume from the floor."
   fi
 }
 
@@ -91,20 +96,20 @@ check_promise() {
   fi
 }
 
-# Bump the loop counter in place and emit the block decision with the prompt.
-continue_loop() {
-  local next_loop prompt_text temp_file system_msg
-  next_loop=$((LOOP + 1))
+# Bump the iteration counter in place and emit the block decision with the prompt.
+continue_iteration() {
+  local next_iteration prompt_text temp_file system_msg
+  next_iteration=$((ITERATION + 1))
 
-  # Prompt is everything after the second --- line.
-  prompt_text=$(awk '/^---$/{i++; next} i>=2' "$STATE_FILE")
-  [[ -n "$prompt_text" ]] || stop_corrupt "no prompt text found"
+  prompt_text=$(cat "$POINTER" 2>/dev/null || true)
+  [[ -n "$prompt_text" ]] || stop_corrupt "$POINTER is empty or missing"
 
   temp_file="${STATE_FILE}.tmp.$$"
-  sed "s/^loop: .*/loop: $next_loop/" "$STATE_FILE" > "$temp_file"
-  mv "$temp_file" "$STATE_FILE"
+  jq --argjson n "$next_iteration" '.iteration = $n' "$STATE_FILE" > "$temp_file" \
+    && mv "$temp_file" "$STATE_FILE" \
+    || { rm -f "$temp_file"; stop_corrupt "could not write the iteration counter"; }
 
-  system_msg="🔄 Spectomat loop $next_loop | Ends when scripts/phase.sh answers E, or at the cap ($MAX_LOOPS)"
+  system_msg="🔄 Spectomat iteration $next_iteration | Ends when scripts/phase.sh answers E, or at the cap ($MAX_ITERATIONS)"
 
   jq -n \
     --arg prompt "$prompt_text" \
@@ -125,7 +130,7 @@ main() {
   require_transcript
   read_last_output
   check_promise
-  continue_loop
+  continue_iteration
   exit 0
 }
 

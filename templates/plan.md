@@ -14,7 +14,7 @@
 
 ## Tasks
 
-One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`, executed in this order. Tasks with no dependency between them and disjoint Files run in parallel as one wave.
+One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`. Phase C executes them one at a time, in this order, one task per iteration. Each task is an independent piece of work; `Depends on` may name only lower-numbered tasks, and every file in the map has exactly one owning task.
 
 | # | File | Component | Covers | Depends on |
 | --- | --- | --- | --- | --- |
@@ -31,5 +31,5 @@ Every criterion id in the spec, and the task that covers it. A criterion with no
 
 ## Rulings
 
-appended by executing-tasks for decisions that cross tasks:
+appended by phase C for decisions that cross tasks:
 `- Task N · <decision> — <why> — <cost if wrong>`

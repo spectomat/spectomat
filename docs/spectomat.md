@@ -1,48 +1,36 @@
-# Spectomat — phase-specialized agents
+# Spectomat
 
-Spectomat runs one generic `looper` subagent per loop; that looper reads a 179-line contract, decides for itself which of four phases applies, and does it. This design replaces the looper with three phase-specialized agents, a bash picker that decides the phase, and a script for the one phase that needs no judgement. The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the project-owned contract holds only the invariants that outlive both.**
+A Claude Code plugin that turns raw ideas into committed, tested code without anyone watching. The operator drops a Markdown draft into `.spectomat/drafts/` and runs `/spectomat:run`; a Stop hook then feeds the session the same pointer prompt over and over, and each pass — an **iteration** — advances exactly one idea by exactly one phase.
 
-Code cites this document by section and line (`§3.4 L316`). Part I is normative: the build follows it and never edits it. A divergence found during the build is a **reconciliation**, recorded in §11 with a number and a reason.
+The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the project-owned contract holds only the invariants that outlive both.**
 
-# Part I — Specification
+Four phases carry an idea end to end: **A** draft → spec, **B** spec → plan, **C** plan → one task's code, **D** finished plan → archive. Three are subagents with their own brief; D is a script, because it needs no judgement.
 
 ## 1. System Overview
 
-### 1.1 Purpose
-
-Give each phase of the factory room to be precise. Phase C gets 11 lines of the current contract because a longer treatment would bury phase A; a dedicated brief can carry 80 lines of wave discipline at no cost to the other phases, because it is read only on phase C loops.
-
-Three secondary outcomes fall out of the same change, and are normative goals, not side effects:
-
-1. The completion promise stops being a model's claim and becomes a relayed bash verdict (§3.5, §5.1).
-2. The five-hop `references/` path (plugin → `run.sh` → `{{PLUGIN_ROOT}}` → task line → agent → file) disappears; each reference becomes the brief that uses it (§6.3).
-3. `/spectomat:status` stops summarising counts and starts predicting the next phase, by calling the same picker the next loop will call (§7.2).
-
-### 1.2 Actors
+### 1.1 Actors
 
 | Actor | Is | Does |
 | --- | --- | --- |
-| Operator | the human | drops drafts in `wishlist/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `contract.md` and `memory.md` |
-| Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per loop, runs the picker and dispatches one agent or one script; does no factory work |
+| Operator | the human | drops drafts in `.spectomat/drafts/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `contract.md` and `memory.md` |
+| Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches one agent or one script; does no factory work |
 | Picker | `scripts/phase.sh` | reads the floor, `log.md` and `git status`; prints one line naming the phase |
-| Phase agent | `spectomat:phase-a`, `phase-b`, `phase-c` | one fresh subagent per loop; performs one phase and commits it |
-| Archiver | `scripts/archive.sh` | performs phase D: gates, moves, version bump, commit, log |
-| Janitor | `spectomat:recover` | performs recovery when a loop died mid-phase and left a dirty tree |
-| Implementer / Reviewer | subagents of the phase C agent | unchanged; `prompts/implementer.md`, `prompts/reviewer.md` |
+| Phase agent | `spectomat:phase-a`, `phase-b`, `phase-c` | one fresh subagent per iteration; performs one phase and commits it |
+| Archiver | `scripts/archive.sh` | performs phase D: gates, moves, commit, log |
+| Janitor | `spectomat:recover` | recovers a dirty tree, or a floor the picker cannot classify |
+| Implementer / Reviewer | subagents of the phase C agent | write and review one task's code; `prompts/implementer.md`, `prompts/reviewer.md` |
 
-### 1.3 The system in one picture
-
-Illustrative.
+### 1.2 The system in one picture
 
 ```text
-Stop hook (unchanged)
-  └─ session receives the pointer prompt from state.md
+Stop hook
+  └─ session receives pointer.md, fed back by the Stop hook
        │
        ├─ bash {{PLUGIN_ROOT}}/scripts/phase.sh   →  exactly one line
        │
        ├─ "A <slug>"  →  Agent(spectomat:phase-a)   draft → spec
        ├─ "B <slug>"  →  Agent(spectomat:phase-b)   spec → plan
-       ├─ "C <slug>"  →  Agent(spectomat:phase-c)   plan → wave
+       ├─ "C <slug>"  →  Agent(spectomat:phase-c)   plan → next task
        ├─ "D <slug>"  →  bash scripts/archive.sh <slug>
        ├─ "R"         →  Agent(spectomat:recover)
        └─ "E"         →  emit <promise>FACTORY EMPTY</promise>
@@ -52,7 +40,7 @@ Stop hook (unchanged)
 
 ## 2. Domain Model
 
-The floor (`drafts/`, `specs/`, `plans/`, `done/`, `log.md`, `contract.md`, `memory.md`, `state.md`, `work/`) is unchanged and is not restated here; see the contract's *The floor* section, which survives the cut (§6.2). Three entities are new or newly explicit.
+The floor is `.spectomat/`: `drafts/`, `specs/`, `plans/`, `done/`, `work/`, plus `log.md`, `contract.md`, `memory.md`, `state.json` and `pointer.md`. The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
 
 ### 2.1 `verdict`
 
@@ -61,9 +49,9 @@ The picker's entire output. One line on stdout, exit code 0.
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `letter` | `A`\|`B`\|`C`\|`D`\|`E`\|`R` | which phase applies, or `E` for none, or `R` for a dirty tree |
-| `slug` | string, absent for `E` and `R` | the draft file name without `.md`, including its `NNN-` prefix |
+| `slug` | string, absent for `E` and `R` | the draft file name without `.md`, as the operator named it |
 
-Identity: there is exactly one verdict per loop, and it is not stored — the picker is re-run, never remembered. Written by: `scripts/phase.sh` only.
+Identity: there is exactly one verdict per iteration, and it is not stored — the picker is re-run, never remembered. Written by: `scripts/phase.sh` only.
 
 ### 2.2 `strike ledger`
 
@@ -79,27 +67,27 @@ Identity: `(letter, slug)`. Written by: any phase agent, and `archive.sh`, by ap
 
 ### 2.3 `gate block`
 
-The fenced `bash` block under `## Verification Gates` in `contract.md`. Already exists; what is new is that a script must now read it, so its shape becomes normative.
+The fenced `bash` block under `## Verification Gates` in `contract.md`. A script reads it, so its shape is normative.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `lines` | list of shell commands | every non-empty, non-comment line inside the first fenced `bash` block after the `## Verification Gates` heading |
 
-Identity: one per floor. Written by: `run.sh` at first render, and the operator by hand thereafter. Read by: the phase C agent, `archive.sh`, and `run.sh` during migration (§8.1).
+Identity: one per floor. Written by: `run.sh` at first render, and the operator by hand thereafter — never rewritten by the factory (D9). Read by: the phase C agent and `archive.sh`.
 
 ## 3. Behaviour
 
 ### 3.1 Trigger and input
 
-Trigger: the Stop hook blocks a session exit and feeds back the body of `state.md`. Input: the floor as the previous loop left it. Idempotency: the picker is a pure function of the floor, `log.md` and `git status`, so running it twice with no intervening change yields the same verdict.
+Trigger: the Stop hook blocks a session exit and feeds back `pointer.md`. Input: the floor as the previous iteration left it. Idempotency: the picker is a pure function of the floor, `log.md` and `git status`, so running it twice with no intervening change yields the same verdict.
 
-### 3.2 The loop
+### 3.2 The iteration
 
 1. The session runs `bash {{PLUGIN_ROOT}}/scripts/phase.sh` and reads one line.
-2. It dispatches per §3.3, passing the verdict line verbatim as the task line.
+2. It dispatches per §3.3.
 3. It prints at most five lines of the report and stops, which fires the Stop hook again.
 
-The session reads no contract, no floor file and no source. Its context accumulates one short report per loop, as today.
+The session reads no contract, no floor file and no source. Its context accumulates one short report per iteration.
 
 ### 3.3 Dispatch
 
@@ -110,17 +98,19 @@ The session reads no contract, no floor file and no source. Its context accumula
 | `R` | launch one subagent as above, with `spectomat:recover` / `agents/recover.md` |
 | `E` | print the closing report and emit the promise as the last line |
 
+The task line handed to a subagent is two lines: the verdict verbatim, then `Plugin root: <absolute path>`. A brief therefore carries no plugin path of its own but can still reach `templates/` and `prompts/`.
+
 The fallback rule is one rule stated once and applied to all four agents; §6.1 fixes the file names so the fallback path is computable from the letter.
 
 ### 3.4 Failure path
 
-A phase agent that cannot finish appends `(strike N)` to its log line and stops; the next loop's picker skips that slug in favour of the next candidate in the same stage (§5.2). On its own third strike the agent moves the offending file to `done/<slug>.blocked.md` and logs the reason (D5). `archive.sh` does the same for phase D by moving the whole trail with a `.blocked` infix (§5.5).
+A phase agent that cannot finish appends `(strike N)` to its log line and stops; the next iteration's picker skips that slug in favour of the next candidate in the same stage (§5.2). On its own third strike the agent moves the offending file to `done/<slug>.blocked.md` and logs the reason (D5). `archive.sh` does the same for phase D by moving the whole trail with a `.blocked` infix (§5.5).
 
-A loop that dies mid-phase leaves a dirty tree; the next picker returns `R` before any other test, and the janitor either finishes and commits the phase or discards the paths the factory owns.
+An iteration that dies mid-phase leaves a dirty tree; the next picker returns `R` before any other test, and the janitor either finishes and commits the phase or discards the paths the factory owns.
 
 ### 3.5 Completion
 
-The session emits `<promise>FACTORY EMPTY</promise>` if and only if the picker printed `E`. The picker prints `E` only when `drafts/`, `specs/` and `plans/` hold no `.md` files **and** `git status --porcelain` is silent, both evaluated in that invocation. The Stop hook's `promised_empty` test is unchanged.
+The session emits `<promise>FACTORY EMPTY</promise>` if and only if the picker printed `E`. The picker prints `E` only when `drafts/`, `specs/` and `plans/` hold no `.md` files **and** `git status --porcelain` is silent, both evaluated in that invocation.
 
 ## 4. Boundaries
 
@@ -128,12 +118,11 @@ Each is an interface the design depends on and does not own.
 
 | Boundary | Interface used | Fake used in tests |
 | --- | --- | --- |
-| git | `status --porcelain`, `rev-parse --show-toplevel`, `mv`, `add`, `commit`, `log` | a real throwaway repo under `mktemp -d` (§14) |
-| filesystem | the floor tree | a fabricated floor under `mktemp -d` (§14) |
-| `log.md` | append-only text, read by `grep` for `(strike N)` | a fabricated log file (§14) |
-| npm | `npm version --no-git-tag-version <v>` | skipped when no `package.json`; asserted on a fixture `package.json` |
-| Claude Code agent runtime | plugin agent types `spectomat:<name>` from `agents/*.md` frontmatter | none; verified out-of-band per §15.2 |
-| the operator's gate commands | lines of the gate block, executed with `eval` | fabricated gate blocks, including `false` (§14) |
+| git | `status --porcelain`, `rev-parse --show-toplevel`, `mv`, `add`, `commit`, `log` | a real throwaway repo under `mktemp -d` (§10.3) |
+| filesystem | the floor tree | a fabricated floor under `mktemp -d` (§10.3) |
+| `log.md` | append-only text, read by `grep` for `(strike N)` | a fabricated log file (§10.3) |
+| Claude Code agent runtime | plugin agent types `spectomat:<name>` from `agents/*.md` frontmatter | none; verified out-of-band per §10.5 |
+| the operator's gate commands | lines of the gate block, executed with `eval` | fabricated gate blocks, including `false` (§10.3) |
 
 ## 5. Normative Algorithms
 
@@ -142,7 +131,6 @@ Named constants, each defined once here and nowhere else in the system:
 | Constant | Value | Owned by |
 | --- | --- | --- |
 | `STRIKE_LIMIT` | 3 | `scripts/utils.sh` |
-| `MAX_WAVE` | 3 | `agents/phase-c.md` |
 | `MAX_FIX_ROUNDS` | 3 | `agents/phase-c.md` |
 | `AGENT_COUNT` | 4 | this spec, asserted by AC-6.1 |
 
@@ -167,16 +155,19 @@ pick_phase():
       pick = least_struck(letter, set)
       if pick is not NONE:  print letter + " " + pick; return 0
 
-  print "E"; return 0
+  if drafts/, specs/ and plans/ hold no .md:  print "E"
+  else:                                       print "R"
+  return 0
 ```
 
 Normative notes, each of which a naive reading would get wrong:
 
 1. **`D` is tested before `C`**, matching the contract's priority: work in progress is finished before anything new starts.
 2. **`D` requires at least one task file.** A plan directory with no task files has no unchecked step and would otherwise satisfy `D` vacuously, archiving an unbuilt plan.
-3. **`B` also claims a plan overview with no task files.** Phase B's output is the overview plus the task files; an overview without them is a phase B that did not finish, and re-running B overwrites it. Without this clause such a plan matches no stage and is stranded for the life of the floor. This is a defect in the current contract, fixed here.
-4. **`R` precedes every stage test and `E`**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit. That reading is only sound because §5.5 checks every mutation: an unchecked failure there can commit a partial move and leave the tree CLEAN, in which case `R` never fires and the janitor never runs. The picker cannot detect that state — the archiver has to not create it.
-5. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
+3. **`B` also claims a plan overview with no task files** (D7). Phase B's output is the overview plus the task files; an overview without them is a phase B that did not finish, and re-running B overwrites it. Without this clause such a plan matches no stage and is stranded for the life of the floor.
+4. **A floor that matches no stage is `R`, not `E`.** `E` means finished; a leftover file means an anomaly only the janitor can clear — an orphan plan overview whose spec is gone, or a slug parked at `STRIKE_LIMIT` that was never blocked.
+5. **`R` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit. That reading is sound only because §5.5 checks every mutation: an unchecked failure there can commit a partial move and leave the tree CLEAN, in which case `R` never fires and the janitor never runs. The picker cannot detect that state — the archiver has to not create it.
+6. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
 
 ### 5.2 `least_struck` — `scripts/utils.sh`
 
@@ -201,7 +192,7 @@ strike_count(letter, slug):
       '(strike '
 ```
 
-Returns 0 when `log.md` is absent. The log line format is the contract's, unchanged.
+Returns 0 when `log.md` is absent. The log line format is the contract's.
 
 ### 5.4 `gate_block` and `run_gates` — `scripts/utils.sh`
 
@@ -225,8 +216,8 @@ run_gates():
 ```text
 archive(slug):
   cd_root()
-  require `git status --porcelain` silent          else exit 1
-  require exists(specs/<slug>.md) and exists(plans/<slug>.md)  else exit 1
+  require `git status --porcelain` silent                       else exit 1
+  require exists(specs/<slug>.md) and exists(plans/<slug>.md)   else exit 1
 
   total = count(gate_block())
   if run_gates() != 0:
@@ -237,157 +228,115 @@ archive(slug):
   else:
       block = ''
 
-  # Every mutation below is checked. Under `set -uo pipefail` with no `-e` a
-  # failed command does not abort, and an unchecked failure here is the one
-  # defect this whole design cannot survive: a partial move that still commits
-  # leaves a CLEAN tree, so the picker never answers `R`, the janitor never
-  # runs, and a spec whose plan was already archived reads as a fresh phase B.
-  # `strike_and_exit` logs a strike in the same shape `gate_or_strike` uses, so
-  # `strike_count` counts it and the slug blocks after three, then exits 1
-  # leaving the tree exactly as it landed — dirty for the janitor if a move
-  # partially applied, unchanged and safe to retry if none did.
-
   git mv specs/<slug>.md  done/<slug>.spec<block>.md  or strike_and_exit
   git mv plans/<slug>.md  done/<slug>.plan<block>.md  or strike_and_exit
   if isdir(plans/<slug>):
       git mv plans/<slug>  done/<slug>              or strike_and_exit
 
-  if exists(package.json) and block == '':
-      N = slug's NNN prefix as an integer
-      npm version --no-git-tag-version <major>.<minor>.<N>
 
   git commit -m 'chore(<slug>): archived' (or '… blocked after 3 strikes')
       or strike_and_exit
-  log '- <ts> · D · <slug> · archived · gates <total>/<total> · v<version>'
+  log '- <ts> · D · <slug> · archived · gates <total>/<total>'
 ```
 
-The third strike takes the `.blocked` infix rather than a separate code path, so the moves are written once. `print_blocked` already matches `*.blocked.md` and needs no change.
+**Every mutation is checked.** The script runs under `set -uo pipefail` with no `-e`, so a failed command does not abort, and an unchecked failure here is the one defect this design cannot survive: a partial move that still commits leaves a CLEAN tree, so the picker never answers `R`, the janitor never runs, and a spec whose plan was already archived reads as a fresh phase B. `strike_and_exit` logs a strike in the shape `strike_count` counts — so the slug blocks after three — then exits 1 leaving the tree exactly as it landed: dirty for the janitor if a move partially applied, unchanged and safe to retry if none did. Exiting without a strike would wedge the flow, because the picker answers `D` again next iteration and the same move fails again until the cap.
 
-The log line's numbers are the gate count and the new version, not test counts: a script has first-hand knowledge of how many gate commands ran and that every one exited 0, and no knowledge of what any of them printed. This is a deliberate narrowing of what a phase D log line carries (D4).
+The third strike takes the `.blocked` infix rather than a separate code path, so the moves are written once. `print_blocked` matches `*.blocked.md`.
+
+The log line's numbers are the gate count, not test counts: a script has first-hand knowledge of how many gate commands ran and that every one exited 0, and no knowledge of what any of them printed (D4).
 
 ## 6. Architecture
 
 ### 6.1 Component map
 
-New:
-
-| File | Role | Agent type |
-| --- | --- | --- |
-| `scripts/phase.sh` | §5.1 | — |
-| `scripts/archive.sh` | §5.5 | — |
-| `agents/phase-a.md` | draft → spec | `spectomat:phase-a` |
-| `agents/phase-b.md` | spec → plan | `spectomat:phase-b` |
-| `agents/phase-c.md` | plan → wave | `spectomat:phase-c` |
-| `agents/recover.md` | dirty-tree recovery | `spectomat:recover` |
-
-Deleted: `agents/looper.md`, and all five files of `references/`.
-
-Changed: `templates/state.md`, `templates/contract.md`, `scripts/utils.sh`, `scripts/run.sh`, `scripts/selftest.sh`, `scripts/print.sh`, `scripts/status.sh`, `README.md`, `.claude/CLAUDE.md`, `templates/guide.md`, `NOTICE.md`, `.claude-plugin/plugin.json`.
-
-Untouched: `hooks/hooks.json`, `scripts/stop-hook.sh`, `scripts/cancel.sh`, `scripts/gates.sh`, `prompts/`, `templates/{spec,plan,task,memory}.md`, `commands/`.
-
-### 6.2 The contract after the cut
-
-Survives, unchanged in intent: the opening paragraphs, `Repository`, `The floor`, `The Loop Contract`, `Three strikes`, `Verification Gates`, `Memory`, `Log Format`, `Constraints`.
-
-Leaves:
-
-| Removed | Because |
+| File | Role |
 | --- | --- |
-| `## Phases` (45 lines) | moved to the briefs of §6.1 |
-| `References:` line | `references/` no longer exists |
-| Loop Contract step 2, *"Pick exactly one phase"* | the picker decides; the step becomes *"do the phase you were handed"* |
-| `## Completion` | §3.5; the session relays a bash verdict |
-| constraint *"DO NOT Emit a false promise"* | structurally impossible once bash emits `E` |
-| constraint *"DO NOT more than one phase in a loop"* | an agent that only knows one phase cannot do two |
+| `scripts/run.sh` | prepares the floor, renders and commits, arms the Stop hook |
+| `scripts/phase.sh` | the picker (§5.1) |
+| `scripts/archive.sh` | the archiver, phase D (§5.5) |
+| `scripts/utils.sh` | shared helpers (§5.2–§5.4), paths, `cd_root`, `state_field`, `render_template`; sourced by every script |
+| `scripts/stop-hook.sh` | blocks the session exit, bumps the iteration counter, feeds back the pointer |
+| `scripts/status.sh`, `print.sh`, `cancel.sh`, `gates.sh` | operator surface (§7) and gate-command detection |
+| `scripts/selftest.sh` | the suite (§10) |
+| `agents/phase-a.md` | draft → spec — `spectomat:phase-a` |
+| `agents/phase-b.md` | spec → plan — `spectomat:phase-b` |
+| `agents/phase-c.md` | plan → next task — `spectomat:phase-c` |
+| `agents/recover.md` | the janitor — `spectomat:recover` |
+| `prompts/implementer.md`, `reviewer.md` | sent verbatim to phase C's subagents |
+| `templates/contract.md`, `memory.md` | rendered into the project once, then owned by it |
+| `templates/pointer.md` | the prompt fed back every iteration, re-rendered every run, gitignored |
+| `templates/spec.md`, `plan.md`, `task.md` | the shapes phases A and B fill in |
+| `templates/guide.md` | the user guide, printed by `/spectomat:help`; holds the glossary |
+| `commands/run.md`, `status.md`, `cancel.md`, `help.md` | the four slash commands |
+| `hooks/hooks.json` | wires the Stop hook |
 
-Target: ~105 lines, every one of them about *this project* rather than about the craft of a phase.
+### 6.2 The contract
 
-### 6.3 Where each reference lands
+`.spectomat/contract.md` is rendered from the template at the first `/spectomat:run` and never overwritten, so it is **the operator's only steering surface**. It holds the invariants that outlive the briefs: the floor, the Iteration Contract, three strikes, when to gate plus the project's own gate block, how to read and write `memory.md`, the log format, and the constraints.
 
-| Reference file | Lands in |
-| --- | --- |
-| `writing-specs.md` | `agents/phase-a.md` |
-| `writing-plans.md` | `agents/phase-b.md` |
-| `executing-tasks.md` | `agents/phase-c.md` |
-| `test-driven-development.md` | `agents/phase-c.md` |
-| `systematic-debugging.md` | `agents/phase-c.md` |
+It holds no phase sections (D3) and no craft prose (D11): text no operator would ever edit is not steering, and belongs in the brief that uses it. What earns a line in `memory.md` lives in that file's own header, not here (D10).
 
-`prompts/implementer.md` and `prompts/reviewer.md` stay files, because phase C sends their text verbatim to subagents rather than reading them as guidance.
+### 6.3 The briefs
 
-`agents/phase-c.md` is expected to be the largest brief by a wide margin. That is the point of the design and not a smell: it is loaded only on phase C loops.
+Each brief holds the craft of one phase and is read only on that phase's iterations. A brief carries no `{{KEY}}` placeholder — it is never rendered — and no plugin path: the task line supplies one at dispatch (§3.3).
 
-Each brief carries no `{{KEY}}` placeholder (it is never rendered) and no plugin path (the task line carries the slug; nothing else is needed). This preserves the existing property of `agents/looper.md`.
+`agents/phase-c.md` is the largest brief by a wide margin, carrying task execution, TDD and systematic debugging. That is the point of the design and not a smell: phase A pays nothing for it.
 
-### 6.4 The pointer
+`prompts/implementer.md` and `prompts/reviewer.md` stay separate files, because phase C sends their text verbatim to subagents rather than reading them as guidance.
 
-`templates/state.md` keeps its frontmatter (`active`, `loop`, `session_id`, `max_loops`, `started_at`) and its `{{PLUGIN_ROOT}}` placeholder. Its body becomes the picker call plus the §3.3 dispatch table. `stop-hook.sh` reads the body with `awk '/^---$/{i++; next} i>=2'` and is unaffected by its content.
+### 6.4 The state and the pointer
+
+An armed flow is two gitignored files, created and removed together by `arm_flow()` and `disarm()`:
+
+| File | Holds | Read by | Written by |
+| --- | --- | --- | --- |
+| `state.json` | `iteration`, `max_iterations`, `session_id`, `started_at` | `stop-hook.sh` (one `jq` call per iteration), `print.sh`, `cancel.sh` | `run.sh` at arming; `stop-hook.sh` bumps `iteration` each pass |
+| `pointer.md` | the picker call plus the §3.3 dispatch table | fed back verbatim to the session | `run.sh` only — never mutated |
+
+Splitting them is what keeps each one honest: the state is data a script parses, the pointer is a prompt a model reads, and neither has to skip past the other. `state.json` is the armed flag — the five existence tests point at it — and `pointer.md` is its payload, so `disarm()` removes both and a pointer can never outlive its counter (D12).
+
+Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). The picker reads them in plain alphabetical order of the file name, which is the operator's only lever on the order they are worked.
 
 ## 7. Operator surface
 
 ### 7.1 Commands
 
-`/spectomat:run`, `:status`, `:cancel`, `:help` keep their names, arguments and behaviour.
-
-### 7.2 `status` gains a prediction
-
-`status.sh` calls `phase.sh` and prints its verdict as a new first line of the floor section, e.g. `next: C · 003-auth`. Because it is the identical code path the next loop takes, the prediction cannot drift from the decision. The picker mutates nothing (§5.1 note 5), so this is safe to run at any time.
-
-### 7.3 Text that names the removed mechanism
-
-Three user-visible strings assert that the model decides completion and must be corrected, or they will contradict §3.5:
-
-| Location | Currently says |
+| Command | Does |
 | --- | --- |
-| `scripts/run.sh` `announce()` | *"To finish, output … ONLY when drafts/, specs/ and plans/ are all empty … Never output a false promise to escape."* |
-| `scripts/stop-hook.sh` `continue_loop()` `system_msg` | *"ONLY when the statement is TRUE - do not lie to exit!"* |
-| `templates/guide.md` | the Flow, Loops Mechanics and Glossary sections, which define **Looper** |
+| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1 |
+| `/spectomat:status` | the next verdict, the current iteration, floor counts, per-plan step progress, blocked files, log tail |
+| `/spectomat:cancel` | disarms the flow; the floor stays and `run` resumes from it |
+| `/spectomat:help` | prints `templates/guide.md` |
 
-### 7.4 Glossary changes
+### 7.2 `status` predicts the next phase
 
-`.claude/CLAUDE.md` requires the guide's terms to be used consistently and without synonyms, so the vocabulary change is normative.
+`status.sh` calls `print_next`, which prints a `--- next ---` section holding the picker's verdict verbatim, e.g. `C 003-auth`. Because it is the identical code path the next iteration takes, the prediction cannot drift from the decision. The picker mutates nothing (§5.1 note 6), so this is safe to run at any time.
 
-| Term | Change |
-| --- | --- |
-| **Looper** | removed |
-| **Phase agent** | new: the subagent that performs one phase — `spectomat:phase-a`, `phase-b`, `phase-c` |
-| **Picker** | new: `scripts/phase.sh`, which decides the phase of a loop and prints one verdict line |
-| **Archiver** | new: `scripts/archive.sh`, which performs phase D |
-| **Janitor** | new: `spectomat:recover`, which recovers a dirty tree |
-| **Verdict** | new: the picker's one-line output (§2.1) |
-| **Loop** | amended: one picker verdict, one phase, one commit, one log line |
+### 7.3 Installation
 
-## 8. Migration
+The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so a source edit is not live until `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run`.
 
-### 8.1 Existing floors
+### 7.4 Licence
 
-`contract.md` is rendered once and never overwritten, so an armed floor keeps a contract whose `## Phases` section contradicts the new briefs. `render_factory()` in `run.sh` gains a migration branch:
+Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from Anthropic's `ralph-loop` (Apache 2.0). `agents/phase-b.md` and `agents/phase-c.md` carry material condensed from `superpowers` (MIT). `NOTICE.md` names each file and its changes, and must be updated whenever derived material moves — a licence obligation, not documentation housekeeping.
 
-```text
-migrate_contract():
-  if not exists(CONTRACT):            return        # first render, nothing to migrate
-  if CONTRACT has no '^## Phases':    return        # already migrated
-  gates = gate_block()                              # the operator's lines, preserved verbatim
-  render templates/contract.md over CONTRACT with REPO and GATES=gates
-  stage CONTRACT for the floor-setup commit
-  report 'contract.md: migrated to the phase-agent contract (gates preserved)'
-```
+## 8. Design decisions
 
-The previous text stays recoverable in git history, because `contract.md` is committed. `memory.md` is untouched by the migration: it belongs to the project.
-
-Known floor requiring this: `~/Projects/telegator` — idle, `drafts/`, `specs/` and `plans/` all empty, no `state.md`.
-
-### 8.2 Future migrations
-
-The new contract carries a marker `<!-- spectomat-contract: 2 -->` as its first line, so the next migration greps a version rather than a section name that may itself have moved (D7).
-
-### 8.3 Installation
-
-`.claude-plugin/plugin.json` version is bumped; the operator reinstalls and restarts Claude Code, because the plugin runs from a cache copy. A project with an active flow needs `/spectomat:cancel` then `/spectomat:run`.
-
-### 8.4 Licence
-
-`NOTICE.md` names four superpowers-derived files by path under `references/`. When they dissolve, the attribution moves with them: the notice must name `agents/phase-b.md` and `agents/phase-c.md` as the files carrying condensed superpowers material, and describe the change. This is a licence obligation, not documentation housekeeping.
+| Id | Decision | Rejected | Why |
+| --- | --- | --- | --- |
+| D1 | A bash picker (`phase.sh`) decides the phase | a thin foreman agent; the session deciding from the contract | deterministic, testable, costs no tokens, and makes a false completion promise structurally impossible |
+| D2 | Three phase agents (A, B, C); phase D is `archive.sh` | four agents; two agents (author / builder) | D is mechanical — gates, three moves, one commit; a script that exits non-zero on a failing gate is stronger evidence than an agent claiming the gate passed |
+| D3 | The contract keeps no phase sections at all | per-phase stubs with a "Project overrides" list | one source per phase; an override mechanism is complexity bought before anyone has needed it |
+| D4 | Phase D's log line carries the gate count | parsing test counts out of gate output | a script knows how many gates ran and that each exited 0; it cannot know what they printed, and guessing would be the adjective the Log Format forbids |
+| D5 | A phase agent performs its own third-strike block-move | the picker detecting the third strike and a `block.sh` doing the move | the agent knows why it failed and must write the reason; the picker stays free of mutation |
+| D6 | `run_gates` executes gate lines with `eval` | a restricted parser, or `npm run` only | the gate block is operator-authored content in their own committed repository, at the same trust level as a `package.json` script the factory already runs |
+| D7 | `B` also claims a plan overview with no task files | leaving it stranded | otherwise a half-finished phase B matches no stage and the plan is unreachable for the life of the floor |
+| D8 | Phase C executes exactly one task per iteration, in dependency order | packing file-disjoint ready tasks into one iteration as a "wave" | a wave is the only place where the unit of dispatch differs from the unit of work, and it pays for that with file-disjointness analysis in phase C, packability planning in phase B, shared-tree race rules, ordered commits and concurrent fix loops. One task per iteration deletes all of it: the picker is unaffected, an iteration stays one commit and one log line, and a task's blast radius is one revert. The cost is iterations, which are cheap and unattended |
+| D9 | `run.sh` renders `contract.md` once and never rewrites it | a migration that regenerates an old contract from the template, carrying the gate lines across | a migration path can only overwrite the file the operator is told to edit, and one that has never migrated anything is untested weight on the script every run executes |
+| D10 | `templates/memory.md`'s own header carries what earns a line; the contract carries only when to read and write it | the rules in both files, kept in step by hand | duplicated rules drift, and keeping them in step was a manual instruction to a human. Every iteration reads `memory.md` in Orient anyway, so the header costs no extra read |
+| D11 | Craft prose lives in the brief that uses it — gate-reading in `agents/phase-c.md`, "A and B skip the gates" in those two briefs | keeping it in the contract, where every phase reads it | the contract is the operator's only editable surface; text no operator would ever edit is craft, not steering, and D3 already put craft in the briefs |
+| D12 | An armed flow is `state.json` (data) plus `pointer.md` (prompt), created and removed together | one Markdown file with the state in frontmatter and the prompt in its body | one file forced every reader to parse past the other: `awk '/^---$/{i++; next} i>=2'` in two scripts to reach the prompt, and a `sed \| grep \| sed` pipeline to reach a field. Split, the state is `jq`-addressable in one call and the prompt is a file you `cat`. The names stop competing too — neither file is both things |
+| D13 | The operator puts drafts into `drafts/` and names them; `run.sh` only commits what it finds there | `run.sh` moving `wishlist/*.md` into `drafts/` under a number issued from a committed `.inc` counter | intake is the project's business, not the factory's. It cost a second inbox directory, a counter file with a git lifecycle opposite to the state it sat next to, and staging both ends of every move so arming still ended on a clean tree. Without it the floor has one entrance and drafts are worked in plain alphabetical order of whatever the operator called them |
 
 ## 9. Acceptance Criteria
 
@@ -395,7 +344,7 @@ The new contract carries a marker `<!-- spectomat-contract: 2 -->` as its first 
 
 | Id | Criterion | Verified by |
 | --- | --- | --- |
-| AC-1.1 | `phase.sh` prints exactly one line and exits 0 for every floor state in §14 | selftest |
+| AC-1.1 | `phase.sh` prints exactly one line and exits 0 for every floor state in §10.3 | selftest |
 | AC-1.2 | Priority holds: with candidates in all four stages, the verdict is `D` | selftest |
 | AC-1.3 | A plan directory with zero `task-*.md` files does not yield `D` | selftest |
 | AC-1.4 | A spec whose plan overview exists but has zero task files yields `B` | selftest |
@@ -410,90 +359,64 @@ The new contract carries a marker `<!-- spectomat-contract: 2 -->` as its first 
 | AC-3.1 | `archive.sh` with a failing gate moves nothing and exits non-zero | selftest |
 | AC-3.2 | `archive.sh` logs `(strike N)` with N one higher than the log showed | selftest |
 | AC-3.3 | At the third strike `archive.sh` moves the trail with the `.blocked` infix, and `print_blocked` lists both files | selftest |
-| AC-3.4 | `archive.sh` sets the patch version to the slug's `NNN` as an integer, keeping major and minor | selftest |
-| AC-3.5 | `archive.sh` makes exactly one commit | selftest |
-| AC-4.1 | `migrate_contract` rewrites a contract containing `## Phases` and preserves the gate lines verbatim | selftest |
-| AC-4.2 | `migrate_contract` is a no-op on a contract carrying the §8.2 marker | selftest |
-| AC-5.1 | `status.sh` prints the picker's verdict verbatim | manual, scratch repo |
-| AC-6.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §15.2 |
-| AC-6.2 | Both plugin manifests validate `--strict` | manual |
-| AC-7.1 | No file under `scripts/`, `agents/` or `templates/` mentions `references/` or `looper` | grep, selftest |
-| AC-7.2 | `NOTICE.md` names only files that exist | grep, selftest |
+| AC-3.4 | `archive.sh` makes exactly one commit, and touches no file outside the floor | selftest |
+| AC-4.1 | `status.sh` prints the picker's verdict verbatim | manual, scratch repo |
+| AC-4.2 | Arming writes a valid `state.json` with `iteration` 1 and a numeric `max_iterations`, and a `pointer.md` with no frontmatter and no unresolved `{{KEY}}` | selftest |
+| AC-4.3 | `/spectomat:cancel` removes both `state.json` and `pointer.md`, and keeps the floor | selftest |
+| AC-4.4 | `run.sh` commits a draft dropped into `drafts/`, tracked or not, and leaves a clean tree | selftest |
+| AC-4.5 | Drafts are taken in alphabetical order of the file name, whatever their modification times | selftest |
+| AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
+| AC-5.2 | Both plugin manifests validate `--strict` | manual |
+| AC-6.1 | No brief carries a `{{KEY}}` placeholder | selftest |
+| AC-6.2 | `agents/phase-c.md` names both files under `prompts/` | selftest |
+| AC-6.3 | `NOTICE.md` names only files that exist | grep, selftest |
 
 ### 9.2 End-to-end
 
 | Id | Criterion | Verified by |
 | --- | --- | --- |
-| E2E-1 | A scratch repo with two drafts runs to `<promise>FACTORY EMPTY</promise>`, producing two archived trails and committed code | `claude -p` run, §15.2 |
-| E2E-2 | The `telegator` floor migrates on the next `/spectomat:run`: contract rewritten, gate lines unchanged, `memory.md` untouched | manual |
-| E2E-3 | A loop killed mid-phase C leaves a dirty tree; the next loop's verdict is `R` and the janitor restores a clean tree | manual, scratch repo |
+| E2E-1 | A scratch repo with two drafts runs to `<promise>FACTORY EMPTY</promise>`, producing two archived trails and committed code | `claude -p` run, §10.5 |
+| E2E-2 | An iteration killed mid-phase C leaves a dirty tree; the next iteration's verdict is `R` and the janitor restores a clean tree | manual, scratch repo |
 
 ### 9.3 Non-functional
 
 | Target | Measured by |
 | --- | --- |
-| `phase.sh` completes in under 200 ms on a floor of 20 plans | `time` in the scratch repo; it is on the path of every loop and of `status` |
+| `phase.sh` completes in under 200 ms on a floor of 20 plans | `time` in the scratch repo; it is on the path of every iteration and of `status` |
 | `selftest.sh` stays under 8s, and one test case — fixture setup plus one subject invocation — costs at or below 200ms | wall time for the total; the per-case figure by A/B against a scratch harness of N identical cases |
-| bash 3.2 compatible, no GNU-only flags, `jq` the only non-base dependency | the existing dependency test in `selftest.sh`, extended |
+| bash 3.2 compatible, no GNU-only flags, `jq` the only non-base dependency | the dependency test in `selftest.sh` |
 
-## 10. Decisions
+## 10. Building and testing
 
-| Id | Date | Decision | Rejected | Why |
-| --- | --- | --- | --- | --- |
-| D1 | 2026-09-11 | A bash picker (`phase.sh`) decides the phase | a thin foreman agent; the session deciding from the contract | deterministic, testable, costs no tokens, and makes a false completion promise structurally impossible |
-| D2 | 2026-09-11 | Three phase agents (A, B, C); phase D is `archive.sh` | four agents; two agents (author / builder) | D is mechanical — gates, three moves, a version bump; a script that exits non-zero on a failing gate is stronger evidence than an agent claiming the gate passed |
-| D3 | 2026-09-11 | The contract keeps no phase sections at all | per-phase stubs with a "Project overrides" list | one source per phase; an override mechanism is complexity bought before anyone has needed it |
-| D4 | 2026-09-11 | Phase D's log line carries the gate count and the new version | parsing test counts out of gate output | a script knows how many gates ran and that each exited 0; it cannot know what they printed, and guessing would be the adjective the Log Format forbids |
-| D5 | 2026-09-11 | A phase agent performs its own third-strike block-move | the picker detecting the third strike and a `block.sh` doing the move | the agent knows why it failed and must write the reason; the picker stays free of mutation |
-| D6 | 2026-09-11 | `run_gates` executes gate lines with `eval` | a restricted parser, or `npm run` only | the gate block is operator-authored content in their own committed repository, at the same trust level as a `package.json` script the factory already runs |
-| D7 | 2026-09-11 | The new contract carries a `<!-- spectomat-contract: 2 -->` marker | grepping `## Phases` forever | this migration greps a section name that is being removed; the next one needs a marker that does not move |
-| D8 | 2026-09-11 | `B` also claims a plan overview with no task files | leaving it stranded, as today | otherwise a half-finished phase B matches no stage and the plan is unreachable for the life of the floor |
+### 10.1 Toolchain
 
-## 11. Reconciliations
+bash 3.2, `jq`, no build, no package manager, no network. `scripts/utils.sh` is sourced by every script and sets no shell options; each script chooses its own `set -e/-u/pipefail`.
 
-Filled during the build. One row per divergence from Part I.
-
-| Id | Sections | Contradiction | Reading built to |
-| --- | --- | --- | --- |
-| R1 | §5.1, §3.5 | The `pick_phase` pseudocode prints `E` once no stage matches, but §3.5 and AC-1.6 require `E` to mean all three directories are empty. A floor can match no stage and still hold files: an orphan plan overview whose spec was deleted, or a slug parked at `STRIKE_LIMIT` that was never blocked. | After the four stages the picker prints `E` only when `drafts/`, `specs/` and `plans/` are empty; anything left over prints `R`. The janitor's brief widens from "a dirty tree" to "a dirty tree, or a floor the picker could not classify", and gains the two block-moves that clear those cases. |
-| R2 | §3.3, §6.4 | The task line is specified as the verdict line verbatim, but phase A must read `templates/spec.md`, phase B `templates/plan.md` and `templates/task.md`, and phase C `prompts/implementer.md` and `prompts/reviewer.md` — all plugin files reachable only by absolute path. | The task line is two lines: the verdict, then `Plugin root: <absolute path>`. §6.3 is unaffected — a brief still carries no plugin path of its own; it is told one at dispatch, exactly as the old task line told the looper where `references/` lived. |
-| R3 | §9.3 | The non-functional target "`selftest.sh` still runs in under a second" was carried over from the file's own header, written when the suite was 29 pure-text assertions that spawned no subprocesses. The suite this spec designs creates roughly 36 real repositories and runs ~120 assertions, most through command substitutions that spawn a subprocess each. At Task 3 it measured 0.904s, 1.213s and 1.295s across three runs, with user time steady at 0.35-0.39s — the variance is filesystem and process-spawn time, not computation. | The target becomes three seconds, and gains a second half the one-second figure never had: the marginal cost of one `floor()` call must stay at or below ~20ms. This is a recalibration to what is being measured, not a weakened gate — the per-call cost IMPROVED 8-10x in Task 2 (from ~150ms), and the per-call clause is what would catch a real regression, which a wall-clock total cannot once the suite's scope grows. The "no network" half of the constraint is untouched. |
-| R4 | §9.3, R3 | R3 kept a wall-clock total and added a per-`floor()`-call clause, on a measurement of ~15-20ms per call. That measurement was sound but measured the wrong unit: it appended BARE `floor()` calls, and a bare floor is the cheap part. Task 4 added ~14 real cases and the suite rose ~2s — ~140ms per case, seven times the figure R3 was built on. A guard aimed at the wrong quantity gives false assurance, which is worse than a guard set too loose. | Measured attribution, N=14 per case on a scratch harness: a bare `floor()` costs ~17ms; each fixture helper that commits (`draft`, `spec`, `plan`, `plan_bare`) costs ~52ms, spawning three subprocesses; and one `phase.sh` invocation costs ~68ms on an empty floor and ~94ms on a populated one. The subject under test is therefore as expensive as the fixtures, and its cost is irreducible without deleting coverage. So the unit changes from `floor()` calls to test cases, and the total becomes a generous 8s that the suite's real scope can meet. The per-case 200ms figure is what detects a regression; the total only detects unbounded growth. The "no network" half remains untouched. |
-| R5 | §5.5, §5.1 note 4, §9.1 AC-3.5 | §5.5's pseudocode ran three moves and a commit with no failure check, under a script that sets `-uo pipefail` and deliberately not `-e`. Task 5's reviewer reproduced the consequence twice against the real script: a conflict at one destination lets the first move fail and the second succeed, after which the version bump, the commit and the log line all run and the script exits 0 reporting success — with half the trail archived and the tree CLEAN. A second variant fails both moves, fails the commit with "nothing to commit", and still exits 0 having made zero commits, violating AC-3.5. | Every mutation is checked, and a failure logs a strike for phase D in the same shape `gate_or_strike` writes — so `strike_count` counts it and the slug blocks after three — then exits non-zero leaving the tree exactly as it landed. Both halves are required: exiting without a strike wedges the flow, because the picker answers `D` again next loop and the same move fails again until the cap. §5.1 note 4 is amended too: it stated the dirty-tree recovery assumption as fact, when it is conditional on precisely this check. The picker cannot detect a clean-but-corrupt floor; only the archiver can avoid creating one. |
-
-# Part II — Building it
-
-## 12. Toolchain and layout
-
-bash 3.2, `jq`, no build, no package manager, no network. Layout is the existing plugin layout of §6.1. `scripts/utils.sh` is sourced by every script and sets no shell options; each script chooses its own `set -e/-u/pipefail`, as today.
-
-## 13. Configuration contract
+### 10.2 Configuration contract
 
 | Placeholder | Rendered into | Value |
 | --- | --- | --- |
-| `{{PLUGIN_ROOT}}` | `state.md` | absolute plugin path; now locates `scripts/phase.sh`, `scripts/archive.sh` and `agents/phase-*.md` instead of `agents/looper.md` and `references/` |
-| `{{SESSION_ID}}`, `{{MAX_LOOPS}}`, `{{STARTED_AT}}` | `state.md` frontmatter | unchanged |
-| `{{REPO}}`, `{{GATES}}` | `contract.md` | unchanged; `GATES` is additionally re-supplied by the §8.1 migration |
+| `{{PLUGIN_ROOT}}` | `pointer.md` | absolute plugin path; locates `scripts/phase.sh`, `scripts/archive.sh` and `agents/phase-*.md` |
+| `{{REPO}}` | `contract.md`, `memory.md` | the repository root, substituted at the one and only render |
+| `{{GATES}}` | `contract.md` | the gate command compiled by `gates.sh`, substituted at the one and only render |
 
-A new placeholder requires a matching value in the `render_template` call in `run.sh`; this design adds none.
+A new placeholder requires a matching value in the `render_template` call in `run.sh`. `state.json` has no template: `arm_flow` writes its four fields inline, with `max_iterations` unquoted, so `parse_args` must keep requiring `^[0-9]+$`.
 
-## 14. Fixtures
+### 10.3 Fixtures
 
-The bash equivalent of a port and a fake. `selftest.sh` gains one fixture builder, used by every new case:
+The bash equivalent of a port and a fake. Every case in `selftest.sh` builds one:
 
 ```text
 floor(dir, spec):   under a fresh `mktemp -d`, `git init`, then create the
                     floor described by spec — drafts, specs, plan overviews,
                     task files with a given number of ticked and open steps,
-                    a log.md with given strike lines, a contract.md with a
-                    given gate block, and optionally a package.json
+                    a log.md with given strike lines, and a contract.md with
+                    a given gate block
 ```
 
 Cases are then a verdict assertion (`pk NAME want`) or an effect assertion over the resulting tree. Every fixture is a real git repository, because `git status --porcelain` is normative input and must not be stubbed.
 
-## 15. Verification
-
-### 15.1 The gates
+### 10.4 The gates
 
 ```bash
 bash -n scripts/*.sh
@@ -502,38 +425,24 @@ claude plugin validate .claude-plugin/plugin.json --strict
 claude plugin validate .claude-plugin/marketplace.json --strict
 ```
 
-### 15.2 What the gates do not cover
+### 10.5 What the gates do not cover
 
 | Not covered | Checked instead by |
 | --- | --- |
 | whether the runtime loads four agents | `claude -p … --debug-file <f> --model opus`, then grep `<f>` for `Loaded 4 agents from plugin`; a `-p` prompt asking Claude to list agent types reports NONE even when they are loaded, so it must not be used |
 | whether a full flow reaches the promise | `claude -p "/spectomat:run 25" --plugin-dir . --model opus` in a scratch repo with two drafts |
 | whether the Stop hook still releases | piping a fabricated `{"session_id","transcript_path"}` payload into `scripts/stop-hook.sh` |
-| whether the `telegator` migration is clean | run `/spectomat:run` there and read the diff of `contract.md` |
+| whether `run.sh` leaves a clean tree and keeps an edited contract | arming twice in a scratch repo, editing `contract.md` between runs |
 
 Nested `claude -p` must always be given `--model opus`; the CLI rejects the default model.
 
-### 15.3 The invariants that must be tests
+### 10.6 The invariants that must be tests
 
 | Invariant | Why a test and not a rule |
 | --- | --- |
-| the picker mutates nothing | it is called by `status` on demand and by every loop; a stray write would corrupt the floor silently |
+| the picker mutates nothing | it is called by `status` on demand and by every iteration; a stray write would corrupt the floor silently |
 | `D` never fires on a plan with no task files | the failure archives unbuilt work and is invisible until someone reads `done/` |
 | a `.blocked` trail is still listed by `print_blocked` | a blocked slug that nothing reports is a silently dropped idea |
-| no file mentions `references/` or `looper` | the removal is only real if nothing still points at it; a stale pointer would send an agent to read a missing file |
+| no brief carries a `{{KEY}}` placeholder | briefs are never rendered, so a placeholder would reach an agent literally |
+| arming and cancelling touch both `state.json` and `pointer.md` | a pointer outliving its state would be fed back to a later flow with no counter behind it; a state without a pointer stops the flow with a corruption message |
 | `NOTICE.md` names only files that exist | a licence notice pointing at deleted files does not discharge the obligation |
-
-## 16. Build sequence
-
-Bottom-up. Each step ends with §15.1 green.
-
-1. **Fixtures.** `floor()` and the `pk` assertion helper in `selftest.sh`, with one trivial case each, so every later step has a harness.
-2. **Shared helpers.** `strike_count`, `least_struck`, `gate_block`, `run_gates`, `STRIKE_LIMIT` in `utils.sh`. Covers AC-2.1, AC-2.2, AC-2.3, AC-1.7, AC-1.8.
-3. **The picker.** `scripts/phase.sh` per §5.1. Covers AC-1.1 … AC-1.9.
-4. **The archiver.** `scripts/archive.sh` per §5.5. Covers AC-3.1 … AC-3.5.
-5. **The briefs.** `agents/phase-a.md`, `phase-b.md`, `phase-c.md`, `recover.md`, absorbing `references/` per §6.3; delete `agents/looper.md` and `references/`.
-6. **The contract.** Cut `templates/contract.md` per §6.2 and add the §8.2 marker.
-7. **The pointer.** Rewrite the body of `templates/state.md` per §6.4 and §3.3.
-8. **Migration.** `migrate_contract()` in `run.sh` per §8.1. Covers AC-4.1, AC-4.2.
-9. **Operator surface.** `status.sh` prediction (§7.2), the three strings of §7.3, the glossary of §7.4.
-10. **Cross-cutting.** `NOTICE.md` (§8.4), `README.md`, `.claude/CLAUDE.md`, the AC-7.1 and AC-7.2 greps, plugin version bump.
