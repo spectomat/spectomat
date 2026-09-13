@@ -2,7 +2,7 @@
   "name": "spectomat",
   "metadata": {
     "description": "Spec-driven autonomous development for Claude Code",
-    "version": "0.5.0"
+    "version": "0.5.1"
   },
   "owner": {
     "name": "alex"
