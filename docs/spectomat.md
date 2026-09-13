@@ -4,7 +4,7 @@ A Claude Code plugin that turns raw ideas into committed, tested code without an
 
 The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the project-owned contract holds only the invariants that outlive both.**
 
-Five phases carry an idea end to end: **`SPECIFY`** draft → spec, **`PLAN`** spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Four are subagents with their own brief; `ARCHIVE` is a script, because it needs no judgement.
+Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPEC`** spec → reviewed spec, **`PLAN`** reviewed spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Five are subagents with their own brief; `ARCHIVE` is a script, because it needs no judgement.
 
 ## 1. System Overview
 
@@ -15,7 +15,7 @@ Five phases carry an idea end to end: **`SPECIFY`** draft → spec, **`PLAN`** s
 | Operator | the human | drops drafts in `.spectomat/drafts/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `contract.md` and `memory.md` |
 | Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches one agent or one script; does no factory work |
 | Picker | `scripts/phase.sh` | reads the floor, `log.md` and `git status`; prints one line naming the phase |
-| Phase agent | `spectomat:specify`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase and commits it |
+| Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase and commits it |
 | Archiver | `scripts/archive.sh` | performs the `ARCHIVE` phase: gates, moves, commit, log |
 | Janitor | `spectomat:recover` | recovers a dirty tree, or a floor the picker cannot classify |
 
@@ -28,7 +28,8 @@ Stop hook
        ├─ bash {{PLUGIN_ROOT}}/scripts/phase.sh   →  exactly one line
        │
        ├─ "SPECIFY <slug>"    →  Agent(spectomat:specify)     draft → spec
-       ├─ "PLAN <slug>"       →  Agent(spectomat:plan)        spec → plan
+       ├─ "REVIEW-SPEC <slug>" → Agent(spectomat:review-spec) spec → reviewed spec
+       ├─ "PLAN <slug>"       →  Agent(spectomat:plan)        reviewed spec → plan
        ├─ "IMPLEMENT <slug>"  →  Agent(spectomat:implement)   plan → next task
        ├─ "REVIEW <slug>"     →  Agent(spectomat:review)      finished plan → verdict
        ├─ "ARCHIVE <slug>"    →  bash scripts/archive.sh <slug>
@@ -48,7 +49,7 @@ The picker's entire output. One line on stdout, exit code 0.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `phase` | `SPECIFY`\|`PLAN`\|`IMPLEMENT`\|`REVIEW`\|`ARCHIVE`\|`FINISH`\|`RECOVER` | which phase applies, or `FINISH` for none, or `RECOVER` for a dirty tree |
+| `phase` | `SPECIFY`\|`REVIEW-SPEC`\|`PLAN`\|`IMPLEMENT`\|`REVIEW`\|`ARCHIVE`\|`FINISH`\|`RECOVER` | which phase applies, or `FINISH` for none, or `RECOVER` for a dirty tree |
 | `slug` | string, absent for `FINISH` and `RECOVER` | the draft file name without `.md`, as the operator named it |
 
 Identity: there is exactly one verdict per iteration, and it is not stored — the picker is re-run, never remembered. Written by: `scripts/phase.sh` only.
@@ -93,14 +94,14 @@ The session reads no contract, no floor file and no source. Its context accumula
 
 | Verdict | Action |
 | --- | --- |
-| `SPECIFY <slug>` / `PLAN <slug>` / `IMPLEMENT <slug>` / `REVIEW <slug>` | launch exactly one subagent, `run_in_background: false`, `subagent_type: "spectomat:<phase>"` when that type is listed; otherwise `general-purpose` with the body of `{{PLUGIN_ROOT}}/agents/<phase>.md` after its frontmatter as the brief |
+| `SPECIFY <slug>` / `REVIEW-SPEC <slug>` / `PLAN <slug>` / `IMPLEMENT <slug>` / `REVIEW <slug>` | launch exactly one subagent, `run_in_background: false`, `subagent_type: "spectomat:<phase>"` when that type is listed; otherwise `general-purpose` with the body of `{{PLUGIN_ROOT}}/agents/<phase>.md` after its frontmatter as the brief |
 | `ARCHIVE <slug>` | run `bash {{PLUGIN_ROOT}}/scripts/archive.sh <slug>` |
 | `RECOVER` | launch one subagent as above, with `spectomat:recover` / `agents/recover.md` |
 | `FINISH` | print the closing report and emit the promise as the last line |
 
 The task line handed to a subagent is two lines: the verdict verbatim, then `Plugin root: <absolute path>`. A brief therefore carries no plugin path of its own but can still reach `templates/`.
 
-The fallback rule is one rule stated once and applied to all five agents; §6.1 fixes the file names so the fallback path is computable from the phase name.
+The fallback rule is one rule stated once and applied to all six agents; the verdict's first word lowercased is the agent name, so `REVIEW-SPEC` dispatches `spectomat:review-spec` from `agents/review-spec.md`; §6.1 fixes the file names so the fallback path is computable from the phase name.
 
 ### 3.4 Failure path
 
@@ -132,7 +133,7 @@ Named constants, each defined once here and nowhere else in the system:
 | --- | --- | --- |
 | `STRIKE_LIMIT` | 3 | `scripts/utils.sh` |
 | `MAX_REVIEW_ROUNDS` | 2 | `agents/review.md` |
-| `AGENT_COUNT` | 5 | this spec, asserted by AC-6.1 |
+| `AGENT_COUNT` | 6 | this spec, asserted by AC-6.1 |
 
 ### 5.1 `pick_phase` — `scripts/phase.sh`
 
@@ -149,11 +150,14 @@ pick_phase():
   ARCHIVE   = [ s in FINISHED     : a line matching '^- Verdict: ' in plans/<s>.md ]
   REVIEW    = [ s in FINISHED     : no such line ]
   IMPLEMENT = [ s for plans/<s>.md : any line matching '^- \[ \]' in plans/<s>/task-*.md ]
-  PLAN      = [ s for specs/<s>.md : not exists(plans/<s>.md)
+  REVIEWED  = [ s for specs/<s>.md : a line matching '^- Verdict: ' in specs/<s>.md ]
+  PLAN      = [ s in REVIEWED      : not exists(plans/<s>.md)
                                      or count(plans/<s>/task-*.md) == 0 ]
+  REVIEW_SPEC = [ s for specs/<s>.md : s not in REVIEWED
+                                     and not exists(plans/<s>.md) ]
   SPECIFY   = [ basename(f, '.md') for f in drafts/*.md ]
 
-  for (phase, set) in [ ('ARCHIVE',ARCHIVE), ('REVIEW',REVIEW), ('IMPLEMENT',IMPLEMENT), ('PLAN',PLAN), ('SPECIFY',SPECIFY) ]:
+  for (phase, set) in [ ('ARCHIVE',ARCHIVE), ('REVIEW',REVIEW), ('IMPLEMENT',IMPLEMENT), ('PLAN',PLAN), ('REVIEW-SPEC',REVIEW_SPEC), ('SPECIFY',SPECIFY) ]:
       pick = least_struck(phase, set)
       if pick is not NONE:  print phase + " " + pick; return 0
 
@@ -168,9 +172,10 @@ Normative notes, each of which a naive reading would get wrong:
 2. **`ARCHIVE` and `REVIEW` split one candidate set on the verdict line.** `FINISHED` is the plan whose every step is ticked; `REVIEW` writes `- Verdict: ...` into the overview, and that line — a one-way latch, never removed — is the only thing that moves a plan from one set to the other. The picker reads it and judges nothing: a plan the `REVIEW` phase sent back for fixes has unchecked steps again, leaves `FINISHED` on its own, and is claimed by `IMPLEMENT` with no extra rule.
 3. **`FINISHED` requires at least one task file.** A plan directory with no task files has no unchecked step and would otherwise satisfy it vacuously, reviewing and archiving an unbuilt plan.
 4. **`PLAN` also claims a plan overview with no task files** (D7). The `PLAN` phase's output is the overview plus the task files; an overview without them is a `PLAN` phase that did not finish, and re-running it overwrites the overview. Without this clause such a plan matches no stage and is stranded for the life of the floor.
-5. **A floor that matches no stage is `RECOVER`, not `FINISH`.** `FINISH` means finished; a leftover file means an anomaly only the janitor can clear — an orphan plan overview whose spec is gone, or a slug parked at `STRIKE_LIMIT` that was never blocked.
-6. **`RECOVER` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit. That reading is sound only because §5.5 checks every mutation: an unchecked failure there can commit a partial move and leave the tree CLEAN, in which case `RECOVER` never fires and the janitor never runs. The picker cannot detect that state — the archiver has to not create it.
-7. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
+5. **`REVIEW-SPEC` and `PLAN` split the specs on the same kind of latch.** `REVIEW-SPEC` writes `- Verdict: READY` into the spec's §17 and that line is what admits the spec to `PLAN`. A spec is reviewed once, before planning: one that already has a plan overview is never a `REVIEW-SPEC` candidate, so an unreviewed spec with an overview (a floor from before this phase existed, or a hand-placed overview) matches no stage and goes to the janitor.
+6. **A floor that matches no stage is `RECOVER`, not `FINISH`.** `FINISH` means finished; a leftover file means an anomaly only the janitor can clear — an orphan plan overview whose spec is gone, or a slug parked at `STRIKE_LIMIT` that was never blocked.
+7. **`RECOVER` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit. That reading is sound only because §5.5 checks every mutation: an unchecked failure there can commit a partial move and leave the tree CLEAN, in which case `RECOVER` never fires and the janitor never runs. The picker cannot detect that state — the archiver has to not create it.
+8. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
 
 ### 5.2 `least_struck` — `scripts/utils.sh`
 
@@ -262,13 +267,14 @@ The log line's numbers are the gate count, not test counts: a script has first-h
 | `scripts/status.sh`, `print.sh`, `cancel.sh`, `gates.sh` | operator surface (§7) and gate-command detection |
 | `scripts/selftest.sh` | the suite (§10) |
 | `agents/specify.md` | draft → spec — `spectomat:specify` |
-| `agents/plan.md` | spec → plan — `spectomat:plan` |
+| `agents/review-spec.md` | spec → reviewed spec — `spectomat:review-spec` |
+| `agents/plan.md` | reviewed spec → plan — `spectomat:plan` |
 | `agents/implement.md` | plan → next task — `spectomat:implement` |
 | `agents/review.md` | finished plan → verdict or fix tasks — `spectomat:review` |
 | `agents/recover.md` | the janitor — `spectomat:recover` |
 | `templates/contract.md`, `memory.md` | rendered into the project once, then owned by it |
 | `templates/pointer.md` | the prompt fed back every iteration, re-rendered every run, gitignored |
-| `templates/spec.md`, `plan.md`, `task.md` | the shapes the `SPECIFY` and `PLAN` phases fill in |
+| `templates/spec.md`, `plan.md`, `task.md` | the shapes the `SPECIFY`, `REVIEW-SPEC` and `PLAN` phases fill in |
 | `templates/guide.md` | the user guide, printed by `/spectomat:help`; holds the glossary |
 | `commands/run.md`, `status.md`, `cancel.md`, `help.md` | the four slash commands |
 | `hooks/hooks.json` | wires the Stop hook |
@@ -285,7 +291,7 @@ Each brief holds the craft of one phase and is read only on that phase's iterati
 
 `agents/implement.md` is the largest brief by a wide margin, carrying task execution, TDD and systematic debugging. That is the point of the design and not a smell: the `SPECIFY` phase pays nothing for it.
 
-No brief dispatches another agent. The `IMPLEMENT` phase writes its task's code itself and the `REVIEW` phase reads the plan itself, so a brief is only ever read as guidance by the one agent it names — there is no text a phase sends verbatim to somebody else.
+No brief dispatches another agent. The `IMPLEMENT` phase writes its task's code itself, the `REVIEW-SPEC` phase revises the spec itself and the `REVIEW` phase reads the plan itself, so a brief is only ever read as guidance by the one agent it names — there is no text a phase sends verbatim to somebody else.
 
 ### 6.4 The state and the pointer
 
@@ -328,7 +334,7 @@ Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from A
 | Id | Decision | Rejected | Why |
 | --- | --- | --- | --- |
 | D1 | A bash picker (`phase.sh`) decides the phase | a thin foreman agent; the session deciding from the contract | deterministic, testable, costs no tokens, and makes a false completion promise structurally impossible |
-| D2 | Four phase agents (`SPECIFY`, `PLAN`, `IMPLEMENT`, `REVIEW`); the `ARCHIVE` phase is `archive.sh` | five agents; two agents (author / builder) | `ARCHIVE` is mechanical — gates, three moves, one commit; a script that exits non-zero on a failing gate is stronger evidence than an agent claiming the gate passed |
+| D2 | Five phase agents (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`); the `ARCHIVE` phase is `archive.sh` | six agents; two agents (author / builder) | `ARCHIVE` is mechanical — gates, three moves, one commit; a script that exits non-zero on a failing gate is stronger evidence than an agent claiming the gate passed |
 | D3 | The contract keeps no phase sections at all | per-phase stubs with a "Project overrides" list | one source per phase; an override mechanism is complexity bought before anyone has needed it |
 | D4 | The `ARCHIVE` phase's log line carries the gate count | parsing test counts out of gate output | a script knows how many gates ran and that each exited 0; it cannot know what they printed, and guessing would be the adjective the Log Format forbids |
 | D5 | A phase agent performs its own third-strike block-move | the picker detecting the third strike and a `block.sh` doing the move | the agent knows why it failed and must write the reason; the picker stays free of mutation |
@@ -342,6 +348,7 @@ Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from A
 | D13 | The operator puts drafts into `drafts/` and names them; `run.sh` only commits what it finds there | `run.sh` moving `wishlist/*.md` into `drafts/` under a number issued from a committed `.inc` counter | intake is the project's business, not the factory's. It cost a second inbox directory, a counter file with a git lifecycle opposite to the state it sat next to, and staging both ends of every move so arming still ended on a clean tree. Without it the floor has one entrance and drafts are worked in plain alphabetical order of whatever the operator called them |
 | D14 | The `IMPLEMENT` phase writes its task's code itself | an implementer subagent it dispatches, reports back from and resumes | the picker already gives one fresh agent per task, so a subagent bought no context isolation and cost a placeholder-filled brief sent verbatim, a report file as the return channel, a `DONE / BLOCKED / NEEDS_CONTEXT` protocol and a re-dispatch rule — all of it deleted. What it loses is real but small: a cheap model for code writing, and a stronger one on the last fix round |
 | D15 | `REVIEW` is one phase per plan, run when every task is ticked | a reviewer subagent per task commit, with `MAX_FIX_ROUNDS` fix rounds inside the `IMPLEMENT` phase | per-task review was the one unit of work the picker could not see: no verdict, no log line, no strike, not resumable, a sub-state-machine with its own constant hidden inside another phase. As a phase it is an iteration like any other; its findings become task files that get the full TDD cycle instead of "send the findings back" rounds; and it reads the plan whole, which is the only way to see a helper written twice, code one task orphaned, or an interface that drifted between one task's `Produces` and another's `Consumes`. The cost is latency — a defect in task 1 surfaces after task 8 — bounded because the gates still run on every task and the plan's `Interfaces` rows are what guard the seams |
+| D16 | `REVIEW-SPEC` is one phase per spec, run once between `SPECIFY` and `PLAN`, and it revises the spec in place | a self-review checklist inside the `SPECIFY` brief; an approve-or-flag reviewer that sends the spec back to `SPECIFY` | the author cannot read its own spec cold, and the planner is the first reader that can be misled; a fresh agent with only the spec and the draft is the cheapest cold read. It fixes rather than flags because the fix for a spec is a sentence, and a `SPECIFY` round trip would rewrite the whole file to change one line. Each fix is a `revised` row in §10, so the trail is as traceable as an `assumed` one. One round, latched by `- Verdict: READY` in §17, the same grammar as the plan latch, so the picker learns nothing new |
 
 ## 9. Acceptance Criteria
 
@@ -350,9 +357,11 @@ Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from A
 | Id | Criterion | Verified by |
 | --- | --- | --- |
 | AC-1.1 | `phase.sh` prints exactly one line and exits 0 for every floor state in §10.3 | selftest |
-| AC-1.2 | Priority holds: with candidates in all four stages, the verdict is `ARCHIVE` | selftest |
+| AC-1.2 | Priority holds: with candidates in all six stages, the verdict is `ARCHIVE` | selftest |
 | AC-1.3 | A plan directory with zero `task-*.md` files does not yield `ARCHIVE` | selftest |
-| AC-1.4 | A spec whose plan overview exists but has zero task files yields `PLAN` | selftest |
+| AC-1.4 | A reviewed spec whose plan overview exists but has zero task files yields `PLAN` | selftest |
+| AC-1.6 | A spec with no `- Verdict: ` line and no plan overview yields `REVIEW-SPEC`; with the line it yields `PLAN` | selftest |
+| AC-1.7 | A strike logged at `REVIEW-SPEC` does not count at `REVIEW`, nor the reverse | selftest |
 | AC-1.5 | A dirty tree yields `RECOVER`, even when the floor is empty | selftest |
 | AC-1.6 | `FINISH` requires all three directories empty **and** a silent `git status` | selftest |
 | AC-1.7 | Given two candidates in one stage, the one with fewer strikes is named | selftest |
@@ -377,7 +386,7 @@ Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from A
 | AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
 | AC-5.2 | Both plugin manifests validate `--strict` | manual |
 | AC-6.1 | No brief carries a `{{KEY}}` placeholder | selftest |
-| AC-6.2 | No brief points at a `prompts/` file, and `agents/review.md` writes the `- Verdict: ` line §5.1 greps | selftest |
+| AC-6.2 | No brief points at a `prompts/` file, and `agents/review.md` and `agents/review-spec.md` each write the `- Verdict: ` line §5.1 greps | selftest |
 | AC-6.3 | `NOTICE.md` names only files that exist | grep, selftest |
 
 ### 9.2 End-to-end
@@ -438,7 +447,7 @@ claude plugin validate .claude-plugin/marketplace.json --strict
 
 | Not covered | Checked instead by |
 | --- | --- |
-| whether the runtime loads four agents | `claude -p … --debug-file <f> --model opus`, then grep `<f>` for `Loaded 4 agents from plugin`; a `-p` prompt asking Claude to list agent types reports NONE even when they are loaded, so it must not be used |
+| whether the runtime loads `AGENT_COUNT` agents | `claude -p … --debug-file <f> --model opus`, then grep `<f>` for `Loaded 6 agents from plugin`; a `-p` prompt asking Claude to list agent types reports NONE even when they are loaded, so it must not be used |
 | whether a full flow reaches the promise | `claude -p "/spectomat:run 25" --plugin-dir . --model opus` in a scratch repo with two drafts |
 | whether the Stop hook releases against the real runtime | the selftest drives it with a fabricated payload; only a live session proves Claude Code honours the `block` decision |
 | whether `run.sh` keeps an edited contract | arming twice in a scratch repo, editing `contract.md` between runs |

@@ -14,7 +14,7 @@
 ```text
 .spectomat/
   drafts/     ideas, one .md each; the file name is the slug, worked in alphabetical order
-  specs/      written by SPECIFY from each draft; or put a finished spec here yourself
+  specs/      written by SPECIFY from each draft, then revised once by REVIEW-SPEC; or put a finished spec here yourself
   plans/      PLAN writes an overview per spec plus <slug>/task-NN-<name>.md per task, each a self-contained brief
   done/       spec + plan moved here by ARCHIVE once REVIEW has passed the plan and the gates are green
   log.md      one line per phase, gitignored
@@ -27,12 +27,13 @@
 
 ## The Flow
 
-The flow is a sequence of iterations. Each iteration is one picker verdict, dispatched to a fresh phase agent, to the archiver, or to the janitor. The picker reads the floor and prints one verdict per iteration: `SPECIFY <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`.
+The flow is a sequence of iterations. Each iteration is one picker verdict, dispatched to a fresh phase agent, to the archiver, or to the janitor. The picker reads the floor and prints one verdict per iteration: `SPECIFY <slug>`, `REVIEW-SPEC <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`.
 
 - **`ARCHIVE`** `reviewed plan` → `done/`, when the review verdict is in and the gates are green,
 - **`REVIEW`** `finished plan` → `verdict`: one read of the plan's whole diff, at most two rounds; findings become fix tasks that go back through `IMPLEMENT`,
 - **`IMPLEMENT`×n** `plan` → `next ready task`: one task per iteration in dependency order, TDD, gates, one commit,
-- **`PLAN`** `spec` → `plan`: an overview plus one task file per task,
+- **`PLAN`** `reviewed spec` → `plan`: an overview plus one task file per task,
+- **`REVIEW-SPEC`** `spec` → `reviewed spec`: one cold read against the draft, defects fixed in place and recorded as decisions, one round,
 - **`SPECIFY`** `draft` → `spec`,
 - **`FINISH`** `nothing left`: `drafts/`, `specs/` and `plans/` are empty and the tree is clean, so the iteration emits `<promise>FACTORY EMPTY</promise>` and the flow ends.
 
@@ -42,7 +43,7 @@ Work in progress is finished before a new draft is read. Drafts are read in alph
 
 The Stop hook runs when Claude tries to end its turn. While `state.json` exists for this session, the hook blocks the exit and returns `pointer.md` as the next input.
 
-The picker dispatches to exactly one phase per iteration: `SPECIFY <slug>` → a fresh phase agent writes draft → spec (`specify.md`); `PLAN <slug>` → a fresh phase agent writes an overview plus one task file per task (`plan.md`); `IMPLEMENT <slug>` → a phase agent implements the next ready task with TDD and the gates (`implement.md`); `REVIEW <slug>` → a phase agent reads the finished plan's whole diff and either passes it or adds fix tasks (`review.md`); `ARCHIVE <slug>` → `scripts/archive.sh` ticks all steps, verifies gates, and moves the trail to `done/`; `recover` → the janitor recovers from a dirty tree; `finalize` → the floor is empty and the flow ends. Each iteration emits one short report; when the flow ends, `state.json` and `pointer.md` are both removed.
+The picker dispatches to exactly one phase per iteration: `SPECIFY <slug>` → a fresh phase agent writes draft → spec (`specify.md`); `REVIEW-SPEC <slug>` → a fresh phase agent reads the spec cold, fixes what would mislead the planner and marks it ready (`review-spec.md`); `PLAN <slug>` → a fresh phase agent writes an overview plus one task file per task (`plan.md`); `IMPLEMENT <slug>` → a phase agent implements the next ready task with TDD and the gates (`implement.md`); `REVIEW <slug>` → a phase agent reads the finished plan's whole diff and either passes it or adds fix tasks (`review.md`); `ARCHIVE <slug>` → `scripts/archive.sh` ticks all steps, verifies gates, and moves the trail to `done/`; `recover` → the janitor recovers from a dirty tree; `finalize` → the floor is empty and the flow ends. Each iteration emits one short report; when the flow ends, `state.json` and `pointer.md` are both removed.
 
 `contract.md` and `memory.md` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the factory believes about the codebase. Each is checked on its own, so a floor armed before `memory.md` existed gets it on the next `run`.
 
@@ -50,7 +51,7 @@ The picker dispatches to exactly one phase per iteration: `SPECIFY <slug>` → a
 
 ## Operating it
 
-- **Feed it.** Drop a `.md` idea into `.spectomat/drafts/`. `run` commits whatever it finds there. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `specs/`; the factory then starts at planning.
+- **Feed it.** Drop a `.md` idea into `.spectomat/drafts/`. `run` commits whatever it finds there. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `specs/`; the factory then starts at reviewing it.
 - **Steer it.** Edit a spec or a plan between iterations. Edit `contract.md` to change the rules, `memory.md` to correct what the factory believes about the codebase.
 - **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every iteration reads before working and adds to before committing. Seed it by hand before the first run and the factory starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
 - **Gate it.** The gates run once per task in the `IMPLEMENT` phase, before its commit, and once in the `ARCHIVE` phase before archiving. `run` compiles the gate command from `package.json` scripts: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `test`, `lint` and `build` script found, chained with `&&` in that order. The command is the first line of the block under Verification Gates in `contract.md`, rendered once at the first `run`; edit it there when `package.json` changes. Gates that are not npm scripts go into the same block, one command per line; every line must exit 0. An iteration may never weaken a gate to pass.
@@ -65,12 +66,12 @@ The picker dispatches to exactly one phase per iteration: `SPECIFY <slug>` → a
 - **Iteration** is one picker verdict, one phase, one commit, one log line.
 - **State file** is `.spectomat/state.json`: the iteration counter, the iteration cap and the session that armed the flow. Its existence is what "armed" means; `/spectomat:cancel` deletes it.
 - **Pointer** is `.spectomat/pointer.md`: the prompt the Stop hook feeds back every iteration, telling the session to run the picker and dispatch on its verdict. Fixed text, rendered once per `run`.
-- **Picker** is the script `scripts/phase.sh` that prints one verdict per iteration: `SPECIFY <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`.
-- **Phase agent** is a fresh subagent per phase: `spectomat:specify|plan|implement|review` or `spectomat:recover`; each brief contains the craft of its phase (`agents/specify.md`, `plan.md`, `implement.md`, `review.md`, `recover.md`). A phase agent does its own work and never dispatches another agent.
+- **Picker** is the script `scripts/phase.sh` that prints one verdict per iteration: `SPECIFY <slug>`, `REVIEW-SPEC <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`.
+- **Phase agent** is a fresh subagent per phase: `spectomat:specify|review-spec|plan|implement|review` or `spectomat:recover`; each brief contains the craft of its phase (`agents/specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `recover.md`). A phase agent does its own work and never dispatches another agent.
 - **Archiver** is the script `scripts/archive.sh` that performs the `ARCHIVE` phase: ticks all steps, verifies gates, moves the trail to `done/` and commits.
 - **Janitor** is the same as the Archiver: the script `scripts/archive.sh` recovers from a dirty tree by moving the current trail to `done/` and committing a blocked file.
-- **Verdict** is the one-line output of the picker: `SPECIFY <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`. (The `REVIEW` phase's own `- Verdict:` line in a plan overview is a different thing: the latch that releases that plan to `ARCHIVE`.)
-- **Phase** is one of `SPECIFY` (draft → spec), `PLAN` (spec → plan), `IMPLEMENT` (plan → next task), `REVIEW` (finished plan → verdict), `ARCHIVE` (reviewed plan → done). An iteration does exactly one. Verdicts are upper case; the agent types and brief files that serve them are lower case. The two remaining verdicts are not phases: `RECOVER` hands the floor to the janitor, `FINISH` ends the flow.
+- **Verdict** is the one-line output of the picker: `SPECIFY <slug>`, `REVIEW-SPEC <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`. (The `- Verdict:` line the `REVIEW-SPEC` phase writes into a spec and the `REVIEW` phase writes into a plan overview is a different thing: the latch that releases that spec to `PLAN` or that plan to `ARCHIVE`.)
+- **Phase** is one of `SPECIFY` (draft → spec), `REVIEW-SPEC` (spec → reviewed spec), `PLAN` (reviewed spec → plan), `IMPLEMENT` (plan → next task), `REVIEW` (finished plan → verdict), `ARCHIVE` (reviewed plan → done). An iteration does exactly one. Verdicts are upper case; the agent types and brief files that serve them are lower case. The two remaining verdicts are not phases: `RECOVER` hands the floor to the janitor, `FINISH` ends the flow.
 - **Task** is one independent piece of work in a plan, with its own file, its own test cycle and its own commit. The `IMPLEMENT` phase executes exactly one per iteration, in dependency order; the `REVIEW` phase may add more.
 - **Flow** is the sequence of iterations from the first `/spectomat:run` until the promise `FACTORY EMPTY`.
 - **Strike** is one failed attempt at a phase for a slug. Three strikes move the file to `done/<slug>.blocked.md` with the reason.

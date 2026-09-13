@@ -120,3 +120,7 @@ Bottom-up, numbered. Each step ends with all gates green. The factory derives it
 8. UI
 9. Operations
 10. Cross-cutting
+
+## 17. Review
+
+Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of counts, then the `Verdict:` line that releases the spec to `PLAN`. Empty until then.

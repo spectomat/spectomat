@@ -11,7 +11,7 @@ Nobody is watching. **Never ask a question.** Where an input is silent, decide, 
 ```text
 .spectomat/
   drafts/      raw ideas, one .md each — the user drops them here; worked in alphabetical order
-  specs/       normative specs, one per draft slug — you write these
+  specs/       normative specs, one per draft slug — you write these, then review them once before planning
   plans/       one overview per spec slug, plus <slug>/task-NN-<name>.md per task — you write these
   done/        <slug>.draft.md, <slug>.spec.md, <slug>.plan.md and <slug>/ task files, moved here when a plan completes
   log.md       append-only, one line per phase of work — gitignored, never committed
@@ -30,11 +30,11 @@ Every iteration, in order:
 
 1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `pointer.md`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/` files except to move them.
 2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task line names it and the slug. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
-3. **Verify** with the gates — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `PLAN` and `REVIEW` phases write no code and skip them,
+3. **Verify** with the gates — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them,
 4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
 5. **Log** one line to `log.md`, then stop the iteration. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In the `IMPLEMENT` phase the plan tick is one `chore(<slug>): …` commit after the task commits.
 
-> Work in progress always wins: a started plan is finished and archived before the next spec is planned, and every spec is planned before the next draft is read. New drafts wait until the floor ahead of them is clear.
+> Work in progress always wins: a started plan is finished and archived before the next spec is planned, every reviewed spec is planned before the next spec is reviewed, and every spec is reviewed before the next draft is read. New drafts wait until the floor ahead of them is clear.
 
 ### Three strikes
 
@@ -67,6 +67,7 @@ Append to `log.md`, never edit earlier lines. The timestamp is the output of `da
 
 ```text
 - 2026-09-07T19:40Z · SPECIFY · <slug> · spec written, 3 assumptions
+- 2026-09-07T19:46Z · REVIEW-SPEC · <slug> · 2 issues fixed in §3.2, §9.1 · 1 decision added
 - 2026-09-07T19:52Z · IMPLEMENT · <slug> · Task 2/6 done · tests 41/41
 - 2026-09-07T20:10Z · ARCHIVE · <slug> · moved to done · tsc 0, tests 58/58, lint 0
 - 2026-09-07T20:11Z · PLAN · <slug> · plan: 6 tasks (strike 1: spec §4 contradicts §2)

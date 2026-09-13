@@ -70,7 +70,15 @@ fixture_commit() {
 }
 
 draft() { printf 'idea\n' > "$FIXTURE/.spectomat/drafts/$1.md"; fixture_commit; }
-spec()  { printf 'spec\n' > "$FIXTURE/.spectomat/specs/$1.md";  fixture_commit; }
+
+# spec SLUG [REVIEWED] — a spec; a non-empty REVIEWED writes the closing
+# verdict line the REVIEW-SPEC phase leaves behind, which is what releases a
+# spec to PLAN.
+spec() {
+  printf 'spec\n' > "$FIXTURE/.spectomat/specs/$1.md"
+  [[ -z "${2:-}" ]] || printf '\n## 17. Review\n\n- Verdict: READY\n' >> "$FIXTURE/.spectomat/specs/$1.md"
+  fixture_commit
+}
 
 # plan SLUG TASKS OPEN [REVIEWED] — an overview plus TASKS task files, the
 # first OPEN of them carrying an unchecked step and the rest ticked. A non-empty
@@ -267,10 +275,19 @@ floor p_a; draft 001-a
 pk "a draft is SPECIFY" "SPECIFY 001-a"
 
 floor p_b; spec 001-a
-pk "a spec with no plan is PLAN" "PLAN 001-a"
+pk "an unreviewed spec is REVIEW-SPEC" "REVIEW-SPEC 001-a"
 
-floor p_bare; spec 001-a; plan_bare 001-a
+floor p_b2; spec 001-a yes
+pk "a reviewed spec with no plan is PLAN" "PLAN 001-a"
+
+floor p_bare; spec 001-a yes; plan_bare 001-a
 pk "an overview with no task files is PLAN" "PLAN 001-a"
+
+# A spec is reviewed once, before it is planned: an overview already exists, so
+# the spec is never sent back to REVIEW-SPEC, and PLAN wants the latch. Nothing
+# claims it; the janitor rules.
+floor p_unlatched; spec 001-a; plan_bare 001-a
+pk "an unreviewed spec with an overview is RECOVER" "RECOVER"
 
 floor p_c; spec 001-a; plan 001-a 3 1
 pk "an open step is IMPLEMENT" "IMPLEMENT 001-a"
@@ -289,15 +306,36 @@ printf 'overview\n\n## Review\n\n- Round 1 — 2 findings (0 critical, 2 importa
 fixture_commit
 pk "a review round without a verdict reopens IMPLEMENT" "IMPLEMENT 001-a"
 
-floor p_vacuous; spec 001-a; plan_bare 001-a
+floor p_vacuous; spec 001-a yes; plan_bare 001-a
 mkdir -p "$FIXTURE/.spectomat/plans/001-a"
 pk "an empty task dir is never REVIEW or ARCHIVE" "PLAN 001-a"
 
-floor p_order; draft 004-d; spec 003-c; plan 002-b 2 1; spec 002-b; spec 001-a; plan 001-a 2 0 yes
-pk "ARCHIVE outranks IMPLEMENT, PLAN and SPECIFY" "ARCHIVE 001-a"
+# One candidate per stage, all six at once; ARCHIVE wins.
+floor p_order; draft 006-f; spec 005-e; spec 004-d yes; plan 003-c 2 1; spec 003-c; spec 002-b; plan 002-b 1 0; spec 001-a; plan 001-a 2 0 yes
+pk "ARCHIVE outranks REVIEW, IMPLEMENT, PLAN, REVIEW-SPEC and SPECIFY" "ARCHIVE 001-a"
 
 floor p_order2; draft 003-c; plan 002-b 2 1; spec 002-b; spec 001-a; plan 001-a 2 0
 pk "REVIEW outranks IMPLEMENT, PLAN and SPECIFY" "REVIEW 001-a"
+
+floor p_order3; draft 003-c; spec 002-b; spec 001-a yes
+pk "PLAN outranks REVIEW-SPEC and SPECIFY" "PLAN 001-a"
+
+floor p_order4; draft 001-a; spec 002-b
+pk "REVIEW-SPEC outranks SPECIFY" "REVIEW-SPEC 002-b"
+
+# The two review phases share a prefix; a strike at one must not count at the
+# other, or a struck spec review would silently skip the plan review too.
+floor p_strike_prefix; spec 001-a; plan 001-a 2 0
+logline '- t · REVIEW-SPEC · 001-a · x (strike 1)'
+logline '- t · REVIEW-SPEC · 001-a · x (strike 2)'
+logline '- t · REVIEW-SPEC · 001-a · x (strike 3)'
+pk "REVIEW-SPEC strikes do not count against REVIEW" "REVIEW 001-a"
+
+floor p_strike_prefix2; spec 001-a
+logline '- t · REVIEW · 001-a · x (strike 1)'
+logline '- t · REVIEW · 001-a · x (strike 2)'
+logline '- t · REVIEW · 001-a · x (strike 3)'
+pk "REVIEW strikes do not count against REVIEW-SPEC" "REVIEW-SPEC 001-a"
 
 floor p_dirty; draft 001-a; dirty
 pk "a dirty tree is RECOVER" "RECOVER"
@@ -388,13 +426,13 @@ is "zero new commits when nothing could move" "$(( $(commits) - n0 ))" "0"
 
 echo "briefs"
 AGENTS="$(dirname "$SCRIPTS")/agents"
-for a in specify plan implement review recover; do
+for a in specify review-spec plan implement review recover; do
   is "agents/$a.md exists" "$([[ -f "$AGENTS/$a.md" ]] && echo yes || echo no)" "yes"
   is "agents/$a.md is named $a" "$(sed -n 's/^name: *//p' "$AGENTS/$a.md" | head -1)" "$a"
   is "agents/$a.md has a description" \
     "$(grep -c '^description: ' "$AGENTS/$a.md")" "1"
 done
-is "AGENT_COUNT is 5" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "5"
+is "AGENT_COUNT is 6" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "6"
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "no brief points at the deleted prompts/" \
   "$(grep -l 'prompts/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
@@ -402,6 +440,8 @@ is "no brief points at the deleted prompts/" \
 # writer, so the two must name the same marker or a plan never archives.
 is "review.md writes the verdict line the picker greps" \
   "$(grep -q -- '- Verdict: ' "$AGENTS/review.md" && echo yes || echo no)" "yes"
+is "review-spec.md writes the verdict line the picker greps" \
+  "$(grep -q -- '- Verdict: READY' "$AGENTS/review-spec.md" && echo yes || echo no)" "yes"
 
 echo "status"
 floor st; spec 001-a; plan 001-a 2 1

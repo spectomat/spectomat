@@ -3,7 +3,8 @@
 #
 #   phase.sh        prints one line and exits 0:
 #                     "SPECIFY <slug>"    draft -> spec
-#                     "PLAN <slug>"       spec -> plan
+#                     "REVIEW-SPEC <slug>" spec -> revised spec, ready to plan
+#                     "PLAN <slug>"       reviewed spec -> plan
 #                     "IMPLEMENT <slug>"  plan -> next task
 #                     "REVIEW <slug>"     finished plan -> verdict, or fix tasks
 #                     "ARCHIVE <slug>"    reviewed plan -> done
@@ -88,17 +89,37 @@ candidates_implement() {
   done < <(slugs_in plans)
 }
 
-# PLAN: a spec with no plan overview, or an overview with no task files — a
-# PLAN phase that died before writing them. Without the second clause that plan
-# matches no stage and is unreachable for the life of the floor.
+# True when the spec carries the REVIEW-SPEC phase's closing verdict line. That
+# line is the only thing that releases a spec to PLAN, and the REVIEW-SPEC
+# phase is the only writer of it.
+spec_reviewed() { grep -qE '^- Verdict: ' "$FLOOR/specs/$1.md" 2>/dev/null; }
+
+# PLAN: a reviewed spec with no plan overview, or an overview with no task
+# files — a PLAN phase that died before writing them. Without the second clause
+# that plan matches no stage and is unreachable for the life of the floor.
 candidates_plan() {
   local s
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue
+    spec_reviewed "$s" || continue
     if [[ ! -f "$FLOOR/plans/$s.md" ]] || [[ $(task_count "$s") -eq 0 ]]; then
       printf '%s\n' "$s"
     fi
   done < <(slugs_in specs)
+}
+
+# REVIEW-SPEC: a spec with no verdict line and no plan overview. A spec is
+# reviewed once, before it is planned; one that already has an overview is
+# never sent back here.
+candidates_review_spec() {
+  local s
+  while IFS= read -r s; do
+    [[ -n "$s" ]] || continue
+    spec_reviewed "$s" && continue
+    [[ -f "$FLOOR/plans/$s.md" ]] && continue
+    printf '%s\n' "$s"
+  done < <(slugs_in specs)
+  return 0
 }
 
 # SPECIFY: any draft.
@@ -120,6 +141,7 @@ main() {
   pick=$(candidates_review    | least_struck REVIEW);    [[ -z "$pick" ]] || { echo "REVIEW $pick"; exit 0; }
   pick=$(candidates_implement | least_struck IMPLEMENT); [[ -z "$pick" ]] || { echo "IMPLEMENT $pick"; exit 0; }
   pick=$(candidates_plan      | least_struck PLAN);      [[ -z "$pick" ]] || { echo "PLAN $pick"; exit 0; }
+  pick=$(candidates_review_spec | least_struck REVIEW-SPEC); [[ -z "$pick" ]] || { echo "REVIEW-SPEC $pick"; exit 0; }
   pick=$(candidates_specify   | least_struck SPECIFY);   [[ -z "$pick" ]] || { echo "SPECIFY $pick"; exit 0; }
 
   # No stage claimed the floor. That is the end of the flow only when nothing

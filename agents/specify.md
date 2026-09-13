@@ -59,7 +59,7 @@ Start from `<plugin root>/templates/spec.md`; the `SPECIFY` phase follows it whe
 
 ## Review checklist
 
-Before dropping a hand-written spec into `.spectomat/specs/`:
+The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would mislead the planner; leave it nothing to find. Before committing, and before dropping a hand-written spec into `.spectomat/specs/`:
 
 - [ ] every `##` and `###` in Part I is numbered
 - [ ] every criterion has an id and a "verified by"
@@ -67,5 +67,6 @@ Before dropping a hand-written spec into `.spectomat/specs/`:
 - [ ] every external boundary is named
 - [ ] the build sequence exists and is bottom-up
 - [ ] the reconciliations section exists and is empty
+- [ ] the review section (§17) exists and is empty — the `REVIEW-SPEC` phase fills it
 
 Record memory, commit `<type>(<slug>): …`, log one line, report.
