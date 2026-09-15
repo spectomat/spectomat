@@ -37,6 +37,7 @@ floor_template() {
     printf '%s\n' '.spectomat/state.json' '.spectomat/pointer.md' \
                    '.spectomat/work/' '.spectomat/log.md' > .gitignore
     printf '# Spectomat factory log\n\n' > .spectomat/log.md
+    printf '{"slugs": {}}\n' > .spectomat/state.json
     git add .gitignore
     git commit -qm init
   )
@@ -69,25 +70,17 @@ fixture_commit() {
   return 0
 }
 
-draft() { printf 'idea\n' > "$FIXTURE/.spectomat/drafts/$1.md"; fixture_commit; }
+draft() { printf 'idea\n' > "$FIXTURE/.spectomat/drafts/$1.md"; state_slug "$1" SPECIFY; fixture_commit; }
 
-# spec SLUG [REVIEWED] — a spec; a non-empty REVIEWED writes the closing
-# verdict line the REVIEW-SPEC phase leaves behind, which is what releases a
-# spec to PLAN.
 spec() {
   printf 'spec\n' > "$FIXTURE/.spectomat/specs/$1.md"
-  [[ -z "${2:-}" ]] || printf '\n## 17. Review\n\n- Verdict: READY\n' >> "$FIXTURE/.spectomat/specs/$1.md"
+  if [[ -n "${2:-}" ]]; then state_slug "$1" PLAN; else state_slug "$1" REVIEW-SPEC; fi
   fixture_commit
 }
 
-# plan SLUG TASKS OPEN [REVIEWED] — an overview plus TASKS task files, the
-# first OPEN of them carrying an unchecked step and the rest ticked. A non-empty
-# REVIEWED writes the closing verdict line the REVIEW phase leaves behind, which
-# is what releases a finished plan to ARCHIVE.
 plan() {
-  local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i box f
+  local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i box f done_n
   printf 'overview\n' > "$FIXTURE/.spectomat/plans/$slug.md"
-  [[ -z "$reviewed" ]] || printf '\n## Review\n\n- Verdict: CLEAN\n' >> "$FIXTURE/.spectomat/plans/$slug.md"
   mkdir -p "$FIXTURE/.spectomat/plans/$slug"
   i=1
   while [[ $i -le $tasks ]]; do
@@ -96,11 +89,18 @@ plan() {
     printf '%s\n' "$box" > "$f"
     i=$((i + 1))
   done
+  done_n=$((tasks - open))
+  if [[ -n "$reviewed" ]]; then
+    state_slug "$slug" ARCHIVE "$tasks" "$done_n"
+  elif [[ $open -eq 0 ]]; then
+    state_slug "$slug" REVIEW "$tasks" "$done_n"
+  else
+    state_slug "$slug" IMPLEMENT "$tasks" "$done_n"
+  fi
   fixture_commit
 }
 
-# plan_bare SLUG — an overview with no task directory: a PLAN phase that died.
-plan_bare() { printf 'overview\n' > "$FIXTURE/.spectomat/plans/$1.md"; fixture_commit; }
+plan_bare() { printf 'overview\n' > "$FIXTURE/.spectomat/plans/$1.md"; state_slug "$1" PLAN; fixture_commit; }
 
 # logline TEXT — append to the gitignored factory log; never committed.
 logline() { printf '%s\n' "$1" >> "$FIXTURE/.spectomat/log.md"; }
@@ -121,6 +121,26 @@ gates_block() {
     printf '```\n'
   } > "$FIXTURE/.spectomat/contract.md"
   fixture_commit
+}
+
+# state_slug SLUG PHASE [TASKS_TOTAL TASKS_DONE] — set (or create) SLUG's
+# state.json entry.
+state_slug() {
+  local slug="$1" phase="$2" total="${3:-}" done_n="${4:-}" filter
+  filter='.slugs[$s].phase = $p'
+  [[ -z "$total" ]] || filter+=' | .slugs[$s].tasks_total = ($t | tonumber)'
+  [[ -z "$done_n" ]] || filter+=' | .slugs[$s].tasks_done = ($d | tonumber)'
+  jq --arg s "$slug" --arg p "$phase" --arg t "$total" --arg d "$done_n" \
+    "$filter" "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
+    && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
+}
+
+# strike SLUG PHASE [N] — set SLUG's PHASE strike count to N (default 1).
+strike() {
+  local slug="$1" phase="$2" n="${3:-1}"
+  jq --arg s "$slug" --arg p "$phase" --argjson n "$n" \
+    '.slugs[$s].strikes[$p] = $n' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
+    && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
 }
 
 PASS=0; FAIL=0
@@ -231,37 +251,33 @@ is "it names the failing gate" "$(cat "$TMP/gf")" "false"
 
 echo "strike_count"
 floor sc1
-is "no log entry is zero" "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "0"
-logline '- 2026-09-11T10:00Z · IMPLEMENT · 001-a · Task 1 (strike 1: gate red)'
-is "one strike counts"    "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "1"
-logline '- 2026-09-11T10:10Z · IMPLEMENT · 001-a · Task 1 (strike 2: gate red)'
-is "two strikes count"    "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "2"
+is "no entry is zero" "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "0"
+strike 001-a IMPLEMENT 1
+is "one strike counts" "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "1"
+strike 001-a IMPLEMENT 2
+is "two strikes count" "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "2"
 is "another phase is separate" "$(cd "$FIXTURE" && strike_count PLAN 001-a)" "0"
-is "another slug is separate"  "$(cd "$FIXTURE" && strike_count IMPLEMENT 002-b)" "0"
-logline '- 2026-09-11T10:20Z · IMPLEMENT · 001-a · Task 2 done'
-is "a clean line is not a strike" "$(cd "$FIXTURE" && strike_count IMPLEMENT 001-a)" "2"
+is "another slug is separate" "$(cd "$FIXTURE" && strike_count IMPLEMENT 002-b)" "0"
 
 floor sc2
-logline '- t · IMPLEMENT · 001-my idea (draft) · x (strike 1: gate red)'
-is "a slug with a balanced metachar counts" "$(cd "$FIXTURE" && strike_count IMPLEMENT '001-my idea (draft)')" "1"
-logline '- t · IMPLEMENT · 001-a[ · x (strike 1: gate red)'
-is "a slug with an unbalanced bracket counts" "$(cd "$FIXTURE" && strike_count IMPLEMENT '001-a[')" "1"
+strike '001-my idea (draft)' IMPLEMENT 1
+is "a slug with a space counts" "$(cd "$FIXTURE" && strike_count IMPLEMENT '001-my idea (draft)')" "1"
 
 echo "least_struck"
 floor ls1
 ls_pick() { ( cd "$FIXTURE" && printf '%s\n' "$@" | least_struck IMPLEMENT ); }
-is "single candidate"        "$(ls_pick 001-a)" "001-a"
-is "no candidates"           "$(ls_pick)" ""
-is "ties go alphabetically"  "$(ls_pick 001-a 002-b)" "001-a"
-logline '- t · IMPLEMENT · 001-a · x (strike 1)'
-is "fewer strikes wins"      "$(ls_pick 001-a 002-b)" "002-b"
-logline '- t · IMPLEMENT · 002-b · x (strike 1)'
-logline '- t · IMPLEMENT · 002-b · x (strike 2)'
-is "fewest strikes wins"     "$(ls_pick 001-a 002-b)" "001-a"
-logline '- t · IMPLEMENT · 001-a · x (strike 2)'
-logline '- t · IMPLEMENT · 001-a · x (strike 3)'
+is "single candidate" "$(ls_pick 001-a)" "001-a"
+is "no candidates" "$(ls_pick)" ""
+is "ties go alphabetically" "$(ls_pick 001-a 002-b)" "001-a"
+strike 001-a IMPLEMENT 1
+is "fewer strikes wins" "$(ls_pick 001-a 002-b)" "002-b"
+strike 002-b IMPLEMENT 1
+strike 002-b IMPLEMENT 2
+is "fewest strikes wins" "$(ls_pick 001-a 002-b)" "001-a"
+strike 001-a IMPLEMENT 2
+strike 001-a IMPLEMENT 3
 is "a slug at the limit is skipped" "$(ls_pick 001-a 002-b)" "002-b"
-logline '- t · IMPLEMENT · 002-b · x (strike 3)'
+strike 002-b IMPLEMENT 3
 is "all at the limit yields nothing" "$(ls_pick 001-a 002-b)" ""
 is "a slug with a space survives" "$(ls_pick '003-my idea')" "003-my idea"
 
@@ -326,15 +342,11 @@ pk "REVIEW-SPEC outranks SPECIFY" "REVIEW-SPEC 002-b"
 # The two review phases share a prefix; a strike at one must not count at the
 # other, or a struck spec review would silently skip the plan review too.
 floor p_strike_prefix; spec 001-a; plan 001-a 2 0
-logline '- t · REVIEW-SPEC · 001-a · x (strike 1)'
-logline '- t · REVIEW-SPEC · 001-a · x (strike 2)'
-logline '- t · REVIEW-SPEC · 001-a · x (strike 3)'
+strike 001-a REVIEW-SPEC 3
 pk "REVIEW-SPEC strikes do not count against REVIEW" "REVIEW 001-a"
 
 floor p_strike_prefix2; spec 001-a
-logline '- t · REVIEW · 001-a · x (strike 1)'
-logline '- t · REVIEW · 001-a · x (strike 2)'
-logline '- t · REVIEW · 001-a · x (strike 3)'
+strike 001-a REVIEW 3
 pk "REVIEW strikes do not count against REVIEW-SPEC" "REVIEW-SPEC 001-a"
 
 floor p_dirty; draft 001-a; dirty
@@ -344,13 +356,11 @@ floor p_dirty_empty; dirty
 pk "a dirty tree beats FINISH" "RECOVER"
 
 floor p_strike; draft 001-a; draft 002-b
-logline '- t · SPECIFY · 001-a · x (strike 1)'
+strike 001-a SPECIFY 1
 pk "the less-struck draft wins" "SPECIFY 002-b"
 
 floor p_blocked; draft 001-a
-logline '- t · SPECIFY · 001-a · x (strike 1)'
-logline '- t · SPECIFY · 001-a · x (strike 2)'
-logline '- t · SPECIFY · 001-a · x (strike 3)'
+strike 001-a SPECIFY 3
 pk "a leftover at the limit is RECOVER, not FINISH" "RECOVER"
 
 floor p_orphan; plan_bare 001-a
@@ -364,7 +374,11 @@ is "the picker mutates nothing" "$after" "$before"
 
 echo "archive.sh"
 # ready NAME SLUG GATE — a floor with a finished plan and a one-line gate block
-ready() { floor "arc-$1"; spec "$2"; plan "$2" 2 0; gates_block "$3"; }
+ready() {
+  floor "arc-$1"; spec "$2"; plan "$2" 2 0; gates_block "$3"
+  printf '{"active": true, "iteration": 1, "max_iterations": 5, "session_id": "test", "started_at": "t", "slugs": {"%s": {}}}\n' "$2" > "$FIXTURE/.spectomat/state.json"
+  fixture_commit
+}
 arc()   { ( cd "$FIXTURE" && bash "$SCRIPTS/archive.sh" "$1" >/dev/null 2>&1 ); }
 there() { [[ -e "$FIXTURE/.spectomat/$1" ]] && echo yes || echo no; }
 commits() { ( cd "$FIXTURE" && git rev-list --count HEAD ); }
@@ -382,6 +396,7 @@ is "the log names the gate count" "$(grep -c 'gates 1/1' "$FIXTURE/.spectomat/lo
 # which is what the old package.json version bump did.
 is "the commit touches only the floor" \
   "$(cd "$FIXTURE" && git show --name-only --format= HEAD | grep -cv '^.spectomat/')" "0"
+is "archiving deletes the slug from state.json" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"] // "gone"' .spectomat/state.json)" "gone"
 
 ready fail 001-a 'false'
 arc 001-a; is "a red gate exits 1" "$?" "1"
@@ -394,6 +409,7 @@ is "the blocked spec moved" "$(there done/001-a.spec.blocked.md)" "yes"
 is "the blocked plan moved" "$(there done/001-a.plan.blocked.md)" "yes"
 is "print_blocked lists both" \
   "$(cd "$FIXTURE" && find .spectomat/done -maxdepth 1 -name '*.blocked.md' | wc -l | tr -d ' ')" "2"
+is "blocking archive deletes the slug from state.json" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"] // "gone"' .spectomat/state.json)" "gone"
 
 ready dirt 001-a 'true'; dirty
 arc 001-a; is "a dirty tree is refused" "$?" "1"
@@ -436,12 +452,11 @@ is "AGENT_COUNT is 6" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "6"
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "no brief points at the deleted prompts/" \
   "$(grep -l 'prompts/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
-# The picker greps the overview for this exact line; review.md is its only
-# writer, so the two must name the same marker or a plan never archives.
-is "review.md writes the verdict line the picker greps" \
-  "$(grep -q -- '- Verdict: ' "$AGENTS/review.md" && echo yes || echo no)" "yes"
-is "review-spec.md writes the verdict line the picker greps" \
-  "$(grep -q -- '- Verdict: READY' "$AGENTS/review-spec.md" && echo yes || echo no)" "yes"
+is "specify.md advances state.json"     "$(grep -q 'slug_set_phase' "$AGENTS/specify.md" && echo yes || echo no)" "yes"
+is "review-spec.md advances state.json" "$(grep -q 'slug_set_phase' "$AGENTS/review-spec.md" && echo yes || echo no)" "yes"
+is "plan.md advances state.json"        "$(grep -q 'slug_start_tasks' "$AGENTS/plan.md" && echo yes || echo no)" "yes"
+is "implement.md advances state.json"   "$(grep -q 'slug_task_done' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
+is "review.md advances state.json"      "$(grep -q -E 'slug_set_phase|slug_add_tasks' "$AGENTS/review.md" && echo yes || echo no)" "yes"
 
 echo "status"
 floor st; spec 001-a; plan 001-a 2 1
@@ -539,10 +554,15 @@ is "the cap is a JSON number"   "$(cd "$ARM" && jq -r '.max_iterations | type' .
 is "the pointer has no frontmatter" "$(cd "$ARM" && head -1 .spectomat/pointer.md | grep -c '^---$')" "0"
 is "the pointer resolved PLUGIN_ROOT" "$(cd "$ARM" && grep -c '{{' .spectomat/pointer.md)" "0"
 is "arming leaves a clean tree" "$(cd "$ARM" && git status --porcelain)" ""
+is "arming marks the flow active" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "true"
 (cd "$ARM" && bash "$SCRIPTS/cancel.sh") >/dev/null 2>&1
-is "cancel removes the state"   "$([[ -e "$ARM/.spectomat/state.json" ]] && echo yes || echo no)" "no"
-is "cancel removes the pointer" "$([[ -e "$ARM/.spectomat/pointer.md" ]] && echo yes || echo no)" "no"
-is "cancel keeps the floor"     "$([[ -d "$ARM/.spectomat/drafts" ]] && echo yes || echo no)" "yes"
+is "cancel keeps state.json"        "$([[ -e "$ARM/.spectomat/state.json" ]] && echo yes || echo no)" "yes"
+is "cancel marks the flow inactive" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "false"
+is "cancel removes the pointer"     "$([[ -e "$ARM/.spectomat/pointer.md" ]] && echo yes || echo no)" "no"
+is "cancel keeps the floor"         "$([[ -d "$ARM/.spectomat/drafts" ]] && echo yes || echo no)" "yes"
+(cd "$ARM" && bash "$SCRIPTS/prepare.sh" 7) >/dev/null 2>&1
+is "resuming re-arms the flow" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "true"
+is "resuming keeps the pointer" "$([[ -e "$ARM/.spectomat/pointer.md" ]] && echo yes || echo no)" "yes"
 
 # stop-hook.sh runs on every iteration of every flow and is the only script that
 # can end one. Its fixture is a state file, a pointer and a transcript; its input
@@ -554,7 +574,7 @@ HOOK="$TMP/hook"
 # hook_floor SESSION ITERATION MAX — an armed flow owned by SESSION.
 hook_floor() {
   rm -rf "$HOOK"; mkdir -p "$HOOK/.spectomat"
-  printf '{"iteration": %s, "max_iterations": %s, "session_id": "%s", "started_at": "t"}\n' \
+  printf '{"active": true, "iteration": %s, "max_iterations": %s, "session_id": "%s", "started_at": "t"}\n' \
     "$2" "$3" "$1" > "$HOOK/.spectomat/state.json"
   printf 'POINTER PROMPT\n' > "$HOOK/.spectomat/pointer.md"
   transcript 'working on it'
@@ -599,6 +619,12 @@ fire STRANGER >/dev/null
 is "a corrupt state survives a foreign session" "$(hook_state)" "yes"
 fire OWNER >/dev/null
 is "a corrupt state survives its own session"   "$(hook_state)" "yes"
+
+hook_floor OWNER 1 5
+jq '.active = false' "$HOOK/.spectomat/state.json" > "$HOOK/.spectomat/state.json.tmp" && mv "$HOOK/.spectomat/state.json.tmp" "$HOOK/.spectomat/state.json"
+out=$(fire OWNER)
+is "a cancelled flow emits nothing" "$out" ""
+is "a cancelled flow bumps nothing" "$(hook_iter)" "1"
 
 hook_floor OWNER 1 5
 transcript 'done here <promise>FACTORY EMPTY</promise>'
