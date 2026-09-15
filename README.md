@@ -8,7 +8,7 @@ Drop ideas into `.spectomat/drafts/`, call one `/spectomat:run` command, and an 
 idea  ──SPECIFY──▶  specs  ──REVIEW-SPEC──▶  reviewed specs  ──PLAN──▶  plans/tasks×n  ──IMPLEMENT×n──▶  code + commits  ──REVIEW──▶  verdict  ──ARCHIVE──▶  done
 ```
 
-Commands, the floor, the flow and the skills are in `templates/guide.md` with a glossary, shown by `/spectomat:help`.
+Commands, the floor, the flow and the skills are in `docs/guide.md` with a glossary, shown by `/spectomat:help`.
 
 ## Requires
 
@@ -58,8 +58,11 @@ A Claude Code plugin, not an application. No dependencies, no build.
   - `cancel.sh` disarms the flow and reports the iteration it was at,
   - `gates.sh` compiles the gate command from `package.json` scripts; `run` renders it into the contract's Verification Gates block.
 
+- `docs/`
+  - `spectomat.md` (the normative spec),
+  - `guide.md` (the user guide `/spectomat:help` prints).
+
 - `templates/`
-  - `guide.md` (the user guide `/spectomat:help` prints),
   - `contract.md` (placeholders `{{REPO}}` and `{{GATES}}`),
   - `memory.md` (placeholder `{{REPO}}`; the codebase facts every iteration reads and adds to, committed in the project),
   - `state.json` (the flow's state: `{{SESSION_ID}}`, `{{MAX_ITERATIONS}}`, `{{STARTED_AT}}`),

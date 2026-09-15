@@ -275,7 +275,7 @@ The log line's numbers are the gate count, not test counts: a script has first-h
 | `agents/recover.md` | the janitor — `spectomat:recover` |
 | `templates/contract.md`, `memory.md` | rendered into the project once, then owned by it |
 | `templates/spec.md`, `plan.md`, `task.md` | the shapes the `SPECIFY`, `REVIEW-SPEC` and `PLAN` phases fill in |
-| `templates/guide.md` | the user guide, printed by `/spectomat:help`; holds the glossary |
+| `docs/guide.md` | the user guide, printed by `/spectomat:help`; holds the glossary |
 | `commands/run.md`, `status.md`, `cancel.md`, `help.md` | the four slash commands |
 | `hooks/hooks.json` | wires the Stop hook |
 
@@ -318,7 +318,7 @@ Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). T
 | `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1; resumes an inactive flow if one exists, else refuses when a flow is armed, the floor is empty, or the tree is dirty |
 | `/spectomat:status` | the next verdict, the current iteration, floor counts, per-plan step progress, blocked files, log tail |
 | `/spectomat:cancel` | marks the flow inactive and removes the pointer; keeps `state.json` so `/spectomat:run` can resume it |
-| `/spectomat:help` | prints `templates/guide.md` |
+| `/spectomat:help` | prints `docs/guide.md` |
 
 ### 7.2 `status` predicts the next phase
 
