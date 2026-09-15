@@ -34,7 +34,7 @@ require_ready() {
 # candidates instead of burning every remaining iteration.
 strike() {
   local reason="$1" n
-  n=$(( $(strike_count ARCHIVE "$SLUG") + 1 ))
+  n=$(slug_strike "$SLUG" ARCHIVE)
   log_line "- $(now) · ARCHIVE · $SLUG · $reason (strike $n)"
   printf '%s\n' "$n"
 }
@@ -117,6 +117,7 @@ main() {
   gate_or_strike
   move_trail
   commit_archive
+  slug_delete "$SLUG"
   log_result
   echo "ARCHIVE $SLUG · gates $GATE_RESULT${BLOCK:+ · BLOCKED}"
 }
