@@ -56,7 +56,7 @@ Identity: there is exactly one verdict per iteration, and it is not stored — t
 
 ### 2.2 `strike ledger`
 
-Not a file of its own: the strike count for a `(phase, slug)` pair is derived by counting `(strike N)` markers in `log.md`, which is append-only and gitignored.
+A `state.json` field: `.slugs[SLUG].strikes[PHASE]`, holding the strike count for a `(phase, slug)` pair.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ Not a file of its own: the strike count for a `(phase, slug)` pair is derived by
 | `slug` | string | the slug it was defeated on |
 | `count` | integer 0..`STRIKE_LIMIT` | how many times |
 
-Identity: `(phase, slug)`. Written by: any phase agent, and `archive.sh`, by appending a log line. Read by: the picker (§5.2) and `archive.sh` (§5.5).
+Identity: `(phase, slug)`. Written by: any phase agent, and `archive.sh`, by calling `slug_strike` (§5.2). Read by: the picker (§5.2) and `archive.sh` (§5.5).
 
 ### 2.3 `gate block`
 
@@ -80,7 +80,7 @@ Identity: one per floor. Written by: `prepare.sh` at first render, and the opera
 
 ### 3.1 Trigger and input
 
-Trigger: the Stop hook blocks a session exit and feeds back `pointer.md`. Input: the floor as the previous iteration left it. Idempotency: the picker is a pure function of the floor, `log.md` and `git status`, so running it twice with no intervening change yields the same verdict.
+Trigger: the Stop hook blocks a session exit and feeds back `pointer.md`. Input: the floor as the previous iteration left it. Idempotency: the picker is a pure function of the floor, `state.json`, and `git status`, so running it twice with no intervening change yields the same verdict.
 
 ### 3.2 The iteration
 
@@ -121,7 +121,8 @@ Each is an interface the design depends on and does not own.
 | --- | --- | --- |
 | git | `status --porcelain`, `rev-parse --show-toplevel`, `mv`, `add`, `commit`, `log` | a real throwaway repo under `mktemp -d` (§10.3) |
 | filesystem | the floor tree | a fabricated floor under `mktemp -d` (§10.3) |
-| `log.md` | append-only text, read by `grep` for `(strike N)` | a fabricated log file (§10.3) |
+| `log.md` | append-only text, written by phase agents and `archive.sh` for audit trail | a fabricated log file (§10.3) |
+| `state.json` | JSON; written by every phase's brief/`archive.sh` after their commit; read by `phase.sh`, `print.sh`, `stop-hook.sh`; the flow's authoritative progress and strike ledger | a fabricated state file (§10.3) |
 | Claude Code agent runtime | plugin agent types `spectomat:<name>` from `agents/*.md` frontmatter | none; verified out-of-band per §10.5 |
 | the operator's gate commands | lines of the gate block, executed with `eval` | fabricated gate blocks, including `false` (§10.3) |
 
@@ -143,38 +144,33 @@ pick_phase():
   if not isdir(FLOOR):                       print "FINISH"; return 0
   if `git status --porcelain` is non-empty:  print "RECOVER"; return 0
 
-  # candidate sets, each a list of slugs
-  FINISHED  = [ s for plans/<s>.md : isdir(plans/<s>)
-                                     and count(plans/<s>/task-*.md) >= 1
-                                     and no line matching '^- \[ \]' in plans/<s>/task-*.md ]
-  ARCHIVE   = [ s in FINISHED     : a line matching '^- Verdict: ' in plans/<s>.md ]
-  REVIEW    = [ s in FINISHED     : no such line ]
-  IMPLEMENT = [ s for plans/<s>.md : any line matching '^- \[ \]' in plans/<s>/task-*.md ]
-  REVIEWED  = [ s for specs/<s>.md : a line matching '^- Verdict: ' in specs/<s>.md ]
-  PLAN      = [ s in REVIEWED      : not exists(plans/<s>.md)
-                                     or count(plans/<s>/task-*.md) == 0 ]
-  REVIEW_SPEC = [ s for specs/<s>.md : s not in REVIEWED
-                                     and not exists(plans/<s>.md) ]
-  SPECIFY   = [ basename(f, '.md') for f in drafts/*.md ]
+  # read state.json and build candidate sets by phase
+  state = parse state.json
+  check_orphans(state)     # exit with error if floor and state disagree on slug existence
 
-  for (phase, set) in [ ('ARCHIVE',ARCHIVE), ('REVIEW',REVIEW), ('IMPLEMENT',IMPLEMENT), ('PLAN',PLAN), ('REVIEW-SPEC',REVIEW_SPEC), ('SPECIFY',SPECIFY) ]:
+  for (phase, set) in [ ('ARCHIVE', slugs_in(state, 'ARCHIVE')),
+                        ('REVIEW', slugs_in(state, 'REVIEW')),
+                        ('IMPLEMENT', slugs_in(state, 'IMPLEMENT')),
+                        ('PLAN', slugs_in(state, 'PLAN')),
+                        ('REVIEW-SPEC', slugs_in(state, 'REVIEW-SPEC')),
+                        ('SPECIFY', slugs_in(state, 'SPECIFY')) ]:
       pick = least_struck(phase, set)
       if pick is not NONE:  print phase + " " + pick; return 0
 
-  if drafts/, specs/ and plans/ hold no .md:  print "FINISH"
-  else:                                       print "RECOVER"
+  if slugs_in(state, any) is empty and drafts/ has no new .md:  print "FINISH"
+  else:                                                           print "RECOVER"
   return 0
 ```
 
 Normative notes, each of which a naive reading would get wrong:
 
 1. **`ARCHIVE` and `REVIEW` are tested before `IMPLEMENT`**, matching the contract's priority: work in progress is finished before anything new starts.
-2. **`ARCHIVE` and `REVIEW` split one candidate set on the verdict line.** `FINISHED` is the plan whose every step is ticked; `REVIEW` writes `- Verdict: ...` into the overview, and that line — a one-way latch, never removed — is the only thing that moves a plan from one set to the other. The picker reads it and judges nothing: a plan the `REVIEW` phase sent back for fixes has unchecked steps again, leaves `FINISHED` on its own, and is claimed by `IMPLEMENT` with no extra rule.
-3. **`FINISHED` requires at least one task file.** A plan directory with no task files has no unchecked step and would otherwise satisfy it vacuously, reviewing and archiving an unbuilt plan.
-4. **`PLAN` also claims a plan overview with no task files** (D7). The `PLAN` phase's output is the overview plus the task files; an overview without them is a `PLAN` phase that did not finish, and re-running it overwrites the overview. Without this clause such a plan matches no stage and is stranded for the life of the floor.
-5. **`REVIEW-SPEC` and `PLAN` split the specs on the same kind of latch.** `REVIEW-SPEC` writes `- Verdict: READY` into the spec's §17 and that line is what admits the spec to `PLAN`. A spec is reviewed once, before planning: one that already has a plan overview is never a `REVIEW-SPEC` candidate, so an unreviewed spec with an overview (a floor from before this phase existed, or a hand-placed overview) matches no stage and goes to the janitor.
-6. **A floor that matches no stage is `RECOVER`, not `FINISH`.** `FINISH` means finished; a leftover file means an anomaly only the janitor can clear — an orphan plan overview whose spec is gone, or a slug parked at `STRIKE_LIMIT` that was never blocked.
-7. **`RECOVER` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit. That reading is sound only because §5.5 checks every mutation: an unchecked failure there can commit a partial move and leave the tree CLEAN, in which case `RECOVER` never fires and the janitor never runs. The picker cannot detect that state — the archiver has to not create it.
+2. **A slug's phase is stored in `state.json.slugs[slug].phase`**, not derived from floor files. Once in a phase, the slug stays until the brief advances it.
+3. **`check_orphans` enforces agreement between floor and state.** A slug in state with no floor file, or a floor file with no state entry, is an orphan; the picker exits with error and the next iteration's verdict is `RECOVER`.
+4. **New drafts in `drafts/` enter state as `SPECIFY`** when the picker first sees them; they are added on the fly, not pre-loaded at arm time.
+5. **`ARCHIVE` and `REVIEW` are split by phase** (`state.json.slugs[slug].phase` is `ARCHIVE` or `REVIEW`), not by a line in the plan. The `REVIEW` phase advances a slug from `IMPLEMENT` to `REVIEW`; only `REVIEW` returning a verdict advances it to `ARCHIVE`.
+6. **A floor that matches no stage is `RECOVER`, not `FINISH`.** A slug in state with no corresponding floor file is an orphan; leftover files, or a slug parked at `STRIKE_LIMIT`, are anomalies only the janitor can clear.
+7. **`RECOVER` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit, leaving slugs in state with no floor files.
 8. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
 
 ### 5.2 `least_struck` — `scripts/utils.sh`
@@ -195,12 +191,10 @@ A slug at `STRIKE_LIMIT` is skipped so a failed block-move cannot wedge the fact
 
 ```text
 strike_count(phase, slug):
-  return number of lines in log.md matching all of:
-      ' · ' + phase + ' · ' + slug + ' · '
-      '(strike '
+  return .slugs[slug].strikes[phase] // 0  from state.json
 ```
 
-Returns 0 when `log.md` is absent. The log line format is the contract's.
+Returns 0 when the slug has no `strikes` entry for that phase, or when the slug is absent from `state.json`.
 
 ### 5.4 `gate_block` and `run_gates` — `scripts/utils.sh`
 
@@ -229,7 +223,8 @@ archive(slug):
 
   total = count(gate_block())
   if run_gates() != 0:
-      n = strike_count('ARCHIVE', slug) + 1
+      slug_strike('ARCHIVE', slug)
+      n = strike_count('ARCHIVE', slug)
       log '- <ts> · ARCHIVE · <slug> · gate failed: <cmd> (strike ' + n + ')'
       if n >= STRIKE_LIMIT:  block = '.blocked'  and continue to the moves
       else:                  exit 1
@@ -241,13 +236,15 @@ archive(slug):
   if isdir(plans/<slug>):
       git mv plans/<slug>  done/<slug>              or strike_and_exit
 
+  slug_delete(slug)     # remove slug from state.json
+  git add .spectomat/state.json
 
   git commit -m 'chore(<slug>): archived' (or '… blocked after 3 strikes')
       or strike_and_exit
   log '- <ts> · ARCHIVE · <slug> · archived · gates <total>/<total>'
 ```
 
-**Every mutation is checked.** The script runs under `set -uo pipefail` with no `-e`, so a failed command does not abort, and an unchecked failure here is the one defect this design cannot survive: a partial move that still commits leaves a CLEAN tree, so the picker never answers `RECOVER`, the janitor never runs, and a spec whose plan was already archived reads as a fresh `PLAN` phase. `strike_and_exit` logs a strike in the shape `strike_count` counts — so the slug blocks after three — then exits 1 leaving the tree exactly as it landed: dirty for the janitor if a move partially applied, unchanged and safe to retry if none did. Exiting without a strike would wedge the flow, because the picker answers `ARCHIVE` again next iteration and the same move fails again until the cap.
+**Every mutation is checked.** The script runs under `set -uo pipefail` with no `-e`, so a failed command does not abort, and an unchecked failure here is the one defect this design cannot survive: a partial move that still commits leaves a CLEAN tree, so the picker never answers `RECOVER`, the janitor never runs, and a spec whose plan was already archived reads as a fresh `PLAN` phase. `strike_and_exit` records a strike in `state.json` — so the slug blocks after three — then exits 1 leaving the tree exactly as it landed: dirty for the janitor if a move partially applied, unchanged and safe to retry if none did. Exiting without a strike would wedge the flow, because the picker answers `ARCHIVE` again next iteration and the same move fails again until the cap.
 
 The third strike takes the `.blocked` infix rather than a separate code path, so the moves are written once. `print_blocked` matches `*.blocked.md`.
 
@@ -295,14 +292,18 @@ No brief dispatches another agent. The `IMPLEMENT` phase writes its task's code 
 
 ### 6.4 The state and the pointer
 
-An armed flow is two gitignored files, created and removed together by `arm_flow()` and `disarm()`:
+An armed flow is two gitignored files: `state.json` (data) and `pointer.md` (prompt). Together they encode the flow's progress and dispatch: `state.json` records which slug is in which phase and how many times each phase has failed; `pointer.md` instructs the session which agent to run.
 
-| File | Holds | Read by | Written by |
+| File | Schema | Read by | Written by |
 | --- | --- | --- | --- |
-| `state.json` | `iteration`, `max_iterations`, `session_id`, `started_at` | `stop-hook.sh` (one `jq` call per iteration), `print.sh`, `cancel.sh` | `prepare.sh` at arming; `stop-hook.sh` bumps `iteration` each pass |
+| `state.json` | `{active: bool, iteration: int, max_iterations: int, session_id: string, started_at: timestamp, slugs: {<slug>: {phase: string, task_total: int, task_done: int, strikes: {<phase>: int}}}}` | `phase.sh`, `print.sh`, `stop-hook.sh`, phase agents (via `state_field` and slug helpers) | `prepare.sh` at arming; every phase brief and `archive.sh` after their commit; `stop-hook.sh` bumps `iteration`; `/spectomat:cancel` sets `active: false` |
 | `pointer.md` | the picker call plus the §3.3 dispatch table | fed back verbatim to the session | `prepare.sh` only — never mutated |
 
-Splitting them is what keeps each one honest: the state is data a script parses, the pointer is a prompt a model reads, and neither has to skip past the other. `state.json` is the armed flag — the five existence tests point at it — and `pointer.md` is its payload, so `disarm()` removes both and a pointer can never outlive its counter (D12).
+**The resume path:** When `/spectomat:run` is invoked with an inactive flow (`state.json` exists and `active: false`), `prepare.sh` re-arms by setting `active: true` and re-rendering `pointer.md` instead of refusing. This restores the flow from where it stopped, continuing from the same `iteration` counter, with all slug phases and strike counts preserved in `state.json.slugs`.
+
+**Disarming:** `disarm()` is called only at FINISH (all work done), at the iteration cap, or on corrupt state. It removes both `state.json` and `pointer.md` together. `/spectomat:cancel` is different: it only sets `active: false` and removes `pointer.md`, leaving `state.json` intact so `/spectomat:run` can resume.
+
+Splitting the files keeps each one honest: the state is data a script parses, the pointer is a prompt a model reads, and neither has to skip past the other. `state.json`'s `active` flag gates the resume path, and a pointer cannot outlive its state (D12).
 
 Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). The picker reads them in plain alphabetical order of the file name, which is the operator's only lever on the order they are worked.
 
@@ -312,9 +313,9 @@ Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). T
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1; refuses when a flow is armed, the floor is empty, or the tree is dirty |
+| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1; resumes an inactive flow if one exists, else refuses when a flow is armed, the floor is empty, or the tree is dirty |
 | `/spectomat:status` | the next verdict, the current iteration, floor counts, per-plan step progress, blocked files, log tail |
-| `/spectomat:cancel` | disarms the flow; the floor stays and `run` resumes from it |
+| `/spectomat:cancel` | marks the flow inactive and removes the pointer; keeps `state.json` so `/spectomat:run` can resume it |
 | `/spectomat:help` | prints `templates/guide.md` |
 
 ### 7.2 `status` predicts the next phase
@@ -345,6 +346,10 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D14 | The `IMPLEMENT` phase writes its task's code itself | an implementer subagent it dispatches, reports back from and resumes | the picker already gives one fresh agent per task, so a subagent bought no context isolation and cost a placeholder-filled brief sent verbatim, a report file as the return channel, a `DONE / BLOCKED / NEEDS_CONTEXT` protocol and a re-dispatch rule — all of it deleted. What it loses is real but small: a cheap model for code writing, and a stronger one on the last fix round |
 | D15 | `REVIEW` is one phase per plan, run when every task is ticked | a reviewer subagent per task commit, with `MAX_FIX_ROUNDS` fix rounds inside the `IMPLEMENT` phase | per-task review was the one unit of work the picker could not see: no verdict, no log line, no strike, not resumable, a sub-state-machine with its own constant hidden inside another phase. As a phase it is an iteration like any other; its findings become task files that get the full TDD cycle instead of "send the findings back" rounds; and it reads the plan whole, which is the only way to see a helper written twice, code one task orphaned, or an interface that drifted between one task's `Produces` and another's `Consumes`. The cost is latency — a defect in task 1 surfaces after task 8 — bounded because the gates still run on every task and the plan's `Interfaces` rows are what guard the seams |
 | D16 | `REVIEW-SPEC` is one phase per spec, run once between `SPECIFY` and `PLAN`, and it revises the spec in place | a self-review checklist inside the `SPECIFY` brief; an approve-or-flag reviewer that sends the spec back to `SPECIFY` | the author cannot read its own spec cold, and the planner is the first reader that can be misled; a fresh agent with only the spec and the draft is the cheapest cold read. It fixes rather than flags because the fix for a spec is a sentence, and a `SPECIFY` round trip would rewrite the whole file to change one line. Each fix is a `revised` row in §10, so the trail is as traceable as an `assumed` one. One round, latched by `- Verdict: READY` in §17, the same grammar as the plan latch, so the picker learns nothing new |
+| D17 | The picker reads `state.json.slugs` to determine each slug's phase, instead of deriving it from floor-file checks | file-content checks (`- Verdict:` lines, task file existence, etc.) | deterministic and testable: the phase decision is now an explicit field, not an inference. The picker never mutates files, so the state is the only thing that changes when a phase advances. This makes the state the single source of truth for the flow's progress and makes resume possible |
+| D18 | Strike counts are stored in `state.json.slugs[slug].strikes[phase]`, not derived from `log.md` | log-line-counting logic in the picker and `strike_count` | the state is now the authoritative record of phase failures, and `log.md` becomes write-only audit trail. This makes `strike_count` fast (one `jq` call, no grep) and makes strikes observable in the state, enabling inspection and recovery |
+| D19 | `/spectomat:cancel` sets `active: false` and removes `pointer.md`, but keeps `state.json` | full disarm, removing both files | this enables resume: a session can pause a flow with `/spectomat:cancel`, and `/spectomat:run` resumes it from the same iteration, with all slug phases and strikes preserved. Without it, a pause-and-resume would restart the flow and lose all progress |
+| D20 | Each slug carries `phase`, `task_total`, `task_done`, and `strikes` in `state.json.slugs[slug]` | per-phase tracking only, rebuilt at each phase | observable progress: the state encodes not just what phase a slug is in, but how many tasks are in its plan and how many are done. This makes the flow's progress queryable without parsing floor files, and makes recovery from a crashed phase more precise |
 
 ## 9. Acceptance Criteria
 
@@ -356,7 +361,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-1.2 | Priority holds: with candidates in all six stages, the verdict is `ARCHIVE` | selftest |
 | AC-1.3 | A plan directory with zero `task-*.md` files does not yield `ARCHIVE` | selftest |
 | AC-1.4 | A reviewed spec whose plan overview exists but has zero task files yields `PLAN` | selftest |
-| AC-1.6 | A spec with no `- Verdict: ` line and no plan overview yields `REVIEW-SPEC`; with the line it yields `PLAN` | selftest |
+| AC-1.6 | A spec whose slug's phase is `REVIEW-SPEC` yields `REVIEW-SPEC` in the picker; when advanced to `PLAN` it yields `PLAN` | selftest |
 | AC-1.7 | A strike logged at `REVIEW-SPEC` does not count at `REVIEW`, nor the reverse | selftest |
 | AC-1.5 | A dirty tree yields `RECOVER`, even when the floor is empty | selftest |
 | AC-1.6 | `FINISH` requires all three directories empty **and** a silent `git status` | selftest |
@@ -365,14 +370,14 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-1.9 | `phase.sh` leaves the floor and the git index byte-identical | selftest |
 | AC-2.1 | `gate_block` returns the operator's edited lines, dropping comments and blanks | selftest |
 | AC-2.2 | `run_gates` returns non-zero on the first failing line and names it | selftest |
-| AC-2.3 | `strike_count` returns 0 when `log.md` is absent | selftest |
+| AC-2.3 | `strike_count` returns 0 when the slug has no `strikes` entry for that phase | selftest |
 | AC-3.1 | `archive.sh` with a failing gate moves nothing and exits non-zero | selftest |
 | AC-3.2 | `archive.sh` logs `(strike N)` with N one higher than the log showed | selftest |
 | AC-3.3 | At the third strike `archive.sh` moves the trail with the `.blocked` infix, and `print_blocked` lists both files | selftest |
 | AC-3.4 | `archive.sh` makes exactly one commit, and touches no file outside the floor | selftest |
 | AC-4.1 | `status.sh` prints the picker's verdict verbatim | manual, scratch repo |
-| AC-4.2 | Arming writes a valid `state.json` with `iteration` 1 and a numeric `max_iterations`, and a `pointer.md` with no frontmatter and no unresolved `{{KEY}}` | selftest |
-| AC-4.3 | `/spectomat:cancel` removes both `state.json` and `pointer.md`, and keeps the floor | selftest |
+| AC-4.2 | Arming writes a valid `state.json` with `active: true`, `iteration: 1`, numeric `max_iterations`, `session_id`, `started_at`, and `slugs: {}`, and a `pointer.md` with no frontmatter and no unresolved `{{KEY}}` | selftest |
+| AC-4.3 | `/spectomat:cancel` sets `active: false`, removes `pointer.md`, and keeps `state.json` and the floor | selftest |
 | AC-4.4 | `prepare.sh` commits a draft dropped into `drafts/`, tracked or not, and leaves a clean tree | selftest |
 | AC-4.6 | `prepare.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
 | AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, and feeds back `pointer.md` verbatim | selftest |
@@ -382,7 +387,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
 | AC-5.2 | Both plugin manifests validate `--strict` | manual |
 | AC-6.1 | No brief carries a `{{KEY}}` placeholder | selftest |
-| AC-6.2 | No brief points at a `prompts/` file, and `agents/review.md` and `agents/review-spec.md` each write the `- Verdict: ` line §5.1 greps | selftest |
+| AC-6.2 | No brief points at a `prompts/` file, and every phase brief calls a `slug_*` state-helper to advance its slug's phase (e.g., `slug_set_phase`, `slug_add_tasks`) | selftest |
 | AC-6.3 | `NOTICE.md` names only files that exist | grep, selftest |
 
 ### 9.2 End-to-end
@@ -414,7 +419,7 @@ bash 3.2, `jq`, no build, no package manager, no network. `scripts/utils.sh` is 
 | `{{REPO}}` | `contract.md`, `memory.md` | the repository root, substituted at the one and only render |
 | `{{GATES}}` | `contract.md` | the gate command compiled by `gates.sh`, substituted at the one and only render |
 
-A new placeholder requires a matching value in the `render_template` call in `prepare.sh`. `state.json` has no template: `arm_flow` writes its four fields inline, with `max_iterations` unquoted, so `parse_args` must keep requiring `^[0-9]+$`.
+A new placeholder requires a matching value in the `render_template` call in `prepare.sh`. `state.json` has no template: `arm_flow` writes its six fields inline (`active`, `iteration`, `max_iterations`, `session_id`, `started_at`, `slugs`), with `max_iterations` and `iteration` unquoted, `slugs` starting as `{}`, so `parse_args` must keep requiring `^[0-9]+$` for the iteration cap.
 
 ### 10.3 Fixtures
 
@@ -424,8 +429,25 @@ The bash equivalent of a port and a fake. Every case in `selftest.sh` builds one
 floor(dir, spec):   under a fresh `mktemp -d`, `git init`, then create the
                     floor described by spec — drafts, specs, plan overviews,
                     task files with a given number of ticked and open steps,
-                    a log.md with given strike lines, and a contract.md with
-                    a given gate block
+                    a state.json with given slugs, phases, task counters, and
+                    strikes, a log.md with given strike lines for audit trail,
+                    and a contract.md with a given gate block
+```
+
+State is built programmatically via jq to create the `.slugs` object:
+
+```text
+state = {
+  active: false,
+  iteration: 0,
+  max_iterations: 0,
+  session_id: "fixture",
+  started_at: "1970-01-01T00:00:00Z",
+  slugs: {
+    <slug1>: {phase: "PLAN", task_total: 3, task_done: 1, strikes: {SPECIFY: 0, PLAN: 1}},
+    <slug2>: {phase: "IMPLEMENT", task_total: 2, task_done: 0, strikes: {}}
+  }
+}
 ```
 
 Cases are then a verdict assertion (`pk NAME want`) or an effect assertion over the resulting tree. Every fixture is a real git repository, because `git status --porcelain` is normative input and must not be stubbed.
