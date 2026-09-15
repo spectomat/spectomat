@@ -38,7 +38,7 @@ Work on the current branch. Never create branches or worktrees.
 
 `.spectomat/memory.md` is an input too: what it says about this codebase settles a question before you spend an hour on it, and it is where this task's findings go in step 6.
 
-If no task is ready while open steps remain, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan's `<slug>.ruling.md`, log a strike, and stop.
+If no task is ready while open steps remain, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan's `<slug>.ruling.md`, bump the slug's `IMPLEMENT` strike count (`slug_strike`), log a strike, and stop.
 
 ## Commit boundary
 
@@ -62,7 +62,7 @@ The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range 
 ```
 
 6. **Memory.** Ask what would have saved you time at the start of this task: where something lives, what a command costs, a convention to copy, a trap and its symptom. Apply the contract's three tests — durable, reusable, non-obvious — and add what survives to `.spectomat/memory.md`. A trap that cost you an hour this iteration is the entry most worth having; anything true only of this task never is.
-7. **Commit the close.** Task file, `<slug>.result.md` and the memory edit together: `chore(<slug>): Task NN ticked`. Then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks is already in `<slug>.ruling.md`, not a second place to write it.
+7. **Commit the close.** Task file, `<slug>.result.md` and the memory edit together: `chore(<slug>): Task NN ticked`. Then advance `.spectomat/state.json` with `slug_task_done <slug>` (bumps `tasks_done`, and moves the slug to `REVIEW` once every task is done), then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks is already in `<slug>.ruling.md`, not a second place to write it.
 
 Then report: the task that closed, its commits, and the gate numbers from step 3.
 
@@ -78,7 +78,7 @@ The spec binds; the plan argues from it; your ruling settles what neither answer
 
 ## When you cannot finish
 
-A task you cannot build is a strike, not a guess: a brief that contradicts itself, a dependency that does not exist, three failed fixes against the same gate. Write what defeated you to the plan's `<slug>.ruling.md`, tagged with this task's number, revert the task's Files with `git checkout --` and delete the ones you created, append a log line ending `(strike N: <reason>)`, and stop.
+A task you cannot build is a strike, not a guess: a brief that contradicts itself, a dependency that does not exist, three failed fixes against the same gate. Write what defeated you to the plan's `<slug>.ruling.md`, tagged with this task's number, revert the task's Files with `git checkout --` and delete the ones you created, bump the slug's `IMPLEMENT` strike count (`slug_strike`), append a log line ending `(strike N: <reason>)`, and stop.
 
 The next iteration's picker skips this slug in favour of another candidate; on the third strike the plan is blocked and the operator sees it in `/spectomat:status`.
 
