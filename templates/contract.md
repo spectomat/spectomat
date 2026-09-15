@@ -18,7 +18,7 @@ Nobody is watching. **Never ask a question.** Where an input is silent, decide, 
   log.md       append-only, one line per phase of work — gitignored, never committed
   contract.md  this file
   memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit
-  state.json   the flow's state: iteration counter, cap, session — gitignored, never edit
+  state.json   the flow's state: iteration counter, cap, session, and every tracked slug's phase, task counters and strikes — gitignored, changed only through the helpers in the plugin's scripts/utils.sh, never by hand
   pointer.md   the prompt the Stop hook feeds back each iteration — gitignored, never edit
   work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky — gitignored
 ```
@@ -33,13 +33,32 @@ Every iteration, in order:
 2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task line names it and the slug. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
 3. **Verify** with the gates — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them,
 4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
-5. **Log** one line to `log.md`, then stop the iteration. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In the `IMPLEMENT` phase the plan tick is one `chore(<slug>): …` commit after the task commits.
+5. **Log** one line to `log.md`, then stop the iteration. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In the `IMPLEMENT` phase the task's result entry is one `chore(<slug>): …` commit after the task commit.
 
 > Work in progress always wins: a started plan is finished and archived before the next spec is planned, every reviewed spec is planned before the next spec is reviewed, and every spec is reviewed before the next draft is read. New drafts wait until the floor ahead of them is clear.
 
+### Phase boundaries
+
+`state.json` is what moves work along: a phase that changes nothing there is handed to you again next iteration, on the same slug, forever. Every phase ends in exactly one of these changes, applied after its commit through the helpers in the plugin's `scripts/utils.sh` — never by editing the file.
+
+| Phase | Outcome | `state.json` change |
+| --- | --- | --- |
+| `SPECIFY` | spec written | `slug_set_phase <slug> REVIEW-SPEC` |
+| `REVIEW-SPEC` | spec ready to plan | `slug_set_phase <slug> PLAN` |
+| `PLAN` | N task files written | `slug_start_tasks <slug> N` — phase `IMPLEMENT`, `tasks_total` N, `tasks_done` 0 |
+| `IMPLEMENT` | one task closed | `slug_task_done <slug>` — bumps `tasks_done`, and moves to `REVIEW` once it reaches `tasks_total` |
+| `IMPLEMENT` | a task the plan lacked added | `slug_add_tasks <slug> 1` — raises `tasks_total` so the slug is not released early |
+| `REVIEW` | fix tasks added, rounds remain | `slug_add_tasks <slug> N` — back to `IMPLEMENT` with `tasks_total` raised by N |
+| `REVIEW` | nothing left to fix, or the rounds are spent | `slug_set_phase <slug> ARCHIVE` |
+| `ARCHIVE` | trail moved to `done/` | `slug_delete <slug>` — the archiver script does this itself |
+| any phase | the phase defeated you | `slug_strike <slug> <PHASE>`, and no phase change |
+| any phase | third strike, file moved to `done/` | `slug_delete <slug>` (see *Three strikes*) |
+
+Never set a phase by hand where a counter helper exists: `slug_set_phase <slug> REVIEW` in place of `slug_task_done` leaves `tasks_done` short, and every later reader of the counters is lied to.
+
 ### Three strikes
 
-If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike move the offending file to `done/` with the suffix `.blocked.md`, log the reason, and continue. Never delete a draft, spec or plan.
+If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike the slug is blocked: move the offending file to `done/` with the suffix `.blocked.md`, then drop the slug's entry from `state.json` with `scripts/utils.sh`'s `slug_delete <slug>`, log the reason, and continue. Both happen in the same iteration, the move first: an entry left in `state.json` with no floor file behind it makes the picker answer `RECOVER` to every iteration that follows, so a blocked slug that is not deleted blocks the whole flow. Never delete a draft, spec or plan.
 
 ## Verification Gates
 

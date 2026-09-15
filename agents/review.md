@@ -18,7 +18,7 @@ Never ask the user anything.
 
 ## Procedure
 
-You are dispatched on a plan whose every task is ticked. You read what the plan actually built, you decide whether it may be archived, and you write that decision into the plan overview. **Nothing else releases a plan to `ARCHIVE`.**
+You are dispatched on a plan whose every task is closed — `state.json`'s `tasks_done` for this slug equals its `tasks_total`, and the plan's `<slug>.result.md` has an entry per task. You read what the plan actually built, you decide whether it may be archived, and you write that decision into the plan overview. **Nothing else releases a plan to `ARCHIVE`.**
 
 **Change no source file and no test.** You do not fix what you find: you write the fix as a task, and the `IMPLEMENT` phase builds it under TDD in a later iteration. The only files you write are the plan overview and the task files you add, both under `.spectomat/`.
 
@@ -53,7 +53,7 @@ No one reviewed these commits as they landed. This is the only adversarial read 
 
 ### Part 1 — Spec compliance
 
-Per task: **Missing** — a step ticked but absent from the diff, or a `Covers` criterion nothing implements. **Extra** — a file outside that task's `Files`, or behaviour nobody asked for. **Misunderstood** — the right feature built the wrong way, or a constant that does not match the spec's value.
+Per task: **Missing** — a step the task's `<slug>.result.md` entry counts as done but absent from the diff, or a `Covers` criterion nothing implements. **Extra** — a file outside that task's `Files`, or behaviour nobody asked for. **Misunderstood** — the right feature built the wrong way, or a constant that does not match the spec's value.
 
 Then the Coverage table as a whole: every criterion in the spec, and whether the code satisfies it. A criterion the table maps to a task that did not in fact implement it is the most expensive defect this phase can catch.
 
@@ -80,9 +80,11 @@ MAX_REVIEW_ROUNDS = 2
 
 Count the `- Round` lines already under the overview's `## Review`; this is round R.
 
-**Critical and Important findings become tasks.** One task file per finding, or one per cluster sharing a root cause, numbered on from the last task, from `<plugin root>/templates/task.md`, plus a row in the overview's task table. Write each as the fix, not as the complaint: the Goal says what is true once it is fixed, `Files` names exact paths, and Step 1 is the failing test that reproduces the defect. A task nobody could execute alone is a task that comes back to you next round.
+**Critical and Important findings become tasks**, in every round but the last. One task file per finding, or one per cluster sharing a root cause, numbered on from the last task, from `<plugin root>/templates/task.md`, plus a row in the overview's task table. Write each as the fix, not as the complaint: the Goal says what is true once it is fixed, `Files` names exact paths, and Step 1 is the failing test that reproduces the defect. A task nobody could execute alone is a task that comes back to you next round.
 
 **Minor findings become rulings** in `<slug>.ruling.md`, a sibling of the overview, creating it if it does not yet exist. They never become tasks.
+
+**In round `MAX_REVIEW_ROUNDS` nothing becomes a task.** The rounds are spent, so every finding still open — Critical and Important included — is ruled on in `<slug>.ruling.md` and the plan archives anyway. A task written in the last round would be built and reviewed again forever.
 
 Then append to the overview's `## Review`:
 
@@ -90,14 +92,15 @@ Then append to the overview's `## Review`:
 - Round R — N findings (C critical, I important, M minor) — tasks NN–MM added
 ```
 
-Then, only when the round closes the plan, advance `.spectomat/state.json`:
+Then advance `.spectomat/state.json` — every round ends in exactly one of these three, and a round that ends in none leaves the slug at `REVIEW` for the picker to hand you again:
 
 | Situation | `state.json` change |
 | --- | --- |
 | No Critical and no Important finding this round | `slug_set_phase <slug> ARCHIVE` |
-| R = `MAX_REVIEW_ROUNDS` and findings remain | `slug_add_tasks <slug> <n>`, n the fix tasks just added — first rule on every open finding in `<slug>.ruling.md`, so a reader knows what shipped and why |
+| Fix tasks added and R < `MAX_REVIEW_ROUNDS` | `slug_add_tasks <slug> <n>`, n the fix tasks just added — it moves the slug back to `IMPLEMENT` and raises `tasks_total` by n |
+| R = `MAX_REVIEW_ROUNDS` and findings remain | `slug_set_phase <slug> ARCHIVE` — the rounds are spent, so the plan ships with every open finding ruled on in `<slug>.ruling.md`, and a reader knows what shipped and why |
 
-This is what releases a plan, and it is irreversible: a slug moved to `ARCHIVE` is never reviewed again. Make no phase change while you have added fix tasks and rounds remain — `slug_add_tasks` (or leaving the phase at `IMPLEMENT` untouched) is what sends the plan back for its tasks to be ticked.
+`slug_add_tasks` is the only change that sends a plan back, and `ARCHIVE` is irreversible: a slug moved to `ARCHIVE` is never reviewed again.
 
 Commit everything you wrote in one commit: `chore(<slug>): review round R`. Then apply the `state.json` change above, then append one factory log line; the log is gitignored and never committed.
 
@@ -107,11 +110,14 @@ Then report: the round, the counts by severity, the tasks you added, and the pha
 
 A plan you cannot review is a strike, not a guess: a `<slug>.result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `<slug>.ruling.md`, bump the slug's `REVIEW` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
+`slug_strike` prints the new count. If it is the third, this slug is blocked: follow the contract's *Three strikes*, which ends in `slug_delete <slug>` so no entry is left in `state.json` for the picker to trip over.
+
 ## Never
 
 - Change a source file or a test.
 - Fix a finding yourself, however small.
-- Move the slug's phase to `ARCHIVE` in a round where you added fix tasks, unless that round is `MAX_REVIEW_ROUNDS`.
+- Move the slug's phase to `ARCHIVE` in a round where you added fix tasks — at cap you add none and move to `ARCHIVE` anyway.
+- End a round without one of the three `state.json` changes above.
 - Turn a Minor finding into a task.
 - Raise a style nit the gates do not enforce and `memory.md` does not record.
 - Review a plan whose `state.json` phase is not `REVIEW`.

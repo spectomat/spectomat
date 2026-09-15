@@ -71,6 +71,8 @@ Then report: the issue count by category, the sections you changed, and the deci
 
 A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole Part I section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
+`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — move the spec to `done/<slug>.spec.blocked.md`, then `slug_delete <slug>`, so the picker is not left with a tracked slug whose floor file is gone.
+
 ## Never
 
 - Write code, or run the gates.

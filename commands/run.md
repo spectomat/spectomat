@@ -28,7 +28,7 @@ Emit the promise only when `drafts/`, `specs/` and `plans/` are all empty and th
   drafts/     ideas the user drops in, one .md each — the file name is the slug, worked in alphabetical order
   specs/      SPECIFY writes one per draft, REVIEW-SPEC revises it once; or a finished spec placed by hand
   plans/      PLAN writes an overview per spec plus <slug>/task-NN-<name>.md per task
-  done/       ARCHIVE moves spec + plan here when every step is ticked and gates pass
+  done/       ARCHIVE moves spec + plan here when REVIEW has released the plan and gates pass
   work/       per-task briefs, reports and diffs, gitignored
   contract.md the rules, rendered once from the plugin template, re-read every iteration
   memory.md   codebase facts the factory has learned, read every iteration, added to before every commit
@@ -58,5 +58,5 @@ Priority is `ARCHIVE`, `REVIEW`, `IMPLEMENT`, `PLAN`, `REVIEW-SPEC`, `SPECIFY`: 
 ## Rules that make it terminate
 
 - One phase per iteration. Never ask the user; record choices as `assumed` rows in the spec or rulings in the plan.
-- Three strikes → `done/<slug>.blocked.md` with a reason, never deleted.
+- Three strikes → `done/<slug>.blocked.md` with a reason, and the slug's `state.json` entry deleted; the file itself is never deleted.
 - Never weaken a gate. Never fake a promise.
