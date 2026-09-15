@@ -59,7 +59,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
   - `gates.sh` compiles the gate command from `package.json` scripts; `run` renders it into the contract's Verification Gates block.
 
 - `docs/`
-  - `spectomat.md` (the normative spec),
+  - `specification.md` (the normative spec),
   - `guide.md` (the user guide `/spectomat:help` prints).
 
 - `templates/`
