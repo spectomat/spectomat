@@ -18,7 +18,7 @@ Never ask the user anything. Where an input is silent, decide, record the decisi
 
 ## Procedure
 
-Read the spec in full. Write the overview `plans/<slug>.md` and one self-contained task file per task under `plans/<slug>/`, from `<plugin root>/templates/plan.md` and `<plugin root>/templates/task.md`. Every task file carries checkbox steps (`- [ ]`); that is how the `IMPLEMENT` phase finds its work. Run the Self-review below. No code in this phase, so the Verification Gates do not apply.
+Read the spec in full. Write the overview `plans/<slug>.md` and one self-contained task file per task under `plans/<slug>/`, from `<plugin root>/templates/plan.md` and `<plugin root>/templates/task.md`. Every task file carries five numbered steps; the `IMPLEMENT` phase finds its work from `state.json`'s `tasks_done` counter, not from the task files' own text. Run the Self-review below. No code in this phase, so the Verification Gates do not apply.
 
 A plan is an overview plus one file per task. Each task file is a complete brief: the `IMPLEMENT` phase, which sees nothing else, can execute it alone, later, without opening the plan or the spec. DRY, YAGNI, TDD.
 
@@ -47,7 +47,7 @@ Follow `<plugin root>/templates/task.md` exactly. A task file is read by an agen
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths; **Interfaces** with exact names and signatures consumed from earlier tasks and produced for later ones.
 - **Covers** — the criterion ids this task's tests name.
-- **Steps** — five checkbox steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/snippets/<slug>/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. The checkboxes are how the `IMPLEMENT` phase finds its work and how the `ARCHIVE` phase knows the plan is finished: never omit them.
+- **Steps** — five numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/snippets/<slug>/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. Number the steps 1–5; `state.json`'s `tasks_total`/`tasks_done` (not the task files) are what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
 - **Rulings and Result** are not sections of the task file: the `IMPLEMENT` phase records them later, one entry per task, in the plan's `<slug>.ruling.md` and `<slug>.result.md`. Write neither file yourself.
 
 ## No placeholders
@@ -67,4 +67,4 @@ After writing every file, check them against the spec yourself:
 
 Fix inline and move on. Do not ask which execution mode to use; the `IMPLEMENT` phase always runs one task per iteration.
 
-Record memory, commit `<type>(<slug>): …`, log one line, report.
+Record memory, commit `<type>(<slug>): …`, advance `.spectomat/state.json`: call `slug_start_tasks <slug> <N>` with N the number of task files written (sets phase `IMPLEMENT`, `tasks_total` N, `tasks_done` 0), log one line, report.
