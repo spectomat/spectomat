@@ -11,6 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 ITERATION=""
 MAX_ITERATIONS=""
 STATE_SESSION=""
+STATE_ACTIVE=""
 STATE_BROKEN=""   # why the state file could not be parsed, when it could not
 # Set by require_transcript / read_last_output
 TRANSCRIPT_PATH=""
@@ -45,9 +46,9 @@ stop_corrupt() {
 # it does not own - see require_readable_state.
 read_state() {
   local tsv
-  tsv=$(jq -r '[.iteration, .max_iterations, .session_id] | @tsv' "$STATE_FILE" 2>/dev/null) \
+  tsv=$(jq -r '[.iteration, .max_iterations, .session_id, (.active // false)] | @tsv' "$STATE_FILE" 2>/dev/null) \
     || { STATE_BROKEN="not valid JSON"; tsv=""; }
-  IFS=$'\t' read -r ITERATION MAX_ITERATIONS STATE_SESSION <<< "$tsv"
+  IFS=$'\t' read -r ITERATION MAX_ITERATIONS STATE_SESSION STATE_ACTIVE <<< "$tsv"
 }
 
 # Session isolation: the Stop hook fires in every session of this project.
@@ -144,6 +145,7 @@ main() {
   require_own_session
   require_readable_state
   require_sane_state
+  [[ "$STATE_ACTIVE" == "true" ]] || exit 0
   require_below_max
   require_transcript
   read_last_output
