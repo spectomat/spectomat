@@ -1,6 +1,6 @@
 .DS_Store
 *.local.md
+*.local.json
 node_modules
 .claude/worktrees/
 .superpowers/
-.claude/settings.json

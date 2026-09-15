@@ -9,6 +9,15 @@
 | `/spectomat:cancel` | disarms the flow; the floor stays, `run` resumes from it |
 | `/spectomat:help` | shows this guide |
 
+## Install
+
+Requires `jq` on PATH.
+
+```bash
+claude plugin marketplace add ~/Projects/spectomat
+claude plugin install spectomat@spectomat
+```
+
 ## The Floor
 
 ```text
