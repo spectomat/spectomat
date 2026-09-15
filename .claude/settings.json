@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash"
+    ],
+    "additionalDirectories": [
+      "/Users/Aliaksandr_Litskevich/Projects/superpowers/sdd/2026-09-15-state-json-ssot"
+    ]
+  }
+}
