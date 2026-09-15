@@ -53,7 +53,7 @@ No one reviewed these commits as they landed. This is the only adversarial read 
 
 ### Part 1 — Spec compliance
 
-Per task: **Missing** — a step the task's `<slug>.result.md` entry counts as done but absent from the diff, or a `Covers` criterion nothing implements. **Extra** — a file outside that task's `Files`, or behaviour nobody asked for. **Misunderstood** — the right feature built the wrong way, or a constant that does not match the spec's value.
+Per task: **Missing** — a step the task file asks for that its `<slug>.result.md` entry claims as built but that the diff does not show, or a `Covers` criterion nothing implements. **Extra** — a file outside that task's `Files`, or behaviour nobody asked for. **Misunderstood** — the right feature built the wrong way, or a constant that does not match the spec's value.
 
 Then the Coverage table as a whole: every criterion in the spec, and whether the code satisfies it. A criterion the table maps to a task that did not in fact implement it is the most expensive defect this phase can catch.
 

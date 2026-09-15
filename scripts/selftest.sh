@@ -80,14 +80,13 @@ spec() {
 }
 
 plan() {
-  local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i box f done_n
+  local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i f done_n
   printf 'overview\n' > "$FIXTURE/.spectomat/plans/$slug.md"
   mkdir -p "$FIXTURE/.spectomat/plans/$slug"
   i=1
   while [[ $i -le $tasks ]]; do
-    if [[ $i -le $open ]]; then box='- [ ] step'; else box='- [x] step'; fi
     printf -v f '%s/.spectomat/plans/%s/task-%02d-x.md' "$FIXTURE" "$slug" "$i"
-    printf '%s\n' "$box" > "$f"
+    printf 'step\n' > "$f"
     i=$((i + 1))
   done
   done_n=$((tasks - open))
@@ -214,8 +213,9 @@ floor dirt; dirty
 is "dirty() dirties the tree"   "$(cd "$FIXTURE" && git status --porcelain)" "?? untracked.txt"
 floor counted; plan 001-a 3 1
 is "plan() writes N task files" "$(ls "$FIXTURE/.spectomat/plans/001-a" | wc -l | tr -d ' ')" "3"
-is "plan() leaves OPEN open"    "$(grep -lE '^- \[ \]' "$FIXTURE"/.spectomat/plans/001-a/*.md | wc -l | tr -d ' ')" "1"
-is "plan() ticks the rest"      "$(grep -lE '^- \[x\]' "$FIXTURE"/.spectomat/plans/001-a/*.md | wc -l | tr -d ' ')" "2"
+is "plan() seeds tasks_total"   "$(jq -r '.slugs["001-a"].tasks_total' "$FIXTURE/.spectomat/state.json")" "3"
+is "plan() seeds tasks_done from OPEN" "$(jq -r '.slugs["001-a"].tasks_done' "$FIXTURE/.spectomat/state.json")" "2"
+is "plan() with an open task is IMPLEMENT" "$(jq -r '.slugs["001-a"].phase' "$FIXTURE/.spectomat/state.json")" "IMPLEMENT"
 floor bare; plan_bare 002-b
 is "plan_bare() has no task dir" "$([[ -d "$FIXTURE/.spectomat/plans/002-b" ]] && echo yes || echo no)" "no"
 
@@ -312,7 +312,7 @@ pk "a closing verdict releases it to ARCHIVE" "ARCHIVE 001-a"
 # REVIEW round 1 adds fix tasks and writes no verdict: the plan reopens and the
 # picker sends it back to IMPLEMENT, which is the whole fix loop.
 floor p_fixtasks; spec 001-a; plan 001-a 3 0
-printf -- '- [ ] step\n' > "$FIXTURE/.spectomat/plans/001-a/task-04-fix.md"
+printf 'step\n' > "$FIXTURE/.spectomat/plans/001-a/task-04-fix.md"
 printf 'overview\n\n## Review\n\n- Round 1 — 2 findings (0 critical, 2 important, 0 minor) — tasks 04 added\n' > "$FIXTURE/.spectomat/plans/001-a.md"
 fixture_commit
 state_slug 001-a IMPLEMENT 4 3
@@ -453,6 +453,13 @@ is "review-spec.md advances state.json" "$(grep -q 'slug_set_phase' "$AGENTS/rev
 is "plan.md advances state.json"        "$(grep -q 'slug_start_tasks' "$AGENTS/plan.md" && echo yes || echo no)" "yes"
 is "implement.md advances state.json"   "$(grep -q 'slug_task_done' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
 is "review.md advances state.json"      "$(grep -q -E 'slug_set_phase|slug_add_tasks' "$AGENTS/review.md" && echo yes || echo no)" "yes"
+# A brief that blocks a slug must delete it from state.json in the same breath,
+# or the picker's orphan check answers RECOVER to every iteration after it.
+for a in specify review-spec implement review recover; do
+  is "agents/$a.md deletes a blocked slug" "$(grep -q 'slug_delete' "$AGENTS/$a.md" && echo yes || echo no)" "yes"
+done
+is "contract.md's three strikes deletes the slug" \
+  "$(grep -q 'slug_delete' "$(dirname "$SCRIPTS")/templates/contract.md" && echo yes || echo no)" "yes"
 
 echo "status"
 floor st; spec 001-a; plan 001-a 2 1

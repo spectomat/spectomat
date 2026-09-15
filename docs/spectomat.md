@@ -428,7 +428,8 @@ The bash equivalent of a port and a fake. Every case in `selftest.sh` builds one
 ```text
 floor(dir, spec):   under a fresh `mktemp -d`, `git init`, then create the
                     floor described by spec — drafts, specs, plan overviews,
-                    task files with a given number of ticked and open steps,
+                    a given number of task files (their contents inert — the
+                    task counters in state.json carry the progress),
                     a state.json with given slugs, phases, task counters, and
                     strikes, a log.md with given strike lines for audit trail,
                     and a contract.md with a given gate block
