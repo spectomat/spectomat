@@ -45,7 +45,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
 - `.claude-plugin/` — `plugin.json` (the plugin) and `marketplace.json` (this repo as a one-plugin marketplace, source `./`).
 - `commands/` — `/spectomat:run`, `status`, `cancel`, `help`. Each `!` block runs a script before Claude reads the command.
 
-- `agents/` — `specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `recover.md`. The picker dispatches to one per iteration: `spectomat:specify|review-spec|plan|implement|review`, `spectomat:recover`, or `scripts/archive.sh`.
+- `agents/` — `specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `archive.md`, `finish.md`, `recover.md`. The picker dispatches to one per iteration: `spectomat:specify|review-spec|plan|implement|review|archive|finish`, or `spectomat:recover`. `archive` and `finish` are thin wrappers — `archive` invokes `scripts/archive.sh` and relays its result, `finish` composes the closing report and leaves the promise to the session — so every verdict dispatches the same way.
 
 - `hooks/` — `hooks.json` registers the Stop hook; the hook itself is `scripts/stop-hook.sh`, which keeps the flow alive.
 

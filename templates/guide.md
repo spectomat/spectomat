@@ -27,7 +27,7 @@
 
 ## The Flow
 
-The flow is a sequence of iterations. Each one asks the picker for a verdict and dispatches on it — a fresh phase agent, the archiver, or the janitor — then commits, logs, and stops for the Stop hook to feed the next iteration in.
+The flow is a sequence of iterations. Each one asks the picker for a verdict and dispatches on it — a fresh phase agent, the archiver, the finisher, or the janitor — then commits, logs, and stops for the Stop hook to feed the next iteration in.
 
 ```text
 Stop hook ──▶ feeds back pointer.md ──▶ picker (scripts/phase.sh) ──▶ one verdict per iteration
@@ -70,9 +70,10 @@ Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` 
 - **State file** is `.spectomat/state.json`: the iteration counter, the iteration cap and the session that armed the flow. Its existence is what "armed" means; `/spectomat:cancel` deletes it.
 - **Pointer** is `.spectomat/pointer.md`: the prompt the Stop hook feeds back every iteration, telling the session to run the picker and dispatch on its verdict. Fixed text, rendered once per `run`.
 - **Picker** is the script `scripts/phase.sh` that prints one verdict per iteration: `SPECIFY <slug>`, `REVIEW-SPEC <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`.
-- **Phase agent** is a fresh subagent per phase: `spectomat:specify|review-spec|plan|implement|review` or `spectomat:recover`; each brief contains the craft of its phase (`agents/specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `recover.md`). A phase agent does its own work and never dispatches another agent.
-- **Archiver** is the script `scripts/archive.sh` that performs the `ARCHIVE` phase: verifies gates, moves the trail to `done/`, commits, and drops the slug from `state.json`.
-- **Janitor** is the same as the Archiver: the script `scripts/archive.sh` recovers from a dirty tree by moving the current trail to `done/` and committing a blocked file.
+- **Phase agent** is a fresh subagent per phase: `spectomat:specify|review-spec|plan|implement|review|archive`; each brief contains the craft of its phase (`agents/specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `archive.md`). A phase agent does its own work and never dispatches another agent — except `archive`, whose own work is invoking `scripts/archive.sh` and relaying its result, never repeating its mutation by hand.
+- **Archiver** is `spectomat:archive` (`agents/archive.md`), a subagent that invokes the script `scripts/archive.sh` and relays its result unchanged. The script performs the `ARCHIVE` phase: verifies gates, moves the trail to `done/`, commits, and drops the slug from `state.json`. The agent does none of that mutation itself.
+- **Finisher** is `spectomat:finish` (`agents/finish.md`): a subagent dispatched on `FINISH` that reads the log and floor to compose the closing report. It makes no judgement — the picker already confirmed the floor is empty and the tree is clean — and it never emits the promise; the session does that once it relays the report.
+- **Janitor** is `spectomat:recover` (`agents/recover.md`): a subagent that recovers from a dirty tree by finishing or discarding a crashed phase's changes, or reconciles a floor the picker could not classify.
 - **Verdict** is the one-line output of the picker: `SPECIFY <slug>`, `REVIEW-SPEC <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`. (What releases a spec to `PLAN` or a plan to `ARCHIVE` is the slug's phase in `state.json`, written by the phase that finished; a `- Verdict:` line in a spec's §17 or a plan overview is a record of that decision, not the switch.)
 - **Phase** is one of `SPECIFY` (draft → spec), `REVIEW-SPEC` (spec → reviewed spec), `PLAN` (reviewed spec → plan), `IMPLEMENT` (plan → next task), `REVIEW` (finished plan → verdict), `ARCHIVE` (reviewed plan → done). An iteration does exactly one. Verdicts are upper case; the agent types and brief files that serve them are lower case. The two remaining verdicts are not phases: `RECOVER` hands the floor to the janitor, `FINISH` ends the flow.
 - **Task** is one independent piece of work in a plan, with its own file, its own test cycle and its own commit. The `IMPLEMENT` phase executes exactly one per iteration, in dependency order; the `REVIEW` phase may add more.

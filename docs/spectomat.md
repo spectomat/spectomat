@@ -4,7 +4,7 @@ A Claude Code plugin that turns raw ideas into committed, tested code without an
 
 The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the project-owned contract holds only the invariants that outlive both.**
 
-Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPEC`** spec → reviewed spec, **`PLAN`** reviewed spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Five are subagents with their own brief; `ARCHIVE` is a script, because it needs no judgement.
+Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPEC`** spec → reviewed spec, **`PLAN`** reviewed spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Every phase, plus `RECOVER` and `FINISH`, is a subagent with its own brief, so the pointer dispatches one way for every verdict (D2); `ARCHIVE`'s brief does no archiving itself — it only invokes `scripts/archive.sh` and relays its exit code, because a script that exits non-zero on a failing gate is still stronger evidence than an agent claiming the gate passed.
 
 ## 1. System Overview
 
@@ -13,11 +13,12 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 | Actor | Is | Does |
 | --- | --- | --- |
 | Operator | the human | drops drafts in `.spectomat/drafts/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `contract.md` and `memory.md` |
-| Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches one agent or one script; does no factory work |
+| Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches exactly one subagent; does no factory work |
 | Picker | `scripts/phase.sh` | reads the floor, `log.md` and `git status`; prints one line naming the phase |
 | Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase and commits it |
-| Archiver | `scripts/archive.sh` | performs the `ARCHIVE` phase: gates, moves, commit, log |
+| Archiver | `spectomat:archive`, wrapping `scripts/archive.sh` | the brief invokes the script and relays its result unchanged; the script performs the `ARCHIVE` phase: gates, moves, commit, log |
 | Janitor | `spectomat:recover` | recovers a dirty tree, or a floor the picker cannot classify |
+| Finisher | `spectomat:finish` | confirms the floor is empty and composes the closing report; the session itself still emits the promise |
 
 ### 1.2 The system in one picture
 
@@ -32,9 +33,9 @@ Stop hook
           ├─ "PLAN <slug>"       →  Agent(spectomat:plan)        reviewed spec → plan
           ├─ "IMPLEMENT <slug>"  →  Agent(spectomat:implement)   plan → next task
           ├─ "REVIEW <slug>"     →  Agent(spectomat:review)      finished plan → verdict
-          ├─ "ARCHIVE <slug>"    →  bash scripts/archive.sh <slug>
+          ├─ "ARCHIVE <slug>"    →  Agent(spectomat:archive)      bash scripts/archive.sh <slug>, relayed
           ├─ "RECOVER"           →  Agent(spectomat:recover)
-          └─ "FINISH"            →  emit <promise>FACTORY EMPTY</promise>
+          └─ "FINISH"            →  Agent(spectomat:finish)       session then emits <promise>FACTORY EMPTY</promise>
 ```
 
 ## 2. Domain Model
@@ -92,10 +93,9 @@ The session reads no contract, no floor file and no source. Its context accumula
 
 | Verdict | Action |
 | --- | --- |
-| `SPECIFY <slug>` / `REVIEW-SPEC <slug>` / `PLAN <slug>` / `IMPLEMENT <slug>` / `REVIEW <slug>` | launch exactly one subagent, `run_in_background: false`, `subagent_type: "spectomat:<phase>"` when that type is listed; otherwise `general-purpose` with the body of `{{PLUGIN_ROOT}}/agents/<phase>.md` after its frontmatter as the brief |
-| `ARCHIVE <slug>` | run `bash {{PLUGIN_ROOT}}/scripts/archive.sh <slug>` |
+| `SPECIFY <slug>` / `REVIEW-SPEC <slug>` / `PLAN <slug>` / `IMPLEMENT <slug>` / `REVIEW <slug>` / `ARCHIVE <slug>` | launch exactly one subagent, `run_in_background: false`, `subagent_type: "spectomat:<phase>"` when that type is listed; otherwise `general-purpose` with the body of `{{PLUGIN_ROOT}}/agents/<phase>.md` after its frontmatter as the brief |
 | `RECOVER` | launch one subagent as above, with `spectomat:recover` / `agents/recover.md` |
-| `FINISH` | print the closing report and emit the promise as the last line |
+| `FINISH` | launch one subagent as above, with `spectomat:finish` / `agents/finish.md`; print its closing report and emit the promise as the last line |
 
 The task line handed to a subagent is two lines: the verdict verbatim, then `Plugin root: <absolute path>`. A brief therefore carries no plugin path of its own but can still reach `templates/`.
 
@@ -213,6 +213,8 @@ run_gates():
 
 ### 5.5 `archive` — `scripts/archive.sh`
 
+Invoked by the `spectomat:archive` subagent (`agents/archive.md`), which relays its stdout/stderr and exit code unchanged and performs no mutation of its own (D21).
+
 ```text
 archive(slug):
   cd_root()
@@ -329,7 +331,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | Id | Decision | Rejected | Why |
 | --- | --- | --- | --- |
 | D1 | A bash picker (`phase.sh`) decides the phase | a thin foreman agent; the session deciding from the contract | deterministic, testable, costs no tokens, and makes a false completion promise structurally impossible |
-| D2 | Five phase agents (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`); the `ARCHIVE` phase is `archive.sh` | six agents; two agents (author / builder) | `ARCHIVE` is mechanical — gates, three moves, one commit; a script that exits non-zero on a failing gate is stronger evidence than an agent claiming the gate passed |
+| D2 | Five phase agents (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`); the `ARCHIVE` phase is `archive.sh` | six agents; two agents (author / builder) | `ARCHIVE` is mechanical — gates, three moves, one commit; a script that exits non-zero on a failing gate is stronger evidence than an agent claiming the gate passed. Superseded in dispatch shape by D21: the reliability guarantee stated here still holds, since `archive.sh` still does the work and still owns the exit code |
 | D3 | The contract keeps no phase sections at all | per-phase stubs with a "Project overrides" list | one source per phase; an override mechanism is complexity bought before anyone has needed it |
 | D4 | The `ARCHIVE` phase's log line carries the gate count | parsing test counts out of gate output | a script knows how many gates ran and that each exited 0; it cannot know what they printed, and guessing would be the adjective the Log Format forbids |
 | D5 | A phase agent performs its own third-strike block-move | the picker detecting the third strike and a `block.sh` doing the move | the agent knows why it failed and must write the reason; the picker stays free of mutation |
@@ -348,6 +350,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D18 | Strike counts are stored in `state.json.slugs[slug].strikes[phase]`, not derived from `log.md` | log-line-counting logic in the picker and `strike_count` | the state is now the authoritative record of phase failures, and `log.md` becomes write-only audit trail. This makes `strike_count` fast (one `jq` call, no grep) and makes strikes observable in the state, enabling inspection and recovery |
 | D19 | `/spectomat:cancel` sets `active: false` and removes `pointer.md`, but keeps `state.json` | full disarm, removing both files | this enables resume: a session can pause a flow with `/spectomat:cancel`, and `/spectomat:run` resumes it from the same iteration, with all slug phases and strikes preserved. Without it, a pause-and-resume would restart the flow and lose all progress |
 | D20 | Each slug carries `phase`, `tasks_total`, `tasks_done`, and `strikes` in `state.json.slugs[slug]` | per-phase tracking only, rebuilt at each phase | observable progress: the state encodes not just what phase a slug is in, but how many tasks are in its plan and how many are done. This makes the flow's progress queryable without parsing floor files, and makes recovery from a crashed phase more precise |
+| D21 | Every verdict, `ARCHIVE` and `FINISH` included, dispatches through a subagent, so `templates/pointer.md`'s table has one row shape for all seven — `spectomat:archive` invokes `archive.sh` and relays its exit code unchanged; `spectomat:finish` reads the log and floor to compose the closing report, and the session still emits the promise | keeping `ARCHIVE` a bare script call and `FINISH` pointer-only text, as D2 and D14 both argue for mechanical work | operator preference for a uniform dispatch table outweighed the extra hop, once each wrapper was written to add no judgement of its own: `spectomat:archive`'s brief forbids moving a file, running a gate, or reinterpreting a non-zero exit as success, and `spectomat:finish`'s brief forbids writing to `state.json` or emitting the promise itself. D2's reliability guarantee is unweakened by the wrapper, since `archive.sh` still performs every mutation and still owns its own exit code — the agent can only relay it, not launder it |
 
 ## 9. Acceptance Criteria
 
