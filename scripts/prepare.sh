@@ -1,7 +1,7 @@
 #!/bin/bash
-# Spectomat run — prepare the factory floor and arm the unattended flow.
+# Spectomat prepare — set up the factory floor and arm the unattended flow.
 #
-#   run.sh [MAX_ITERATIONS]
+#   prepare.sh [MAX_ITERATIONS]
 #
 # Creates .spectomat/{drafts,specs,plans,done}, renders contract.md and
 # memory.md when absent, commits what it created (contract, memory, ignore
@@ -16,8 +16,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/gates.sh"
 cd_root
 TEMPLATES="$PLUGIN_ROOT/templates"
 MAX_ITERATIONS=100
-STAGE=()     # files run.sh created this run, committed by commit_floor
-IGNORED=()   # .gitignore lines run.sh appended this run, staged by commit_floor
+STAGE=()     # files prepare.sh created this run, committed by commit_floor
+IGNORED=()   # .gitignore lines prepare.sh appended this run, staged by commit_floor
 
 # --- helpers ---
 
@@ -63,7 +63,7 @@ prepare_floor() {
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
 }
 
-# Stage .gitignore as "what the index had + the lines run.sh appended", leaving
+# Stage .gitignore as "what the index had + the lines prepare.sh appended", leaving
 # any other working-tree edit of the user unstaged.
 stage_ignore_entries() {
   local base blob

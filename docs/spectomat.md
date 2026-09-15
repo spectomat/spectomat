@@ -74,7 +74,7 @@ The fenced `bash` block under `## Verification Gates` in `contract.md`. A script
 | --- | --- | --- |
 | `lines` | list of shell commands | every non-empty, non-comment line inside the first fenced `bash` block after the `## Verification Gates` heading |
 
-Identity: one per floor. Written by: `run.sh` at first render, and the operator by hand thereafter — never rewritten by the factory (D9). Read by: the `IMPLEMENT` agent and `archive.sh`.
+Identity: one per floor. Written by: `prepare.sh` at first render, and the operator by hand thereafter — never rewritten by the factory (D9). Read by: the `IMPLEMENT` agent and `archive.sh`.
 
 ## 3. Behaviour
 
@@ -259,7 +259,7 @@ The log line's numbers are the gate count, not test counts: a script has first-h
 
 | File | Role |
 | --- | --- |
-| `scripts/run.sh` | prepares the floor, renders and commits, arms the Stop hook |
+| `scripts/prepare.sh` | prepares the floor, renders and commits, arms the Stop hook |
 | `scripts/phase.sh` | the picker (§5.1) |
 | `scripts/archive.sh` | the archiver, the `ARCHIVE` phase (§5.5) |
 | `scripts/utils.sh` | shared helpers (§5.2–§5.4), paths, `cd_root`, `state_field`, `render_template`; sourced by every script |
@@ -299,8 +299,8 @@ An armed flow is two gitignored files, created and removed together by `arm_flow
 
 | File | Holds | Read by | Written by |
 | --- | --- | --- | --- |
-| `state.json` | `iteration`, `max_iterations`, `session_id`, `started_at` | `stop-hook.sh` (one `jq` call per iteration), `print.sh`, `cancel.sh` | `run.sh` at arming; `stop-hook.sh` bumps `iteration` each pass |
-| `pointer.md` | the picker call plus the §3.3 dispatch table | fed back verbatim to the session | `run.sh` only — never mutated |
+| `state.json` | `iteration`, `max_iterations`, `session_id`, `started_at` | `stop-hook.sh` (one `jq` call per iteration), `print.sh`, `cancel.sh` | `prepare.sh` at arming; `stop-hook.sh` bumps `iteration` each pass |
+| `pointer.md` | the picker call plus the §3.3 dispatch table | fed back verbatim to the session | `prepare.sh` only — never mutated |
 
 Splitting them is what keeps each one honest: the state is data a script parses, the pointer is a prompt a model reads, and neither has to skip past the other. `state.json` is the armed flag — the five existence tests point at it — and `pointer.md` is its payload, so `disarm()` removes both and a pointer can never outlive its counter (D12).
 
@@ -325,10 +325,6 @@ Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). T
 
 The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so a source edit is not live until `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run`.
 
-### 7.4 Licence
-
-Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from Anthropic's `ralph-loop` (Apache 2.0). `agents/plan.md` and `agents/implement.md` carry material condensed from `superpowers` (MIT). `NOTICE.md` names each file and its changes, and must be updated whenever derived material moves — a licence obligation, not documentation housekeeping.
-
 ## 8. Design decisions
 
 | Id | Decision | Rejected | Why |
@@ -341,11 +337,11 @@ Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from A
 | D6 | `run_gates` executes gate lines with `eval` | a restricted parser, or `npm run` only | the gate block is operator-authored content in their own committed repository, at the same trust level as a `package.json` script the factory already runs |
 | D7 | `PLAN` also claims a plan overview with no task files | leaving it stranded | otherwise a half-finished `PLAN` phase matches no stage and the plan is unreachable for the life of the floor |
 | D8 | The `IMPLEMENT` phase executes exactly one task per iteration, in dependency order | packing file-disjoint ready tasks into one iteration as a "wave" | a wave is the only place where the unit of dispatch differs from the unit of work, and it pays for that with file-disjointness analysis in the `IMPLEMENT` phase, packability planning in the `PLAN` phase, shared-tree race rules, ordered commits and concurrent fix loops. One task per iteration deletes all of it: the picker is unaffected, an iteration stays one commit and one log line, and a task's blast radius is one revert. The cost is iterations, which are cheap and unattended |
-| D9 | `run.sh` renders `contract.md` once and never rewrites it | a migration that regenerates an old contract from the template, carrying the gate lines across | a migration path can only overwrite the file the operator is told to edit, and one that has never migrated anything is untested weight on the script every run executes |
+| D9 | `prepare.sh` renders `contract.md` once and never rewrites it | a migration that regenerates an old contract from the template, carrying the gate lines across | a migration path can only overwrite the file the operator is told to edit, and one that has never migrated anything is untested weight on the script every run executes |
 | D10 | `templates/memory.md`'s own header carries what earns a line; the contract carries only when to read and write it | the rules in both files, kept in step by hand | duplicated rules drift, and keeping them in step was a manual instruction to a human. Every iteration reads `memory.md` in Orient anyway, so the header costs no extra read |
 | D11 | Craft prose lives in the brief that uses it — gate-reading in `agents/implement.md`, "`SPECIFY` and `PLAN` skip the gates" in those two briefs | keeping it in the contract, where every phase reads it | the contract is the operator's only editable surface; text no operator would ever edit is craft, not steering, and D3 already put craft in the briefs |
 | D12 | An armed flow is `state.json` (data) plus `pointer.md` (prompt), created and removed together | one Markdown file with the state in frontmatter and the prompt in its body | one file forced every reader to parse past the other: `awk '/^---$/{i++; next} i>=2'` in two scripts to reach the prompt, and a `sed \| grep \| sed` pipeline to reach a field. Split, the state is `jq`-addressable in one call and the prompt is a file you `cat`. The names stop competing too — neither file is both things |
-| D13 | The operator puts drafts into `drafts/` and names them; `run.sh` only commits what it finds there | `run.sh` moving `wishlist/*.md` into `drafts/` under a number issued from a committed `.inc` counter | intake is the project's business, not the factory's. It cost a second inbox directory, a counter file with a git lifecycle opposite to the state it sat next to, and staging both ends of every move so arming still ended on a clean tree. Without it the floor has one entrance and drafts are worked in plain alphabetical order of whatever the operator called them |
+| D13 | The operator puts drafts into `drafts/` and names them; `prepare.sh` only commits what it finds there | `prepare.sh` moving `wishlist/*.md` into `drafts/` under a number issued from a committed `.inc` counter | intake is the project's business, not the factory's. It cost a second inbox directory, a counter file with a git lifecycle opposite to the state it sat next to, and staging both ends of every move so arming still ended on a clean tree. Without it the floor has one entrance and drafts are worked in plain alphabetical order of whatever the operator called them |
 | D14 | The `IMPLEMENT` phase writes its task's code itself | an implementer subagent it dispatches, reports back from and resumes | the picker already gives one fresh agent per task, so a subagent bought no context isolation and cost a placeholder-filled brief sent verbatim, a report file as the return channel, a `DONE / BLOCKED / NEEDS_CONTEXT` protocol and a re-dispatch rule — all of it deleted. What it loses is real but small: a cheap model for code writing, and a stronger one on the last fix round |
 | D15 | `REVIEW` is one phase per plan, run when every task is ticked | a reviewer subagent per task commit, with `MAX_FIX_ROUNDS` fix rounds inside the `IMPLEMENT` phase | per-task review was the one unit of work the picker could not see: no verdict, no log line, no strike, not resumable, a sub-state-machine with its own constant hidden inside another phase. As a phase it is an iteration like any other; its findings become task files that get the full TDD cycle instead of "send the findings back" rounds; and it reads the plan whole, which is the only way to see a helper written twice, code one task orphaned, or an interface that drifted between one task's `Produces` and another's `Consumes`. The cost is latency — a defect in task 1 surfaces after task 8 — bounded because the gates still run on every task and the plan's `Interfaces` rows are what guard the seams |
 | D16 | `REVIEW-SPEC` is one phase per spec, run once between `SPECIFY` and `PLAN`, and it revises the spec in place | a self-review checklist inside the `SPECIFY` brief; an approve-or-flag reviewer that sends the spec back to `SPECIFY` | the author cannot read its own spec cold, and the planner is the first reader that can be misled; a fresh agent with only the spec and the draft is the cheapest cold read. It fixes rather than flags because the fix for a spec is a sentence, and a `SPECIFY` round trip would rewrite the whole file to change one line. Each fix is a `revised` row in §10, so the trail is as traceable as an `assumed` one. One round, latched by `- Verdict: READY` in §17, the same grammar as the plan latch, so the picker learns nothing new |
@@ -377,8 +373,8 @@ Spectomat is MIT. `scripts/stop-hook.sh` and the state-file format derive from A
 | AC-4.1 | `status.sh` prints the picker's verdict verbatim | manual, scratch repo |
 | AC-4.2 | Arming writes a valid `state.json` with `iteration` 1 and a numeric `max_iterations`, and a `pointer.md` with no frontmatter and no unresolved `{{KEY}}` | selftest |
 | AC-4.3 | `/spectomat:cancel` removes both `state.json` and `pointer.md`, and keeps the floor | selftest |
-| AC-4.4 | `run.sh` commits a draft dropped into `drafts/`, tracked or not, and leaves a clean tree | selftest |
-| AC-4.6 | `run.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
+| AC-4.4 | `prepare.sh` commits a draft dropped into `drafts/`, tracked or not, and leaves a clean tree | selftest |
+| AC-4.6 | `prepare.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
 | AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, and feeds back `pointer.md` verbatim | selftest |
 | AC-4.8 | A session that did not arm the flow neither advances nor ends it, and an unreadable state file is left in place for `/spectomat:cancel` | selftest |
 | AC-4.9 | The promise and the iteration cap both disarm the flow | selftest |
@@ -418,7 +414,7 @@ bash 3.2, `jq`, no build, no package manager, no network. `scripts/utils.sh` is 
 | `{{REPO}}` | `contract.md`, `memory.md` | the repository root, substituted at the one and only render |
 | `{{GATES}}` | `contract.md` | the gate command compiled by `gates.sh`, substituted at the one and only render |
 
-A new placeholder requires a matching value in the `render_template` call in `run.sh`. `state.json` has no template: `arm_flow` writes its four fields inline, with `max_iterations` unquoted, so `parse_args` must keep requiring `^[0-9]+$`.
+A new placeholder requires a matching value in the `render_template` call in `prepare.sh`. `state.json` has no template: `arm_flow` writes its four fields inline, with `max_iterations` unquoted, so `parse_args` must keep requiring `^[0-9]+$`.
 
 ### 10.3 Fixtures
 
@@ -450,7 +446,7 @@ claude plugin validate .claude-plugin/marketplace.json --strict
 | whether the runtime loads `AGENT_COUNT` agents | `claude -p … --debug-file <f> --model opus`, then grep `<f>` for `Loaded 6 agents from plugin`; a `-p` prompt asking Claude to list agent types reports NONE even when they are loaded, so it must not be used |
 | whether a full flow reaches the promise | `claude -p "/spectomat:run 25" --plugin-dir . --model opus` in a scratch repo with two drafts |
 | whether the Stop hook releases against the real runtime | the selftest drives it with a fabricated payload; only a live session proves Claude Code honours the `block` decision |
-| whether `run.sh` keeps an edited contract | arming twice in a scratch repo, editing `contract.md` between runs |
+| whether `prepare.sh` keeps an edited contract | arming twice in a scratch repo, editing `contract.md` between runs |
 
 Nested `claude -p` must always be given `--model opus`; the CLI rejects the default model.
 
@@ -464,5 +460,5 @@ Nested `claude -p` must always be given `--model opus`; the CLI rejects the defa
 | no brief carries a `{{KEY}}` placeholder | briefs are never rendered, so a placeholder would reach an agent literally |
 | arming and cancelling touch both `state.json` and `pointer.md` | a pointer outliving its state would be fed back to a later flow with no counter behind it; a state without a pointer stops the flow with a corruption message |
 | only the session that armed a flow may end it, an unreadable state file included | the hook fires in every session of the project, so a guard that runs before the session check lets a stranger delete a flow it does not own |
-| `run.sh` refuses to arm on a dirty tree | the picker answers `RECOVER` to any dirt, so arming over work in progress spends the entire cap on the janitor |
+| `prepare.sh` refuses to arm on a dirty tree | the picker answers `RECOVER` to any dirt, so arming over work in progress spends the entire cap on the janitor |
 | `NOTICE.md` names only files that exist | a licence notice pointing at deleted files does not discharge the obligation |

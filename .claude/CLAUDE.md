@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A Claude Code plugin, not an application: bash scripts, Markdown commands, agent briefs and templates. No dependencies and no build; `scripts/selftest.sh` covers the text helpers in `utils.sh`, everything else is exercised by hand. `jq` must be on PATH. `README.md` covers layout and licensing; `templates/guide.md` is the user guide (printed by `/spectomat:help`) and holds the glossary whose terms (flow, iteration, phase, task, floor, contract, slug, strike) this repo uses consistently. Use those words, not synonyms.
+A Claude Code plugin, not an application: bash scripts, Markdown commands, agent briefs and templates. No dependencies and no build; `scripts/selftest.sh` covers the text helpers in `utils.sh`, everything else is exercised by hand. `jq` must be on PATH. `README.md` covers layout and licensing; `templates/guide.md` is the user guide (printed by `/spectomat:help`) and holds the glossary whose terms (flow, iteration, phase, task, floor, contract, slug, strike) this repo uses consistently. Use those words, not synonyms. `docs/spectomat.md` is the normative spec behind all of this — domain model, the `pick_phase`/`least_struck`/`strike_count`/`gate_block`/`archive` algorithms in pseudocode, and the design-decisions table (§8) recording what was rejected and why; read it before changing behaviour that this file only summarizes in prose.
 
 ## Verifying changes
 
@@ -12,10 +12,12 @@ A Claude Code plugin, not an application: bash scripts, Markdown commands, agent
 claude plugin validate .claude-plugin/plugin.json --strict      # run from this directory
 claude plugin validate .claude-plugin/marketplace.json --strict
 bash -n scripts/*.sh                                             # syntax only
-scripts/selftest.sh                                              # utils.sh, picker, archiver, run.sh, Stop hook
+scripts/selftest.sh                                              # utils.sh, picker, archiver, prepare.sh, Stop hook
 ```
 
-`selftest.sh` covers all of that — the picker, the archiver, `run.sh` arming and refusing, and the Stop hook driven with a fabricated `{"session_id","transcript_path"}` payload. What it cannot cover is the live runtime: exercise a real flow in a scratch git repo, never here. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.
+`selftest.sh` covers all of that — the picker, the archiver, `prepare.sh` arming and refusing, and the Stop hook driven with a fabricated `{"session_id","transcript_path"}` payload. What it cannot cover is the live runtime: exercise a real flow in a scratch git repo, never here. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.
+
+`selftest.sh` is one linear script of `is NAME GOT WANT` assertions under a handful of `echo` section headers, not a suite with named, individually selectable tests; it prints `ok`/`FAIL` per assertion and runs top to bottom in under 8 seconds, so isolate a failure by its section header, not by a test filter. An optional `DIR` argument points the whole run at a different `scripts/` copy — the installed cache under `~/.claude/plugins/cache/spectomat/`, for instance — instead of the one next to it.
 
 The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`, so edits here are not live until the version in `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run` again.
 
@@ -23,7 +25,7 @@ The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`,
 
 Each command in `commands/` runs a script in its `!` block, then tells Claude what to do with the output. All scripts source `scripts/utils.sh` (paths, `cd_root`, `state_field`, `render_template`) and set their own `set -e/-u` options; bash 3.2 compatible, no GNU-only flags.
 
-`run.sh` prepares the floor `.spectomat/` in the user's project: renders `contract.md` and `memory.md` once (never overwritten afterwards, each checked on its own so an older floor picks up a newly added file), commits what it created plus whatever drafts the user dropped into `drafts/`, then arms the flow on every run by writing `state.json` and rendering `templates/pointer.md`, and refuses if a state file already exists or the floor is empty. There is no intake: the operator names the drafts and the picker works them in alphabetical order (D13). Arming must end on a clean tree: the picker reads `git status` and answers `RECOVER` to any dirt, so an unstaged leftover costs the flow its first iteration.
+`prepare.sh` sets up the floor `.spectomat/` in the user's project: renders `contract.md` and `memory.md` once (never overwritten afterwards, each checked on its own so an older floor picks up a newly added file), commits what it created plus whatever drafts the user dropped into `drafts/`, then arms the flow on every run by writing `state.json` and rendering `templates/pointer.md`, and refuses if a state file already exists or the floor is empty. There is no intake: the operator names the drafts and the picker works them in alphabetical order (D13). Arming must end on a clean tree: the picker reads `git status` and answers `RECOVER` to any dirt, so an unstaged leftover costs the flow its first iteration.
 
 The three rendered files split what they carry on purpose:
 
@@ -38,7 +40,7 @@ The craft of each phase lives in its brief; the invariants live in the contract.
 ## Conventions
 
 - Markdown paragraphs and list items are one line each, no hard wraps. Fenced blocks, tables and frontmatter are the only multi-line structures.
-- Placeholders in templates are `{{KEY}}`, substituted literally by `render_template`; a new placeholder needs a value in the matching `render_template` call in `run.sh`.
+- Placeholders in templates are `{{KEY}}`, substituted literally by `render_template`; a new placeholder needs a value in the matching `render_template` call in `prepare.sh`.
 - Third-party material and its licence go in `NOTICE.md`; changes to derived files are listed there.
 - Verdicts are upper case (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`, `ARCHIVE`, `RECOVER`, `FINISH`); the agent types and brief files that serve them are lower case (`spectomat:review-spec`, `agents/review-spec.md`), and the pointer lowercases the verdict's first word to bridge the two.
 - A change to the verdict grammar must keep `phase.sh`, `templates/pointer.md`, `print.sh` and `archive.sh` in step; a change to what a phase does belongs in its brief, not in the contract or the pointer.

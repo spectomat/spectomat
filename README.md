@@ -51,7 +51,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
 
 - `scripts/` — bash, no other runtime:
   - `utils.sh` holds the shared paths and helpers the others source,
-  - `run.sh` prepares `.spectomat/`, renders `contract.md` and `memory.md`, and arms the flow by writing `state.json` and `pointer.md`,
+  - `prepare.sh` sets up the floor `.spectomat/`, renders `contract.md` and `memory.md`, and arms the flow by writing `state.json` and `pointer.md`,
   - `phase.sh` is the picker: one verdict line per iteration, dispatching to a phase brief, the archiver or the janitor,
   - `archive.sh` is the `ARCHIVE` phase end to end: ticks, gates, moves the trail to `done/` and commits,
   - `status.sh` summarises flow and floor; its sections live in `print.sh`,
@@ -69,7 +69,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
 
 ## Developing
 
-`scripts/selftest.sh` covers the helpers, the picker, the archiver, `run.sh` and the Stop hook, all against real throwaway git repos. For the live runtime, `claude -p "/spectomat:run 25" --plugin-dir <this repo>` inside a scratch project with a draft on the floor.
+`scripts/selftest.sh` covers the helpers, the picker, the archiver, `prepare.sh` and the Stop hook, all against real throwaway git repos. For the live runtime, `claude -p "/spectomat:run 25" --plugin-dir <this repo>` inside a scratch project with a draft on the floor.
 
 ## Licence
 

@@ -10,7 +10,7 @@ Run the unattended dark factory - floor setup
 and the start of iterations over `drafts → specs → plans → executed plans → done` phases:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh" $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}/scripts/prepare.sh" $ARGUMENTS
 ```
 
 If the output ends in `❌ Not starting`, report why and stop.

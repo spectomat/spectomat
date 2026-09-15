@@ -1,6 +1,6 @@
 #!/bin/bash
 # Spectomat cancel — disarm the flow so the Stop hook releases the session.
-# The floor under .spectomat/ stays; run.sh resumes from it.
+# The floor under .spectomat/ stays; `/spectomat:run` resumes from it.
 
 set -uo pipefail
 
