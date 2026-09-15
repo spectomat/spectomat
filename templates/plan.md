@@ -33,7 +33,6 @@ Rulings and Result are not sections of this file: the `IMPLEMENT` phase and the 
 
 ## Review
 
-written by the `REVIEW` phase once every task is ticked, one line per round. The `Verdict:` line is what releases the plan to `ARCHIVE`; while it is absent the plan comes back for another round.
+written by the `REVIEW` phase once every task is ticked, one line per round. The release to `ARCHIVE` (or back to `IMPLEMENT` for another round) is a `state.json` phase change, not a line in this file.
 
 `- Round R — N findings (C critical, I important, M minor) — tasks NN–MM added`
-`- Verdict: CLEAN | PARKED`

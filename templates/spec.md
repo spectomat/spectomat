@@ -123,4 +123,4 @@ Bottom-up, numbered. Each step ends with all gates green. The factory derives it
 
 ## 17. Review
 
-Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of counts, then the `Verdict:` line that releases the spec to `PLAN`. Empty until then.
+Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of counts. The release to `PLAN` is a `state.json` phase change, not a line in this section. Empty until then.

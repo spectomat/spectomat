@@ -24,10 +24,10 @@ One sentence: what exists when this task is done that did not before.
 
 ## Steps
 
-- [ ] **Step 1: Write the failing test** — create `exact/path.test.js` with the content of `.spectomat/snippets/{{SLUG}}/task-{{N}}-step1.js`
-- [ ] **Step 2: Run it, expect FAIL** — `npm test -- exact/path.test.js`, fails with "fn is not defined"
-- [ ] **Step 3: Minimal implementation** — create `exact/path.js` with the content of `.spectomat/snippets/{{SLUG}}/task-{{N}}-step3.js`
-- [ ] **Step 4: Run it, expect PASS** — same command; the full suite stays green
-- [ ] **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the `IMPLEMENT` phase stages exactly this task's Files and makes one commit
+1. **Step 1: Write the failing test** — create `exact/path.test.js` with the content of `.spectomat/snippets/{{SLUG}}/task-{{N}}-step1.js`
+2. **Step 2: Run it, expect FAIL** — `npm test -- exact/path.test.js`, fails with "fn is not defined"
+3. **Step 3: Minimal implementation** — create `exact/path.js` with the content of `.spectomat/snippets/{{SLUG}}/task-{{N}}-step3.js`
+4. **Step 4: Run it, expect PASS** — same command; the full suite stays green
+5. **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the `IMPLEMENT` phase stages exactly this task's Files and makes one commit
 
 Rulings and Result are not sections of this file: the `IMPLEMENT` phase records them as this task's entry in the plan's `{{SLUG}}.ruling.md` and `{{SLUG}}.result.md`.
