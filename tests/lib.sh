@@ -1,7 +1,7 @@
-# Shared harness for scripts/tests/*.sh — sourced, never run directly.
+# Shared harness for tests/*.sh — sourced, never run directly.
 #
 # A caller sets SCRIPTS before sourcing this file:
-#   SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+#   SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 #   source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 #
 # Every fixture is a real git repo: `git status --porcelain` is normative

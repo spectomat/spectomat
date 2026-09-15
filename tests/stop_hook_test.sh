@@ -3,11 +3,11 @@
 # that can end one. Its fixture is a state file and a transcript; its input is
 # the JSON payload Claude Code pipes in.
 #
-#   scripts/tests/stop_hook_test.sh          tests the scripts next to it
-#   scripts/tests/stop_hook_test.sh DIR      tests the scripts in DIR
+#   tests/stop_hook_test.sh              tests ../scripts
+#   tests/stop_hook_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "stop-hook.sh"

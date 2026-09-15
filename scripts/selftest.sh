@@ -1,15 +1,15 @@
 #!/bin/bash
-# Spectomat self-test — runs every scripts/tests/*_test.sh file and reports
+# Spectomat self-test — runs every tests/*_test.sh file and reports
 # the combined tally.
 #
 #   scripts/selftest.sh          tests the scripts next to it
 #   scripts/selftest.sh DIR      tests the scripts in DIR
 #
-# Each file under scripts/tests/ is independently runnable and owns its own
+# Each file under tests/ is independently runnable and owns its own
 # fixtures, so a single section can be driven alone, e.g.:
 #
-#   bash scripts/tests/phase_test.sh
-#   bash scripts/tests/phase_test.sh DIR
+#   bash tests/phase_test.sh
+#   bash tests/phase_test.sh DIR
 #
 # No dependencies and no network. Every fixture is a real git repo, because
 # `git status --porcelain` is normative input.
@@ -17,7 +17,7 @@
 set -uo pipefail
 
 SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
-TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/tests" && pwd)"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../tests" && pwd)"
 
 TOTAL_PASS=0; TOTAL_FAIL=0; FILES_FAILED=0
 

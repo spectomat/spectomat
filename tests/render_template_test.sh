@@ -1,11 +1,11 @@
 #!/bin/bash
 # render_template — the {{KEY}} substitution helper in utils.sh.
 #
-#   scripts/tests/render_template_test.sh          tests the scripts next to it
-#   scripts/tests/render_template_test.sh DIR      tests the scripts in DIR
+#   tests/render_template_test.sh              tests ../scripts
+#   tests/render_template_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # rt NAME TEMPLATE_BODY WANT KEY=VAL...

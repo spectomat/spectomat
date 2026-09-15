@@ -1,11 +1,11 @@
 #!/bin/bash
 # pointer_prompt — the pointer text the Stop hook feeds back, in utils.sh.
 #
-#   scripts/tests/pointer_prompt_test.sh          tests the scripts next to it
-#   scripts/tests/pointer_prompt_test.sh DIR      tests the scripts in DIR
+#   tests/pointer_prompt_test.sh              tests ../scripts
+#   tests/pointer_prompt_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "pointer_prompt"

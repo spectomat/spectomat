@@ -2,11 +2,11 @@
 # phase.sh — the picker: one verdict per iteration, priority order, strikes,
 # RECOVER, and the no-mutation guarantee.
 #
-#   scripts/tests/phase_test.sh          tests the scripts next to it
-#   scripts/tests/phase_test.sh DIR      tests the scripts in DIR
+#   tests/phase_test.sh              tests ../scripts
+#   tests/phase_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "phase.sh"

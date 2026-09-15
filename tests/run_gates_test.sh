@@ -1,11 +1,11 @@
 #!/bin/bash
 # run_gates — runs the gate commands in order and stops at the first failure.
 #
-#   scripts/tests/run_gates_test.sh          tests the scripts next to it
-#   scripts/tests/run_gates_test.sh DIR      tests the scripts in DIR
+#   tests/run_gates_test.sh              tests ../scripts
+#   tests/run_gates_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "run_gates"

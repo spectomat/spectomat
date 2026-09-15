@@ -1,11 +1,11 @@
 #!/bin/bash
 # strike_count — reads a slug's per-phase strike count from state.json.
 #
-#   scripts/tests/strike_count_test.sh          tests the scripts next to it
-#   scripts/tests/strike_count_test.sh DIR      tests the scripts in DIR
+#   tests/strike_count_test.sh              tests ../scripts
+#   tests/strike_count_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "strike_count"

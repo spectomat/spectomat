@@ -1,11 +1,11 @@
 #!/bin/bash
 # least_struck — picks the candidate with the fewest strikes at a phase.
 #
-#   scripts/tests/least_struck_test.sh          tests the scripts next to it
-#   scripts/tests/least_struck_test.sh DIR      tests the scripts in DIR
+#   tests/least_struck_test.sh              tests ../scripts
+#   tests/least_struck_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "least_struck"

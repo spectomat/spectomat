@@ -1,11 +1,11 @@
 #!/bin/bash
 # status.sh — predicts the next verdict and lists floor state for the operator.
 #
-#   scripts/tests/status_test.sh          tests the scripts next to it
-#   scripts/tests/status_test.sh DIR      tests the scripts in DIR
+#   tests/status_test.sh              tests ../scripts
+#   tests/status_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "status"

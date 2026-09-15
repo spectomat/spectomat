@@ -2,11 +2,11 @@
 # briefs — every agents/*.md exists, is named right, and advances state.json
 # the way its phase must.
 #
-#   scripts/tests/briefs_test.sh          tests the scripts next to it
-#   scripts/tests/briefs_test.sh DIR      tests the scripts in DIR
+#   tests/briefs_test.sh              tests ../scripts
+#   tests/briefs_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "briefs"

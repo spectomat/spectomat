@@ -1,11 +1,11 @@
 #!/bin/bash
 # gate_block — parses the Verification Gates fence out of contract.md.
 #
-#   scripts/tests/gate_block_test.sh          tests the scripts next to it
-#   scripts/tests/gate_block_test.sh DIR      tests the scripts in DIR
+#   tests/gate_block_test.sh              tests ../scripts
+#   tests/gate_block_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "gate_block"

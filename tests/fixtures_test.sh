@@ -2,11 +2,11 @@
 # fixtures — the floor/draft/spec/plan/fixture_commit helpers in lib.sh
 # behave correctly, since every other test file trusts them.
 #
-#   scripts/tests/fixtures_test.sh          tests the scripts next to it
-#   scripts/tests/fixtures_test.sh DIR      tests the scripts in DIR
+#   tests/fixtures_test.sh              tests ../scripts
+#   tests/fixtures_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "fixtures"

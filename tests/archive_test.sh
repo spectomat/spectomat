@@ -3,11 +3,11 @@
 # unchecked-move regression that leaves the tree dirty rather than committing
 # a partial move.
 #
-#   scripts/tests/archive_test.sh          tests the scripts next to it
-#   scripts/tests/archive_test.sh DIR      tests the scripts in DIR
+#   tests/archive_test.sh              tests ../scripts
+#   tests/archive_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "archive.sh"

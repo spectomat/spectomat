@@ -1,11 +1,11 @@
 #!/bin/bash
 # promised_empty — the <promise>FACTORY EMPTY</promise> detector in utils.sh.
 #
-#   scripts/tests/promised_empty_test.sh          tests the scripts next to it
-#   scripts/tests/promised_empty_test.sh DIR      tests the scripts in DIR
+#   tests/promised_empty_test.sh              tests ../scripts
+#   tests/promised_empty_test.sh DIR          tests the scripts in DIR
 
 set -uo pipefail
-SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # ep NAME INPUT yes|no — does INPUT carry the completion promise?
