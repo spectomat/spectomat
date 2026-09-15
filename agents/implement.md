@@ -15,6 +15,19 @@ Read `./.spectomat/contract.md` in full — it is the project's authoritative co
 
 ## Procedure
 
+```
+task-NN-*.md ──▶ [ IMPLEMENT ] ──┬──▶ commit (feat)
+                                 └──▶ <slug>.result.md (chore)
+                        │
+                        ▼
+          state: slug_task_done → tasks_done++
+                        │
+              tasks_done == tasks_total?
+                 │ no            │ yes
+                 ▼               ▼
+            next task           REVIEW
+```
+
 Your task line names the slug. Take **the next ready task** in its plan: the lowest-numbered task file with no entry in the plan's `<slug>.result.md` and whose `Depends on` tasks all have one. **One task per iteration, always.** Nothing is batched and nothing runs in parallel; the plan's dependency order is the execution order.
 
 `.spectomat/state.json` counts the work, not the task files: task files carry no checkboxes, and a slug's entry there gives `tasks_total` and `tasks_done`. Work is open while `tasks_done` is below `tasks_total`, and `tasks_done` is how many task files have been closed, so barring a `Depends on` reordering the task you take is number `tasks_done + 1`.

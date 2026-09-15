@@ -15,6 +15,14 @@ Read `./.spectomat/contract.md` in full — it is the project's authoritative co
 
 ## Procedure
 
+```
+specs/<slug>.md ──▶ [ PLAN ] ──┬──▶ plans/<slug>.md
+                               └──▶ plans/<slug>/task-NN-*.md
+                       │
+                       ▼
+        state: slug_start_tasks → IMPLEMENT
+```
+
 Read the spec in full. Write the overview `plans/<slug>.md` and one self-contained task file per task under `plans/<slug>/`, from `<plugin root>/templates/plan.md` and `<plugin root>/templates/task.md`. Every task file carries five numbered steps; the `IMPLEMENT` phase finds its work from `state.json`'s `tasks_done` counter, not from the task files' own text. Run the Self-review below.
 
 A plan is an overview plus one file per task. Each task file is a complete brief: the `IMPLEMENT` phase, which sees nothing else, can execute it alone, later, without opening the plan or the spec. DRY, YAGNI, TDD.

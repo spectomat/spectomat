@@ -25,18 +25,16 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 Stop hook
   └─ session receives pointer.md, fed back by the Stop hook
        │
-       ├─ bash {{PLUGIN_ROOT}}/scripts/phase.sh   →  exactly one line
-       │
-       ├─ "SPECIFY <slug>"    →  Agent(spectomat:specify)     draft → spec
-       ├─ "REVIEW-SPEC <slug>" → Agent(spectomat:review-spec) spec → reviewed spec
-       ├─ "PLAN <slug>"       →  Agent(spectomat:plan)        reviewed spec → plan
-       ├─ "IMPLEMENT <slug>"  →  Agent(spectomat:implement)   plan → next task
-       ├─ "REVIEW <slug>"     →  Agent(spectomat:review)      finished plan → verdict
-       ├─ "ARCHIVE <slug>"    →  bash scripts/archive.sh <slug>
-       ├─ "RECOVER"           →  Agent(spectomat:recover)
-       └─ "FINISH"            →  emit <promise>FACTORY EMPTY</promise>
-       │
-       └─ print at most five lines, stop
+       └─ bash {{PLUGIN_ROOT}}/scripts/phase.sh   →  exactly one line
+          │
+          ├─ "SPECIFY <slug>"    →  Agent(spectomat:specify)     draft → spec
+          ├─ "REVIEW-SPEC <slug>" → Agent(spectomat:review-spec) spec → reviewed spec
+          ├─ "PLAN <slug>"       →  Agent(spectomat:plan)        reviewed spec → plan
+          ├─ "IMPLEMENT <slug>"  →  Agent(spectomat:implement)   plan → next task
+          ├─ "REVIEW <slug>"     →  Agent(spectomat:review)      finished plan → verdict
+          ├─ "ARCHIVE <slug>"    →  bash scripts/archive.sh <slug>
+          ├─ "RECOVER"           →  Agent(spectomat:recover)
+          └─ "FINISH"            →  emit <promise>FACTORY EMPTY</promise>
 ```
 
 ## 2. Domain Model

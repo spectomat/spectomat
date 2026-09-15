@@ -15,6 +15,17 @@ Read `./.spectomat/contract.md` in full — it is the project's authoritative co
 
 ## Procedure
 
+```
+plan + tasks + result.md ──▶ [ REVIEW ] ──┬──▶ critical/important → task-NN-*.md (fix tasks)
+                                          └──▶ minor              → <slug>.ruling.md
+                        │
+                        ▼
+                no C/I findings, or round == MAX_REVIEW_ROUNDS?
+                        │ yes                          │ no
+                        ▼                              ▼
+     state: phase → ARCHIVE          state: slug_add_tasks → IMPLEMENT
+```
+
 You are dispatched on a plan whose every task is closed — `state.json`'s `tasks_done` for this slug equals its `tasks_total`, and the plan's `<slug>.result.md` has an entry per task. You read what the plan actually built, you decide whether it may be archived, and you write that decision into the plan overview. **Nothing else releases a plan to `ARCHIVE`.**
 
 **Change no source file and no test.** You do not fix what you find: you write the fix as a task, and the `IMPLEMENT` phase builds it under TDD in a later iteration. The only files you write are the plan overview and the task files you add, both under `.spectomat/`.

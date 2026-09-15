@@ -27,23 +27,26 @@
 
 ## The Flow
 
-The flow is a sequence of iterations. Each iteration is one picker verdict, dispatched to a fresh phase agent, to the archiver, or to the janitor. The picker reads the floor and prints one verdict per iteration: `SPECIFY <slug>`, `REVIEW-SPEC <slug>`, `PLAN <slug>`, `IMPLEMENT <slug>`, `REVIEW <slug>`, `ARCHIVE <slug>`, `RECOVER`, or `FINISH`.
+The flow is a sequence of iterations. Each one asks the picker for a verdict and dispatches on it — a fresh phase agent, the archiver, or the janitor — then commits, logs, and stops for the Stop hook to feed the next iteration in.
 
-- **`ARCHIVE`** `reviewed plan` → `done/`, when the review verdict is in and the gates are green,
-- **`REVIEW`** `finished plan` → `verdict`: one read of the plan's whole diff, at most two rounds; findings become fix tasks that go back through `IMPLEMENT`,
-- **`IMPLEMENT`×n** `plan` → `next ready task`: one task per iteration in dependency order, TDD, gates, one commit,
-- **`PLAN`** `reviewed spec` → `plan`: an overview plus one task file per task,
-- **`REVIEW-SPEC`** `spec` → `reviewed spec`: one cold read against the draft, defects fixed in place and recorded as decisions, one round,
-- **`SPECIFY`** `draft` → `spec`,
-- **`FINISH`** `nothing left`: `drafts/`, `specs/` and `plans/` are empty and the tree is clean, so the iteration emits `<promise>FACTORY EMPTY</promise>` and the flow ends.
+```text
+Stop hook ──▶ feeds back pointer.md ──▶ picker (scripts/phase.sh) ──▶ one verdict per iteration
+```
 
-Work in progress is finished before a new draft is read. Drafts are read in alphabetical order of the file name, so the name is how you fix the order they are worked in.
+```text
+drafts/*.md ──SPECIFY──▶ specs/*.md ──REVIEW-SPEC──▶ reviewed spec ──PLAN──▶ plans/<slug>.md
+                                                                                   │
+                                                                            IMPLEMENT×n (TDD, gates, one commit)
+                                                                                   │
+                                                                                   ▼
+                                         done/ ◀──ARCHIVE── verdict ◀──REVIEW── finished plan
+                                                                │
+                                                                └──fix tasks──▶ back to IMPLEMENT (≤2 rounds)
+```
 
-## Iteration Mechanics
+`RECOVER` sends a dirty tree to the janitor instead of any of the above; `FINISH` fires once `drafts/`, `specs/` and `plans/` are all empty and the tree is clean, emitting `<promise>FACTORY EMPTY</promise>` and ending the flow.
 
-The Stop hook runs when Claude tries to end its turn. While `state.json` exists for this session, the hook blocks the exit and returns `pointer.md` as the next input.
-
-The picker dispatches to exactly one phase per iteration: `SPECIFY <slug>` → a fresh phase agent writes draft → spec (`specify.md`); `REVIEW-SPEC <slug>` → a fresh phase agent reads the spec cold, fixes what would mislead the planner and marks it ready (`review-spec.md`); `PLAN <slug>` → a fresh phase agent writes an overview plus one task file per task (`plan.md`); `IMPLEMENT <slug>` → a phase agent implements the next ready task with TDD and the gates (`implement.md`); `REVIEW <slug>` → a phase agent reads the finished plan's whole diff and either passes it or adds fix tasks (`review.md`); `ARCHIVE <slug>` → `scripts/archive.sh` ticks all steps, verifies gates, and moves the trail to `done/`; `recover` → the janitor recovers from a dirty tree; `finalize` → the floor is empty and the flow ends. Each iteration emits one short report; when the flow ends, `state.json` and `pointer.md` are both removed.
+Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` outrank `IMPLEMENT`, which outranks `PLAN`, which outranks `REVIEW-SPEC`, which outranks a fresh `SPECIFY`. Drafts are read in alphabetical order of the file name, so the name is how you fix the order they are worked in.
 
 `contract.md` and `memory.md` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the factory believes about the codebase. Each is checked on its own, so a floor armed before `memory.md` existed gets it on the next `run`.
 

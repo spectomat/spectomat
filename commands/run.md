@@ -15,48 +15,6 @@ and the start of iterations over `drafts → specs → plans → executed plans 
 
 If the output ends in `❌ Not starting`, report why and stop.
 
-If the factory is armed, begin iteration 1 now: follow the prompt printed at the end of the output. Each iteration is one picker verdict, dispatched to a fresh phase agent (`spectomat:specify|review-spec|plan|implement|review`, or `general-purpose` carrying the brief when that type is not listed), to `scripts/archive.sh`, or to the janitor; this session only launches it, relays its report and stops. The Stop hook feeds the same prompt back after every iteration until you relay `<promise>FACTORY EMPTY</promise>` or the cap is reached.
+If the factory is armed, begin iteration 1 now: follow the prompt printed at the end of the output, exactly as it directs — it is the authoritative dispatch table, and the Stop hook feeds you the same prompt again after every iteration.
 
-**This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue.
-
-Emit the promise only when `drafts/`, `specs/` and `plans/` are all empty and the tree is clean, checked this iteration.
-
-## The floor
-
-```
-.spectomat/
-  drafts/     ideas the user drops in, one .md each — the file name is the slug, worked in alphabetical order
-  specs/      SPECIFY writes one per draft, REVIEW-SPEC revises it once; or a finished spec placed by hand
-  plans/      PLAN writes an overview per spec plus <slug>/task-NN-<name>.md per task
-  done/       ARCHIVE moves spec + plan here when REVIEW has released the plan and gates pass
-  work/       per-task briefs, reports and diffs, gitignored
-  contract.md the rules, rendered once from the plugin template, re-read every iteration
-  memory.md   codebase facts the factory has learned, read every iteration, added to before every commit
-  state.json  the flow's state: iteration counter, cap, session — gitignored
-  pointer.md  the prompt the Stop hook feeds back each iteration — gitignored
-  log.md      one line per phase, gitignored
-```
-
-## One phase per iteration
-
-```
-drafts/*.md  ──SPECIFY──▶  specs/<slug>.md  ──REVIEW-SPEC──▶  reviewed spec  ──PLAN──▶  plans/<slug>.md  ──IMPLEMENT×n──▶  code + commits  ──REVIEW──▶  verdict  ──ARCHIVE──▶  done/
-```
-
-Priority is `ARCHIVE`, `REVIEW`, `IMPLEMENT`, `PLAN`, `REVIEW-SPEC`, `SPECIFY`: work in progress is finished before the next spec is planned, every reviewed spec is planned before the next is reviewed, and every spec is reviewed before the next draft is read. Every phase is a commit and a log line.
-
-| Phase | Brief |
-| --- | --- |
-| `SPECIFY` · draft → spec | `agents/specify.md` |
-| `REVIEW-SPEC` · spec → reviewed spec | `agents/review-spec.md`, one round, fixes in place |
-| `PLAN` · reviewed spec → plan | `agents/plan.md` |
-| `IMPLEMENT` · next ready task (one per iteration, dependency order) | `agents/implement.md`, which carries TDD and systematic debugging |
-| `REVIEW` · finished plan → verdict or fix tasks | `agents/review.md`, at most two rounds |
-| any failing gate | the systematic-debugging section of `agents/implement.md` |
-| end of an `IMPLEMENT` task, `ARCHIVE` · plan → done, the promise | the gates in `contract.md`, run fresh this iteration, numbers in the log |
-
-## Rules that make it terminate
-
-- One phase per iteration. Never ask the user; record choices as `assumed` rows in the spec or rulings in the plan.
-- Three strikes → `done/<slug>.blocked.md` with a reason, and the slug's `state.json` entry deleted; the file itself is never deleted.
-- Never weaken a gate. Never fake a promise.
+**This flow is unattended.** Nobody answers questions. Decide, record the decision where `.spectomat/contract.md` says, and continue — `.spectomat/contract.md` is the single source of truth for the floor layout, phase priority and the three-strikes rule.

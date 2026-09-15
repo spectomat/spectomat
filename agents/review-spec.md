@@ -17,6 +17,13 @@ Where the spec is silent, decide, record the decision in the spec's Decisions ta
 
 ## Procedure
 
+```
+specs/<slug>.md ──▶ [ REVIEW-SPEC ] ──▶ specs/<slug>.md (revised)
+                            │
+                            ▼
+                  state: phase → PLAN
+```
+
 You are dispatched on a spec the `SPECIFY` phase wrote and nobody has read since. You read it as the planner will — cold, in full, once — you fix what would make a flawed plan, and you write into the spec that it is ready. **Nothing else releases a spec to `PLAN`.**
 
 You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/specs/<slug>.md`, plus `memory.md` when a line is earned.

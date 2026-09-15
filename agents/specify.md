@@ -17,9 +17,18 @@ Where an input is silent or in doubt, brainstorm on your own (below), decide, re
 
 ## Procedure
 
+```
+drafts/<slug>.md ──▶ [ SPECIFY ] ──▶ specs/<slug>.md
+                          │
+                          ▼
+                state: phase → REVIEW-SPEC
+```
+
 Read the draft in full. If it hedges, lists alternatives, or names a goal without a mechanism, go through **Brainstorm** before writing. Write `specs/<slug>.md` from `<plugin root>/templates/spec.md`. Scope it to what the draft asks; do not invent features. Every choice the draft did not make is a row in the spec's Decisions table marked `assumed`. The draft's own words go into §1 verbatim where they are precise.
 
 Then `git mv drafts/<slug>.md done/<slug>.draft.md`. The draft is consumed.
+
+## Output style
 
 A spec is a contract, not a story. You should be able then
 
