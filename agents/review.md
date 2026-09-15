@@ -101,7 +101,7 @@ This is what releases a plan, and it is irreversible: a slug moved to `ARCHIVE` 
 
 Commit everything you wrote in one commit: `chore(<slug>): review round R`. Then apply the `state.json` change above, then append one factory log line; the log is gitignored and never committed.
 
-Then report: the round, the counts by severity, the tasks you added, and the verdict if you wrote one.
+Then report: the round, the counts by severity, the tasks you added, and the phase you advanced to (if any).
 
 ## When you cannot finish
 

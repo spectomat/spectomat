@@ -13,7 +13,7 @@ The picker returned `RECOVER`, so this floor is not in a state any phase can sta
 
 Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. Never ask the user anything.
 
-Find which of the two cases you are in, and do only that one:
+Find which of the three cases you are in, and do only that one:
 
 **A dirty tree.** `git status --porcelain` is not silent, so a previous iteration died mid-phase. Inspect the changes. If they are a phase all but finished, finish it and commit it under that phase's own message. When you commit the crashed phase's work, also apply that phase's `state.json` transition using whichever of `slug_set_phase`, `slug_start_tasks`, `slug_task_done`, or `slug_add_tasks` (from `scripts/utils.sh`) matches the phase that crashed — the same helper that phase's own brief would have called. If they are partial or you cannot tell what they were for, discard them — `git checkout -- .` and `git clean -fd` the paths under `.spectomat/` and the paths the task files name. Never discard a change outside those paths; report it instead and stop.
 
