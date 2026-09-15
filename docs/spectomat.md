@@ -167,7 +167,7 @@ Normative notes, each of which a naive reading would get wrong:
 1. **`ARCHIVE` and `REVIEW` are tested before `IMPLEMENT`**, matching the contract's priority: work in progress is finished before anything new starts.
 2. **A slug's phase is stored in `state.json.slugs[slug].phase`**, not derived from floor files. Once in a phase, the slug stays until the brief advances it.
 3. **`check_orphans` enforces agreement between floor and state.** A slug in state with no floor file, or a floor file with no state entry, is an orphan; the picker exits with error and the next iteration's verdict is `RECOVER`.
-4. **New drafts in `drafts/` enter state as `SPECIFY`** when the picker first sees them; they are added on the fly, not pre-loaded at arm time.
+4. **New drafts in `drafts/` enter state as `SPECIFY` at arm time**, not when the picker first sees them; `prepare.sh` walks `drafts/*.md` and calls `slug_add` for every one with no state entry yet, so the picker never adds a slug itself.
 5. **`ARCHIVE` and `REVIEW` are split by phase** (`state.json.slugs[slug].phase` is `ARCHIVE` or `REVIEW`), not by a line in the plan. The `REVIEW` phase advances a slug from `IMPLEMENT` to `REVIEW`; only `REVIEW` returning a verdict advances it to `ARCHIVE`.
 6. **A floor that matches no stage is `RECOVER`, not `FINISH`.** A slug in state with no corresponding floor file is an orphan; leftover files, or a slug parked at `STRIKE_LIMIT`, are anomalies only the janitor can clear.
 7. **`RECOVER` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit, leaving slugs in state with no floor files.
@@ -223,8 +223,7 @@ archive(slug):
 
   total = count(gate_block())
   if run_gates() != 0:
-      slug_strike('ARCHIVE', slug)
-      n = strike_count('ARCHIVE', slug)
+      n = slug_strike(slug, 'ARCHIVE')
       log '- <ts> · ARCHIVE · <slug> · gate failed: <cmd> (strike ' + n + ')'
       if n >= STRIKE_LIMIT:  block = '.blocked'  and continue to the moves
       else:                  exit 1
@@ -236,11 +235,11 @@ archive(slug):
   if isdir(plans/<slug>):
       git mv plans/<slug>  done/<slug>              or strike_and_exit
 
-  slug_delete(slug)     # remove slug from state.json
-  git add .spectomat/state.json
-
+  git add -A done/ specs/ plans/ snippets/
   git commit -m 'chore(<slug>): archived' (or '… blocked after 3 strikes')
       or strike_and_exit
+
+  slug_delete(slug)     # remove slug from state.json, after the commit lands
   log '- <ts> · ARCHIVE · <slug> · archived · gates <total>/<total>'
 ```
 
@@ -296,7 +295,7 @@ An armed flow is two gitignored files: `state.json` (data) and `pointer.md` (pro
 
 | File | Schema | Read by | Written by |
 | --- | --- | --- | --- |
-| `state.json` | `{active: bool, iteration: int, max_iterations: int, session_id: string, started_at: timestamp, slugs: {<slug>: {phase: string, task_total: int, task_done: int, strikes: {<phase>: int}}}}` | `phase.sh`, `print.sh`, `stop-hook.sh`, phase agents (via `state_field` and slug helpers) | `prepare.sh` at arming; every phase brief and `archive.sh` after their commit; `stop-hook.sh` bumps `iteration`; `/spectomat:cancel` sets `active: false` |
+| `state.json` | `{active: bool, iteration: int, max_iterations: int, session_id: string, started_at: timestamp, slugs: {<slug>: {phase: string, tasks_total: int, tasks_done: int, strikes: {<phase>: int}}}}` | `phase.sh`, `print.sh`, `stop-hook.sh`, phase agents (via `state_field` and slug helpers) | `prepare.sh` at arming; every phase brief and `archive.sh` after their commit; `stop-hook.sh` bumps `iteration`; `/spectomat:cancel` sets `active: false` |
 | `pointer.md` | the picker call plus the §3.3 dispatch table | fed back verbatim to the session | `prepare.sh` only — never mutated |
 
 **The resume path:** When `/spectomat:run` is invoked with an inactive flow (`state.json` exists and `active: false`), `prepare.sh` re-arms by setting `active: true` and re-rendering `pointer.md` instead of refusing. This restores the flow from where it stopped, continuing from the same `iteration` counter, with all slug phases and strike counts preserved in `state.json.slugs`.
@@ -349,7 +348,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D17 | The picker reads `state.json.slugs` to determine each slug's phase, instead of deriving it from floor-file checks | file-content checks (`- Verdict:` lines, task file existence, etc.) | deterministic and testable: the phase decision is now an explicit field, not an inference. The picker never mutates files, so the state is the only thing that changes when a phase advances. This makes the state the single source of truth for the flow's progress and makes resume possible |
 | D18 | Strike counts are stored in `state.json.slugs[slug].strikes[phase]`, not derived from `log.md` | log-line-counting logic in the picker and `strike_count` | the state is now the authoritative record of phase failures, and `log.md` becomes write-only audit trail. This makes `strike_count` fast (one `jq` call, no grep) and makes strikes observable in the state, enabling inspection and recovery |
 | D19 | `/spectomat:cancel` sets `active: false` and removes `pointer.md`, but keeps `state.json` | full disarm, removing both files | this enables resume: a session can pause a flow with `/spectomat:cancel`, and `/spectomat:run` resumes it from the same iteration, with all slug phases and strikes preserved. Without it, a pause-and-resume would restart the flow and lose all progress |
-| D20 | Each slug carries `phase`, `task_total`, `task_done`, and `strikes` in `state.json.slugs[slug]` | per-phase tracking only, rebuilt at each phase | observable progress: the state encodes not just what phase a slug is in, but how many tasks are in its plan and how many are done. This makes the flow's progress queryable without parsing floor files, and makes recovery from a crashed phase more precise |
+| D20 | Each slug carries `phase`, `tasks_total`, `tasks_done`, and `strikes` in `state.json.slugs[slug]` | per-phase tracking only, rebuilt at each phase | observable progress: the state encodes not just what phase a slug is in, but how many tasks are in its plan and how many are done. This makes the flow's progress queryable without parsing floor files, and makes recovery from a crashed phase more precise |
 
 ## 9. Acceptance Criteria
 
@@ -445,8 +444,8 @@ state = {
   session_id: "fixture",
   started_at: "1970-01-01T00:00:00Z",
   slugs: {
-    <slug1>: {phase: "PLAN", task_total: 3, task_done: 1, strikes: {SPECIFY: 0, PLAN: 1}},
-    <slug2>: {phase: "IMPLEMENT", task_total: 2, task_done: 0, strikes: {}}
+    <slug1>: {phase: "PLAN", tasks_total: 3, tasks_done: 1, strikes: {SPECIFY: 0, PLAN: 1}},
+    <slug2>: {phase: "IMPLEMENT", tasks_total: 2, tasks_done: 0, strikes: {}}
   }
 }
 ```
