@@ -96,17 +96,10 @@ run_gates() {
   return 0
 }
 
-# How many times PHASE was struck on SLUG, per the factory log. The log
-# is gitignored and append-only, so this is the only record of a strike. Both
-# matches are fixed-string (grep -F), so a slug carrying regex metacharacters
-# such as parentheses or an unclosed bracket is matched literally, never as a
-# pattern: it cannot fail to compile and it cannot accidentally match less
-# than the literal text.
 strike_count() {
   local phase="$1" slug="$2" n
-  [[ -f "$FLOOR/log.md" ]] || { echo 0; return 0; }
-  n=$(grep -F " · $phase · $slug · " "$FLOOR/log.md" 2>/dev/null | grep -cF '(strike ') || n=0
-  printf '%s\n' "${n// /}"
+  n=$(jq -r --arg p "$phase" --arg s "$slug" '.slugs[$s].strikes[$p] // 0' "$STATE_FILE" 2>/dev/null) || n=0
+  printf '%s\n' "${n:-0}"
 }
 
 # The candidate with the fewest strikes at PHASE; candidate slugs arrive on
@@ -126,5 +119,67 @@ least_struck() {
     fi
   done
   [[ -z "$best" ]] || printf '%s\n' "$best"
+}
+
+# state_apply FILTER [JQ_ARGS...] — atomic jq write to STATE_FILE. JQ_ARGS
+# (e.g. --arg s "$SLUG") must precede FILTER, matching jq's own argument
+# order, so this takes FILTER first and re-appends it after "$@".
+state_apply() {
+  local filter="$1"; shift
+  local tmp="$STATE_FILE.tmp.$$"
+  jq "$@" "$filter" "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE"
+}
+
+# slug_add SLUG PHASE — register a new slug entering the flow, with no strikes yet.
+slug_add() {
+  state_apply '.slugs[$s] = {"phase": $p, "strikes": {}}' --arg s "$1" --arg p "$2"
+}
+
+# slug_phase SLUG — the slug's current phase, or empty if untracked.
+slug_phase() {
+  jq -r --arg s "$1" '.slugs[$s].phase // empty' "$STATE_FILE" 2>/dev/null || true
+}
+
+# slug_set_phase SLUG PHASE — advance a slug to a new phase with no task counters.
+slug_set_phase() {
+  state_apply '.slugs[$s].phase = $p' --arg s "$1" --arg p "$2"
+}
+
+# slug_start_tasks SLUG TOTAL — PLAN -> IMPLEMENT: phase, tasks_total, tasks_done=0.
+slug_start_tasks() {
+  state_apply '.slugs[$s].phase = "IMPLEMENT" | .slugs[$s].tasks_total = ($t | tonumber) | .slugs[$s].tasks_done = 0' \
+    --arg s "$1" --arg t "$2"
+}
+
+# slug_task_done SLUG — IMPLEMENT, one task closed: bump tasks_done, and move to
+# REVIEW once every task is done.
+slug_task_done() {
+  state_apply '
+    .slugs[$s].tasks_done += 1
+    | if .slugs[$s].tasks_done == .slugs[$s].tasks_total
+      then .slugs[$s].phase = "REVIEW"
+      else . end
+  ' --arg s "$1"
+}
+
+# slug_add_tasks SLUG N — REVIEW PARKED: N fix tasks added, back to IMPLEMENT.
+slug_add_tasks() {
+  state_apply '.slugs[$s].tasks_total += ($n | tonumber) | .slugs[$s].phase = "IMPLEMENT"' \
+    --arg s "$1" --arg n "$2"
+}
+
+# slug_delete SLUG — ARCHIVE finished (or blocked): drop the slug's entry.
+slug_delete() {
+  state_apply 'del(.slugs[$s])' --arg s "$1"
+}
+
+# slug_strike SLUG PHASE — bump PHASE's strike count for SLUG and print the new
+# count. Argument order is SLUG first, PHASE second — the reverse of
+# strike_count (phase, slug) — because callers already have the slug in hand
+# first at every phase-failure site; do not swap them by pattern-matching
+# strike_count's order.
+slug_strike() {
+  state_apply '.slugs[$s].strikes[$p] = ((.slugs[$s].strikes[$p] // 0) + 1)' --arg s "$1" --arg p "$2"
+  jq -r --arg s "$1" --arg p "$2" '.slugs[$s].strikes[$p]' "$STATE_FILE"
 }
 
