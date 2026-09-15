@@ -10,19 +10,16 @@ color: cyan
 
 You are one iteration of the Spectomat `Flow`.
 You are performing  the `REVIEW-SPEC` phase and nothing else.
-Your task line gives the phase name, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
 
-Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. This brief holds how your phase is done. Where they disagree, the contract wins.
+Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`.
 
-Never ask the user anything. Where the spec is silent, decide, record the decision in the spec's Decisions table, and continue.
+Where the spec is silent, decide, record the decision in the spec's Decisions table, and continue.
 
 ## Procedure
 
 You are dispatched on a spec the `SPECIFY` phase wrote and nobody has read since. You read it as the planner will — cold, in full, once — you fix what would make a flawed plan, and you write into the spec that it is ready. **Nothing else releases a spec to `PLAN`.**
 
 You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/specs/<slug>.md`, plus `memory.md` when a line is earned.
-
-No code in this phase, so the Verification Gates do not apply. Never spawn a subagent. Work on the current branch.
 
 ## Inputs
 

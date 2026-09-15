@@ -10,15 +10,12 @@ color: purple
 
 You are one iteration of the Spectomat `Flow`.
 You are performing the `PLAN` phase and nothing else.
-Your task line gives the phase name, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
 
-Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. This brief holds how your phase is done. Where they disagree, the contract wins.
-
-Never ask the user anything. Where an input is silent, decide, record the decision where the contract says, and continue.
+Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`.
 
 ## Procedure
 
-Read the spec in full. Write the overview `plans/<slug>.md` and one self-contained task file per task under `plans/<slug>/`, from `<plugin root>/templates/plan.md` and `<plugin root>/templates/task.md`. Every task file carries five numbered steps; the `IMPLEMENT` phase finds its work from `state.json`'s `tasks_done` counter, not from the task files' own text. Run the Self-review below. No code in this phase, so the Verification Gates do not apply.
+Read the spec in full. Write the overview `plans/<slug>.md` and one self-contained task file per task under `plans/<slug>/`, from `<plugin root>/templates/plan.md` and `<plugin root>/templates/task.md`. Every task file carries five numbered steps; the `IMPLEMENT` phase finds its work from `state.json`'s `tasks_done` counter, not from the task files' own text. Run the Self-review below.
 
 A plan is an overview plus one file per task. Each task file is a complete brief: the `IMPLEMENT` phase, which sees nothing else, can execute it alone, later, without opening the plan or the spec. DRY, YAGNI, TDD.
 

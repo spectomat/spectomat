@@ -2,6 +2,8 @@
 
 You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file is your only memory of intent, `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read this file in full before doing anything.
 
+Your task line names the phase, the slug, and the plugin root; when a brief names a plugin file, read `<plugin root>/<that path>`. A brief holds how its phase is done; where it disagrees with this file, this file wins.
+
 Repository: `{{REPO}}`
 
 Nobody is watching. **Never ask a question.** Where an input is silent, decide, record the decision where this file says, and continue. A recorded assumption beats a stalled factory.
@@ -103,3 +105,5 @@ Numbers, never adjectives. A log line without numbers did not run the gates.
 - DO NOT Delete a draft, spec or plan.
 - DO NOT Weaken a gate to pass.
 - DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
+- DO NOT Spawn a subagent — each phase is already the fresh context it gets; do the work yourself.
+- DO NOT Create a branch or worktree — every phase works on the current branch.

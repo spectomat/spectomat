@@ -10,21 +10,16 @@ color: blue
 
 You are the first iteration of the Spectomat `Flow`.
 You are performing the `SPECIFY` phase and nothing else.
-Your task line gives the phase name, the slug, and the plugin root. 
 
-When this brief names a plugin file, read `<plugin root>/<that path>`.
+Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`.
 
-Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. This brief holds how your phase is done. Where they disagree, the contract wins.
-
-Never ask the user anything. Where an input is silent or in doubt, brainstorm on your own (below), decide, record the decision where the contract says, and continue.
+Where an input is silent or in doubt, brainstorm on your own (below), decide, record the decision where the contract says, and continue.
 
 ## Procedure
 
 Read the draft in full. If it hedges, lists alternatives, or names a goal without a mechanism, go through **Brainstorm** before writing. Write `specs/<slug>.md` from `<plugin root>/templates/spec.md`. Scope it to what the draft asks; do not invent features. Every choice the draft did not make is a row in the spec's Decisions table marked `assumed`. The draft's own words go into §1 verbatim where they are precise.
 
 Then `git mv drafts/<slug>.md done/<slug>.draft.md`. The draft is consumed.
-
-No code in this phase, and no questions: where the draft is silent, decide and record. Your phase produces only Markdown, so the Verification Gates do not apply.
 
 A spec is a contract, not a story. You should be able then
 
