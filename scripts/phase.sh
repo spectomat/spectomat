@@ -11,8 +11,8 @@
 #                     "RECOVER"           dirty tree, or a floor no stage claims
 #                     "FINISH"            nothing left; the flow may end
 #
-# Pure: reads the floor, log.md and git status, writes nothing. The session
-# runs it once per iteration and /spectomat:status runs it on demand.
+# Pure: reads the floor, state.json and git status, writes nothing. The
+# session runs it once per iteration and /spectomat:status runs it on demand.
 
 set -uo pipefail
 
@@ -20,7 +20,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 cd_root
 
 # Slugs of the .md files directly inside a floor directory, alphabetically.
-# Bash sorts a glob, so no `ls` is parsed and a slug may contain spaces.
 slugs_in() {
   local f
   for f in "$FLOOR/$1"/*.md; do
@@ -29,126 +28,58 @@ slugs_in() {
   done
 }
 
-# Task files of one plan.
-task_count() {
-  local f n=0
-  for f in "$FLOOR/plans/$1"/task-*.md; do
-    [[ -f "$f" ]] || continue
-    n=$((n + 1))
-  done
-  printf '%s\n' "$n"
+# Slugs state.json tracks at PHASE, alphabetically.
+slugs_at() {
+  jq -r --arg p "$1" '.slugs // {} | to_entries[] | select(.value.phase == $p) | .key' "$STATE_FILE" 2>/dev/null | sort
 }
 
-# True when any task file of the plan still has an unchecked step.
-has_open_step() { grep -qE '^- \[ \]' "$FLOOR/plans/$1"/task-*.md 2>/dev/null; }
+# Every slug state.json tracks, regardless of phase.
+all_slugs() {
+  jq -r '.slugs // {} | keys[]' "$STATE_FILE" 2>/dev/null | sort
+}
 
-# True when the overview carries the REVIEW phase's closing verdict line. That
-# line is the only thing that releases a plan to the archiver, and the REVIEW
-# phase is the only writer of it.
-reviewed() { grep -qE '^- Verdict: ' "$FLOOR/plans/$1.md" 2>/dev/null; }
+# The one floor path that must exist for a slug parked at PHASE.
+phase_file() {
+  local slug="$1" phase="$2"
+  case "$phase" in
+    SPECIFY)                  printf '%s\n' "$FLOOR/drafts/$slug.md" ;;
+    REVIEW-SPEC|PLAN)         printf '%s\n' "$FLOOR/specs/$slug.md" ;;
+    IMPLEMENT|REVIEW|ARCHIVE) printf '%s\n' "$FLOOR/plans/$slug.md" ;;
+  esac
+}
 
-# A plan whose task files exist and are all ticked — the input of both REVIEW
-# and ARCHIVE. The task-file count is what stops an empty plan directory from
-# satisfying "all steps ticked" for free and archiving work that was never
-# built.
-candidates_finished() {
-  local s
+# The safety net: every floor .md must have a state.json entry, and every
+# state.json entry must have its phase-appropriate floor file. Directory
+# listings only, never file content.
+check_orphans() {
+  local s p
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue
-    [[ $(task_count "$s") -ge 1 ]] || continue
-    has_open_step "$s" && continue
-    printf '%s\n' "$s"
-  done < <(slugs_in plans)
-  return 0
-}
+    [[ -n "$(slug_phase "$s")" ]] || return 1
+  done < <(slugs_in drafts; slugs_in specs; slugs_in plans)
 
-# ARCHIVE: finished and reviewed. REVIEW: finished, not yet reviewed.
-candidates_archive() {
-  local s
-  while IFS= read -r s; do
-    reviewed "$s" && printf '%s\n' "$s"
-  done < <(candidates_finished)
-  return 0
-}
-
-candidates_review() {
-  local s
-  while IFS= read -r s; do
-    reviewed "$s" || printf '%s\n' "$s"
-  done < <(candidates_finished)
-  return 0
-}
-
-# IMPLEMENT: a plan with an unchecked step.
-candidates_implement() {
-  local s
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue
-    has_open_step "$s" || continue
-    printf '%s\n' "$s"
-  done < <(slugs_in plans)
-}
-
-# True when the spec carries the REVIEW-SPEC phase's closing verdict line. That
-# line is the only thing that releases a spec to PLAN, and the REVIEW-SPEC
-# phase is the only writer of it.
-spec_reviewed() { grep -qE '^- Verdict: ' "$FLOOR/specs/$1.md" 2>/dev/null; }
-
-# PLAN: a reviewed spec with no plan overview, or an overview with no task
-# files — a PLAN phase that died before writing them. Without the second clause
-# that plan matches no stage and is unreachable for the life of the floor.
-candidates_plan() {
-  local s
-  while IFS= read -r s; do
-    [[ -n "$s" ]] || continue
-    spec_reviewed "$s" || continue
-    if [[ ! -f "$FLOOR/plans/$s.md" ]] || [[ $(task_count "$s") -eq 0 ]]; then
-      printf '%s\n' "$s"
-    fi
-  done < <(slugs_in specs)
-}
-
-# REVIEW-SPEC: a spec with no verdict line and no plan overview. A spec is
-# reviewed once, before it is planned; one that already has an overview is
-# never sent back here.
-candidates_review_spec() {
-  local s
-  while IFS= read -r s; do
-    [[ -n "$s" ]] || continue
-    spec_reviewed "$s" && continue
-    [[ -f "$FLOOR/plans/$s.md" ]] && continue
-    printf '%s\n' "$s"
-  done < <(slugs_in specs)
+    p=$(slug_phase "$s")
+    [[ -f "$(phase_file "$s" "$p")" ]] || return 1
+  done < <(all_slugs)
   return 0
-}
-
-# SPECIFY: any draft.
-candidates_specify() { slugs_in drafts; }
-
-# The floor holds no .md work at all.
-floor_is_empty() {
-  [[ $(count "$FLOOR/drafts") -eq 0 ]] &&
-  [[ $(count "$FLOOR/specs") -eq 0 ]] &&
-  [[ $(count "$FLOOR/plans") -eq 0 ]]
 }
 
 main() {
   local pick
   [[ -d "$FLOOR" ]] || { echo "FINISH"; exit 0; }
   [[ -z "$(git status --porcelain 2>/dev/null)" ]] || { echo "RECOVER"; exit 0; }
+  check_orphans || { echo "RECOVER"; exit 0; }
 
-  pick=$(candidates_archive   | least_struck ARCHIVE);   [[ -z "$pick" ]] || { echo "ARCHIVE $pick"; exit 0; }
-  pick=$(candidates_review    | least_struck REVIEW);    [[ -z "$pick" ]] || { echo "REVIEW $pick"; exit 0; }
-  pick=$(candidates_implement | least_struck IMPLEMENT); [[ -z "$pick" ]] || { echo "IMPLEMENT $pick"; exit 0; }
-  pick=$(candidates_plan      | least_struck PLAN);      [[ -z "$pick" ]] || { echo "PLAN $pick"; exit 0; }
-  pick=$(candidates_review_spec | least_struck REVIEW-SPEC); [[ -z "$pick" ]] || { echo "REVIEW-SPEC $pick"; exit 0; }
-  pick=$(candidates_specify   | least_struck SPECIFY);   [[ -z "$pick" ]] || { echo "SPECIFY $pick"; exit 0; }
+  pick=$(slugs_at ARCHIVE     | least_struck ARCHIVE);     [[ -z "$pick" ]] || { echo "ARCHIVE $pick"; exit 0; }
+  pick=$(slugs_at REVIEW      | least_struck REVIEW);      [[ -z "$pick" ]] || { echo "REVIEW $pick"; exit 0; }
+  pick=$(slugs_at IMPLEMENT   | least_struck IMPLEMENT);   [[ -z "$pick" ]] || { echo "IMPLEMENT $pick"; exit 0; }
+  pick=$(slugs_at PLAN        | least_struck PLAN);        [[ -z "$pick" ]] || { echo "PLAN $pick"; exit 0; }
+  pick=$(slugs_at REVIEW-SPEC | least_struck REVIEW-SPEC); [[ -z "$pick" ]] || { echo "REVIEW-SPEC $pick"; exit 0; }
+  pick=$(slugs_at SPECIFY     | least_struck SPECIFY);     [[ -z "$pick" ]] || { echo "SPECIFY $pick"; exit 0; }
 
-  # No stage claimed the floor. That is the end of the flow only when nothing
-  # is left; anything remaining is an anomaly for the janitor — an orphan plan
-  # overview whose spec is gone, or a slug parked at STRIKE_LIMIT that was
-  # never moved to done/.
-  if floor_is_empty; then echo "FINISH"; else echo "RECOVER"; fi
+  if [[ -z "$(all_slugs)" ]]; then echo "FINISH"; else echo "RECOVER"; fi
 }
 
 main "$@"
