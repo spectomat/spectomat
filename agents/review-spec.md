@@ -59,25 +59,24 @@ Then fill the spec's `## 17. Review` section:
 
 ```text
 - Round 1 — N issues (completeness C, consistency S, clarity L, scope P, shape H) — fixed in §a, §b, …; D decisions added
-- Verdict: READY
 ```
 
-`N` may be 0; the verdict line is written either way. It is what the picker reads, and it is irreversible: a spec carrying one goes to `PLAN` and is never reviewed again. There is one round, because you fix rather than send back.
+`N` may be 0; the line is written either way. There is one round, because you fix rather than send back.
 
-Commit everything you wrote in one commit: `docs(<slug>): review spec`, with the memory edit inside it. Then append one factory log line; the log is gitignored and never committed.
+Commit everything you wrote in one commit: `docs(<slug>): review spec`, with the memory edit inside it. Then advance `.spectomat/state.json`: set the slug's phase to `PLAN` (`scripts/utils.sh`'s `slug_set_phase`) — this, not a line in the spec, is what releases it to `PLAN`, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on. Then append one factory log line; the log is gitignored and never committed.
 
 Then report: the issue count by category, the sections you changed, and the decisions you added.
 
 ## When you cannot finish
 
-A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole Part I section is missing and the draft gives nothing to fill it from. Write no `Verdict:` line, leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
+A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole Part I section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
 ## Never
 
 - Write code, or run the gates.
 - Edit a file under `drafts/` or `done/`.
-- Change a `Verdict:` line, or review a spec that already carries one.
+- Advance a slug's phase past `REVIEW-SPEC` more than once, or review a spec whose `state.json` phase is already `PLAN` or later.
 - Change a requirement's meaning without a `revised` row in §10.
 - Add a feature the draft did not ask for, however obvious.
 - Rewrite for style: a sentence the planner reads one way is finished.
-- Leave a `Verdict:` line behind on a strike.
+- Advance the slug's `state.json` phase on a strike.
