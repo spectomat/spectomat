@@ -261,7 +261,8 @@ The log line's numbers are the gate count, not test counts: a script has first-h
 | `scripts/utils.sh` | shared helpers (§5.2–§5.4), paths, `cd_root`, `state_field`, `render_template`; sourced by every script |
 | `scripts/stop-hook.sh` | blocks the session exit, bumps the iteration counter, feeds back the pointer |
 | `scripts/status.sh`, `print.sh`, `cancel.sh`, `gates.sh` | operator surface (§7) and gate-command detection |
-| `scripts/selftest.sh` | the suite (§10) |
+| `scripts/selftest.sh` | runs every `scripts/tests/*_test.sh` file and reports the combined tally |
+| `scripts/tests/*.sh` | the suite (§10), one file per section, each independently runnable |
 | `agents/specify.md` | draft → spec — `spectomat:specify` |
 | `agents/review-spec.md` | spec → reviewed spec — `spectomat:review-spec` |
 | `agents/plan.md` | reviewed spec → plan — `spectomat:plan` |
@@ -422,7 +423,7 @@ A new placeholder requires a matching value in the `render_template` call in `pr
 
 ### 10.3 Fixtures
 
-The bash equivalent of a port and a fake. Every case in `selftest.sh` builds one:
+The bash equivalent of a port and a fake. Every case in `scripts/tests/*.sh` builds one, using the shared fixture helpers in `scripts/tests/lib.sh`:
 
 ```text
 floor(dir, spec):   under a fresh `mktemp -d`, `git init`, then create the
@@ -455,7 +456,7 @@ Cases are then a verdict assertion (`pk NAME want`) or an effect assertion over 
 ### 10.4 The gates
 
 ```bash
-bash -n scripts/*.sh
+bash -n scripts/*.sh scripts/tests/*.sh
 scripts/selftest.sh
 claude plugin validate .claude-plugin/plugin.json --strict
 claude plugin validate .claude-plugin/marketplace.json --strict
