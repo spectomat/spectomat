@@ -90,29 +90,29 @@ Then append to the overview's `## Review`:
 - Round R — N findings (C critical, I important, M minor) — tasks NN–MM added
 ```
 
-and, only when the round closes the plan, one further line:
+Then, only when the round closes the plan, advance `.spectomat/state.json`:
 
-| Situation | Line |
+| Situation | `state.json` change |
 | --- | --- |
-| No Critical and no Important finding this round | `- Verdict: CLEAN` |
-| R = `MAX_REVIEW_ROUNDS` and findings remain | `- Verdict: PARKED` — first rule on every open finding in `<slug>.ruling.md`, so a reader knows what shipped and why |
+| No Critical and no Important finding this round | `slug_set_phase <slug> ARCHIVE` |
+| R = `MAX_REVIEW_ROUNDS` and findings remain | `slug_add_tasks <slug> <n>`, n the fix tasks just added — first rule on every open finding in `<slug>.ruling.md`, so a reader knows what shipped and why |
 
-The `Verdict:` line is what the picker reads, and it is irreversible: a plan carrying one goes to `ARCHIVE` and is never reviewed again. Write no `Verdict:` line while you have added fix tasks and rounds remain — the plan then has unchecked steps, the picker returns `IMPLEMENT`, and the plan comes back to you when they are ticked.
+This is what releases a plan, and it is irreversible: a slug moved to `ARCHIVE` is never reviewed again. Make no phase change while you have added fix tasks and rounds remain — `slug_add_tasks` (or leaving the phase at `IMPLEMENT` untouched) is what sends the plan back for its tasks to be ticked.
 
-Commit everything you wrote in one commit: `chore(<slug>): review round R`. Then append one factory log line; the log is gitignored and never committed.
+Commit everything you wrote in one commit: `chore(<slug>): review round R`. Then apply the `state.json` change above, then append one factory log line; the log is gitignored and never committed.
 
 Then report: the round, the counts by severity, the tasks you added, and the verdict if you wrote one.
 
 ## When you cannot finish
 
-A plan you cannot review is a strike, not a guess: a `<slug>.result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `<slug>.ruling.md`, leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
+A plan you cannot review is a strike, not a guess: a `<slug>.result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `<slug>.ruling.md`, bump the slug's `REVIEW` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
 ## Never
 
 - Change a source file or a test.
 - Fix a finding yourself, however small.
-- Write a `Verdict:` line in a round where you added fix tasks, unless that round is `MAX_REVIEW_ROUNDS`.
+- Move the slug's phase to `ARCHIVE` in a round where you added fix tasks, unless that round is `MAX_REVIEW_ROUNDS`.
 - Turn a Minor finding into a task.
 - Raise a style nit the gates do not enforce and `memory.md` does not record.
-- Review a plan that already carries a `Verdict:` line.
+- Review a plan whose `state.json` phase is not `REVIEW`.
 - Read the whole range in one `git diff`.
