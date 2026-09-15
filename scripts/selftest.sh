@@ -51,6 +51,7 @@ floor() {
   FIXTURE="$TMP/floor-$1"
   mkdir -p "$FIXTURE"
   cp -R "$TEMPLATE/." "$FIXTURE"
+  printf '{"active": true, "iteration": 1, "max_iterations": 5, "session_id": "test", "started_at": "t", "slugs": {}}\n' > "$FIXTURE/.spectomat/state.json"
 }
 
 # Commit whatever the last fixture helper created, so the tree stays clean.
@@ -356,6 +357,10 @@ pk "a leftover at the limit is RECOVER, not FINISH" "RECOVER"
 
 floor p_orphan; plan_bare 001-a
 pk "an orphan overview is RECOVER, not FINISH" "RECOVER"
+
+floor p_untracked_file; draft 001-a
+jq 'del(.slugs["001-a"])' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
+pk "a floor file with no state.json entry is RECOVER" "RECOVER"
 
 floor p_pure; spec 001-a; plan 001-a 2 1
 before=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "$FIXTURE" && git status --porcelain)
