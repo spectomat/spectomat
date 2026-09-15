@@ -3,7 +3,7 @@
 #
 #   prepare.sh [MAX_ITERATIONS]
 #
-# Creates .spectomat/{drafts,specs,plans,done}, renders contract.md and
+# Creates .spectomat/{drafts,specs,plans,snippets,done}, renders contract.md and
 # memory.md when absent, commits what it created (contract, memory, ignore
 # rules, drafts the user dropped in), and arms the Stop hook by writing
 # state.json and rendering templates/pointer.md. Default 100 iterations, the
@@ -54,7 +54,7 @@ ensure_gitignored() {
 # Floor directories, ignore rules and the log file. Idempotent.
 # The log, the state file and work/ stay local: never committed.
 prepare_floor() {
-  mkdir -p "$FLOOR"/{drafts,specs,plans,done}
+  mkdir -p "$FLOOR"/{drafts,specs,plans,snippets,done}
   ensure_gitignored "$STATE_FILE"
   ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
   ensure_gitignored "$POINTER"

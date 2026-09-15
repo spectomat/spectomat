@@ -29,10 +29,7 @@ Every criterion id in the spec, and the task that covers it. A criterion with no
 | --- | --- |
 | AC-1.1 | 1 |
 
-## Rulings
-
-appended by the `IMPLEMENT` phase for decisions that cross tasks, and by the `REVIEW` phase for the Minor findings it parks:
-`- Task N · <decision> — <why> — <cost if wrong>`
+Rulings and Result are not sections of this file: the `IMPLEMENT` phase and the `REVIEW` phase record them in `{{SLUG}}.ruling.md` and `{{SLUG}}.result.md`, siblings of this overview, one entry per task.
 
 ## Review
 

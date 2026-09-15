@@ -28,7 +28,7 @@ TEMPLATE=""
 # `cp -R` a real repo instead of re-running git init/config/commit per call.
 floor_template() {
   TEMPLATE="$TMP/floor-template"
-  mkdir -p "$TEMPLATE/.spectomat"/{drafts,specs,plans,done}
+  mkdir -p "$TEMPLATE/.spectomat"/{drafts,specs,plans,snippets,done}
   (
     cd "$TEMPLATE" || exit 1
     git init -q .

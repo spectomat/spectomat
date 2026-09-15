@@ -12,8 +12,9 @@ Nobody is watching. **Never ask a question.** Where an input is silent, decide, 
 .spectomat/
   drafts/      raw ideas, one .md each — the user drops them here; worked in alphabetical order
   specs/       normative specs, one per draft slug — you write these, then review them once before planning
-  plans/       one overview per spec slug, plus <slug>/task-NN-<name>.md per task — you write these
-  done/        <slug>.draft.md, <slug>.spec.md, <slug>.plan.md and <slug>/ task files, moved here when a plan completes
+  plans/       one overview per spec slug, plus <slug>/task-NN-<name>.md per task, and <slug>.ruling.md / <slug>.result.md, one entry per task — you write these
+  snippets/    <slug>/task-NN-stepM.<ext>, the code a task's steps name instead of inlining — you write these
+  done/        <slug>.draft.md, <slug>.spec.md, <slug>.plan.md, <slug>.ruling.md and <slug>.result.md if they exist, <slug>/ task files and <slug>/ snippets, moved here when a plan completes
   log.md       append-only, one line per phase of work — gitignored, never committed
   contract.md  this file
   memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit

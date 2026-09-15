@@ -21,15 +21,17 @@ Never spawn a subagent. Work on the current branch.
 
 ## Inputs
 
-- the plan overview `.spectomat/plans/<slug>.md` — Goal, Global Constraints, File map, Coverage table, and any `## Rulings` the `IMPLEMENT` phase left
-- every task file `.spectomat/plans/<slug>/task-NN-*.md` — each one's Constraints, Files, Interfaces, Covers and Steps are the requirements it was built against, and its `## Result` gives its commit range
+- the plan overview `.spectomat/plans/<slug>.md` — Goal, Global Constraints, File map, Coverage table
+- `.spectomat/plans/<slug>.ruling.md`, if it exists — every ruling the `IMPLEMENT` phase left, tagged by task
+- `.spectomat/plans/<slug>.result.md` — one entry per task, each giving that task's commit range
+- every task file `.spectomat/plans/<slug>/task-NN-*.md` — its Constraints, Files, Interfaces, Covers and Steps are the requirements it was built against
 - the spec `.spectomat/specs/<slug>.md` — the criteria the Coverage table claims to have covered
 - `.spectomat/memory.md` — how this codebase does things. Context, not a requirement: cite it when the diff departs from a pattern it records.
 - a scratch directory `.spectomat/work/<slug>/` (gitignored) for the stat and anything else you do not want in your context twice
 
 ## The diff
 
-The plan's range runs from the first task's base to the last task's head, both read off the `Commits:` line of each `## Result`.
+The plan's range runs from the first task's base to the last task's head, both read off the `Commits:` line of each task's entry in `<slug>.result.md`.
 
 ```bash
 mkdir -p .spectomat/work/<slug>
@@ -75,7 +77,7 @@ Count the `- Round` lines already under the overview's `## Review`; this is roun
 
 **Critical and Important findings become tasks.** One task file per finding, or one per cluster sharing a root cause, numbered on from the last task, from `<plugin root>/templates/task.md`, plus a row in the overview's task table. Write each as the fix, not as the complaint: the Goal says what is true once it is fixed, `Files` names exact paths, and Step 1 is the failing test that reproduces the defect. A task nobody could execute alone is a task that comes back to you next round.
 
-**Minor findings become rulings** under the overview's `## Rulings`. They never become tasks.
+**Minor findings become rulings** in `<slug>.ruling.md`, a sibling of the overview, creating it if it does not yet exist. They never become tasks.
 
 Then append to the overview's `## Review`:
 
@@ -88,7 +90,7 @@ and, only when the round closes the plan, one further line:
 | Situation | Line |
 | --- | --- |
 | No Critical and no Important finding this round | `- Verdict: CLEAN` |
-| R = `MAX_REVIEW_ROUNDS` and findings remain | `- Verdict: PARKED` — first rule on every open finding under `## Rulings`, so a reader knows what shipped and why |
+| R = `MAX_REVIEW_ROUNDS` and findings remain | `- Verdict: PARKED` — first rule on every open finding in `<slug>.ruling.md`, so a reader knows what shipped and why |
 
 The `Verdict:` line is what the picker reads, and it is irreversible: a plan carrying one goes to `ARCHIVE` and is never reviewed again. Write no `Verdict:` line while you have added fix tasks and rounds remain — the plan then has unchecked steps, the picker returns `IMPLEMENT`, and the plan comes back to you when they are ticked.
 
@@ -98,7 +100,7 @@ Then report: the round, the counts by severity, the tasks you added, and the ver
 
 ## When you cannot finish
 
-A plan you cannot review is a strike, not a guess: a `## Result` with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you under the overview's `## Rulings`, leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
+A plan you cannot review is a strike, not a guess: a `<slug>.result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `<slug>.ruling.md`, leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
 ## Never
 

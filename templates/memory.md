@@ -4,7 +4,7 @@ What the factory has learned about this codebase. Every iteration reads it befor
 
 **One line per entry**, in the section it belongs to, `- <the fact> — <why the next iteration cares>`, paths and commands in backticks. Newest last.
 
-**A fact earns a line only if all three hold**: it is still true after the current plan is archived, an iteration working on a *different* task would want it, and it is not one grep away from a file that iteration already reads. Anything that fails a test belongs elsewhere: what happened is `log.md`, what is being built is the spec, how it is being built is the plan, a decision binding one task is that task's `## Rulings`.
+**A fact earns a line only if all three hold**: it is still true after the current plan is archived, an iteration working on a *different* task would want it, and it is not one grep away from a file that iteration already reads. Anything that fails a test belongs elsewhere: what happened is `log.md`, what is being built is the spec, how it is being built is the plan, a decision binding one task is a line in the plan's `.ruling.md`.
 
 **Correct or delete on contradiction.** A wrong memory costs more than no memory. When a section passes ~12 lines, merge the weakest entries or drop them; the whole file stays under ~40.
 

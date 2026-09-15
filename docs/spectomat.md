@@ -41,7 +41,7 @@ Stop hook
 
 ## 2. Domain Model
 
-The floor is `.spectomat/`: `drafts/`, `specs/`, `plans/`, `done/`, `work/`, plus `log.md`, `contract.md`, `memory.md`, `state.json` and `pointer.md`. The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
+The floor is `.spectomat/`: `drafts/`, `specs/`, `plans/`, `snippets/`, `done/`, `work/`, plus `log.md`, `contract.md`, `memory.md`, `state.json` and `pointer.md`. The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
 
 ### 2.1 `verdict`
 

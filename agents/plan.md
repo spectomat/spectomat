@@ -22,8 +22,9 @@ A plan is an overview plus one file per task. Each task file is a complete brief
 **Save to:**
 
 ```
-.spectomat/plans/<slug>.md                 overview
-.spectomat/plans/<slug>/task-01-<name>.md  one per task, zero-padded, in execution order
+.spectomat/plans/<slug>.md                       overview
+.spectomat/plans/<slug>/task-01-<name>.md        one per task, zero-padded, in execution order
+.spectomat/snippets/<slug>/task-01-step1.<ext>   the code for that task's code-bearing steps
 ```
 
 ## Before the tasks
@@ -41,22 +42,23 @@ Follow `<plugin root>/templates/task.md` exactly. A task file is read by an agen
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths; **Interfaces** with exact names and signatures consumed from earlier tasks and produced for later ones.
 - **Covers** — the criterion ids this task's tests name.
-- **Steps** — five checkbox steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes and shows its code. The checkboxes are how the `IMPLEMENT` phase finds its work and how the `ARCHIVE` phase knows the plan is finished: never omit them.
-- **Rulings** and **Result** — left empty; the `IMPLEMENT` phase fills them.
+- **Steps** — five checkbox steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/snippets/<slug>/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. The checkboxes are how the `IMPLEMENT` phase finds its work and how the `ARCHIVE` phase knows the plan is finished: never omit them.
+- **Rulings and Result** are not sections of the task file: the `IMPLEMENT` phase records them later, one entry per task, in the plan's `<slug>.ruling.md` and `<slug>.result.md`. Write neither file yourself.
 
 ## No placeholders
 
-Never write: TBD, TODO, "implement later", "add error handling", "handle edge cases", "write tests for the above" without the test code, "similar to Task N" instead of the code, or a reference to a type or function no task defines. A code step shows the code.
+Never write: TBD, TODO, "implement later", "add error handling", "handle edge cases", "write tests for the above" without the test code, "similar to Task N" instead of the code, or a reference to a type or function no task defines. A code step names a snippet file, and that file holds the real code, not a placeholder.
 
 ## Self-review
 
 After writing every file, check them against the spec yourself:
 
 1. **Coverage** — every criterion id in the spec is in the coverage table and in some task's Covers line. A criterion with no task gets one.
-2. **Placeholders** — search every task file for the patterns above.
+2. **Placeholders** — search every task file and every snippet for the patterns above.
 3. **Consistency** — a name, signature or type consumed in a later task is produced, spelled the same, by a task it depends on.
 4. **Ownership** — no file appears in the Files of two tasks unless the later one depends on the earlier, and no `Depends on` names a higher number.
 5. **Self-containment** — read one task file alone: could it be executed without the plan? If not, copy in what is missing.
+6. **Snippets exist** — every snippet path a task file names under `.spectomat/snippets/<slug>/` is a file you actually wrote.
 
 Fix inline and move on. Do not ask which execution mode to use; the `IMPLEMENT` phase always runs one task per iteration.
 

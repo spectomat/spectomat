@@ -33,13 +33,13 @@ Work on the current branch. Never create branches or worktrees.
 
 `.spectomat/memory.md` is an input too: what it says about this codebase settles a question before you spend an hour on it, and it is where this task's findings go in step 6.
 
-If no task is ready while open steps remain, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan overview, log a strike, and stop.
+If no task is ready while open steps remain, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan's `<slug>.ruling.md`, log a strike, and stop.
 
 ## Commit boundary
 
 **One task is one `feat` commit; ticking the task file is a second `chore` commit.**
 
-The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range each `## Result` records, so a task whose Result is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file you touched out of one.
+The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range each task's entry in `<slug>.result.md` records, so a task whose entry is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file you touched out of one.
 
 ## Steps
 
@@ -47,25 +47,33 @@ The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range 
 2. **Build it.** Follow the task's Steps in order under Test-driven development below: the failing test first, watched failing for the right reason, then the minimal code, watched passing. Create or modify only the files the task lists under `Files`. If its tests need a file it does not list, add that file and record a ruling naming it.
 3. **Gates.** Run every Verification Gate in the contract once, whole, and read the output. Red is a debugging job, not a retry — see Gates below.
 4. **Commit.** `git add` exactly this task's Files, plus any test fixture you created, and commit with the message its Step 5 gives; record the commit. Anything left unstaged belongs to nobody: inspect it, then discard it.
-5. **Close the task file.** Tick every step and fill `## Result`: the commit range, and the test count from the gate run in step 3 — that output, not a memory of an earlier one.
+5. **Close the task file.** Tick every step and append this task's entry to the plan's `<slug>.result.md` (a sibling of the overview, creating it if it does not yet exist) with the commit range and the test count from the gate run in step 3 — that output, not a memory of an earlier one:
+
+```text
+## Task NN
+- Commits: <base7>..<head7>
+- Tests: <n>/<n> (<files>)
+- Gates: <n>/<n> green
+```
+
 6. **Memory.** Ask what would have saved you time at the start of this task: where something lives, what a command costs, a convention to copy, a trap and its symptom. Apply the contract's three tests — durable, reusable, non-obvious — and add what survives to `.spectomat/memory.md`. A trap that cost you an hour this iteration is the entry most worth having; anything true only of this task never is.
-7. **Commit the close.** Task file and memory edit together: `chore(<slug>): Task NN ticked`. Then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks goes to the plan overview's `## Rulings` as well.
+7. **Commit the close.** Task file, `<slug>.result.md` and the memory edit together: `chore(<slug>): Task NN ticked`. Then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks is already in `<slug>.ruling.md`, not a second place to write it.
 
 Then report: the task that closed, its commits, and the gate numbers from step 3.
 
 ## Rulings
 
-A ruling is a decision the spec, plan or task did not make: an ambiguity, a defect in the brief, a choice the task left open. Append it to the task file under `## Rulings`:
+A ruling is a decision the spec, plan or task did not make: an ambiguity, a defect in the brief, a choice the task left open. Append it to the plan's `<slug>.ruling.md` (a sibling of the overview, creating it if it does not yet exist):
 
 ```text
-- <what you decided> — <why> — <what it costs if wrong>
+- Task NN · <what you decided> — <why> — <what it costs if wrong>
 ```
 
 The spec binds; the plan argues from it; your ruling settles what neither answers. A recorded wrong ruling is cheap to revert; a stalled task is not.
 
 ## When you cannot finish
 
-A task you cannot build is a strike, not a guess: a brief that contradicts itself, a dependency that does not exist, three failed fixes against the same gate. Write what defeated you under the task's `## Rulings`, revert the task's Files with `git checkout --` and delete the ones you created, append a log line ending `(strike N: <reason>)`, and stop.
+A task you cannot build is a strike, not a guess: a brief that contradicts itself, a dependency that does not exist, three failed fixes against the same gate. Write what defeated you to the plan's `<slug>.ruling.md`, tagged with this task's number, revert the task's Files with `git checkout --` and delete the ones you created, append a log line ending `(strike N: <reason>)`, and stop.
 
 The next iteration's picker skips this slug in favour of another candidate; on the third strike the plan is blocked and the operator sees it in `/spectomat:status`.
 

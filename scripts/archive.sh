@@ -68,8 +68,18 @@ gate_or_strike() {
 move_trail() {
   git mv "$FLOOR/specs/$SLUG.md" "$FLOOR/done/$SLUG.spec$BLOCK.md" || fail_move "specs/$SLUG.md"
   git mv "$FLOOR/plans/$SLUG.md" "$FLOOR/done/$SLUG.plan$BLOCK.md" || fail_move "plans/$SLUG.md"
+  if [[ -f "$FLOOR/plans/$SLUG.ruling.md" ]]; then
+    git mv "$FLOOR/plans/$SLUG.ruling.md" "$FLOOR/done/$SLUG.ruling$BLOCK.md" || fail_move "plans/$SLUG.ruling.md"
+  fi
+  if [[ -f "$FLOOR/plans/$SLUG.result.md" ]]; then
+    git mv "$FLOOR/plans/$SLUG.result.md" "$FLOOR/done/$SLUG.result$BLOCK.md" || fail_move "plans/$SLUG.result.md"
+  fi
   if [[ -d "$FLOOR/plans/$SLUG" ]]; then
     git mv "$FLOOR/plans/$SLUG" "$FLOOR/done/$SLUG" || fail_move "plans/$SLUG"
+  fi
+  if [[ -d "$FLOOR/snippets/$SLUG" ]]; then
+    mkdir -p "$FLOOR/done/$SLUG"
+    git mv "$FLOOR/snippets/$SLUG" "$FLOOR/done/$SLUG/snippets" || fail_move "snippets/$SLUG"
   fi
 }
 
@@ -86,7 +96,7 @@ commit_archive() {
   else
     msg="chore($SLUG): archived"
   fi
-  git add -A "$FLOOR/done" "$FLOOR/specs" "$FLOOR/plans"
+  git add -A "$FLOOR/done" "$FLOOR/specs" "$FLOOR/plans" "$FLOOR/snippets"
   if ! git commit -q -m "$msg"; then
     strike "commit failed" >/dev/null
     echo "❌ commit failed after moving $SLUG's trail" >&2
