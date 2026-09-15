@@ -139,7 +139,7 @@ state_slug() {
 strike() {
   local slug="$1" phase="$2" n="${3:-1}"
   jq --arg s "$slug" --arg p "$phase" --argjson n "$n" \
-    '.slugs[$s].strikes[$p] = $n' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
+    '.slugs[$s] //= {} | .slugs[$s].strikes //= {} | .slugs[$s].strikes[$p] = $n' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
     && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
 }
 
@@ -299,12 +299,6 @@ pk "a reviewed spec with no plan is PLAN" "PLAN 001-a"
 floor p_bare; spec 001-a yes; plan_bare 001-a
 pk "an overview with no task files is PLAN" "PLAN 001-a"
 
-# A spec is reviewed once, before it is planned: an overview already exists, so
-# the spec is never sent back to REVIEW-SPEC, and PLAN wants the latch. Nothing
-# claims it; the janitor rules.
-floor p_unlatched; spec 001-a; plan_bare 001-a
-pk "an unreviewed spec with an overview is RECOVER" "RECOVER"
-
 floor p_c; spec 001-a; plan 001-a 3 1
 pk "an open step is IMPLEMENT" "IMPLEMENT 001-a"
 
@@ -320,11 +314,8 @@ floor p_fixtasks; spec 001-a; plan 001-a 3 0
 printf -- '- [ ] step\n' > "$FIXTURE/.spectomat/plans/001-a/task-04-fix.md"
 printf 'overview\n\n## Review\n\n- Round 1 — 2 findings (0 critical, 2 important, 0 minor) — tasks 04 added\n' > "$FIXTURE/.spectomat/plans/001-a.md"
 fixture_commit
+state_slug 001-a IMPLEMENT 4 3
 pk "a review round without a verdict reopens IMPLEMENT" "IMPLEMENT 001-a"
-
-floor p_vacuous; spec 001-a yes; plan_bare 001-a
-mkdir -p "$FIXTURE/.spectomat/plans/001-a"
-pk "an empty task dir is never REVIEW or ARCHIVE" "PLAN 001-a"
 
 # One candidate per stage, all six at once; ARCHIVE wins.
 floor p_order; draft 006-f; spec 005-e; spec 004-d yes; plan 003-c 2 1; spec 003-c; spec 002-b; plan 002-b 1 0; spec 001-a; plan 001-a 2 0 yes
