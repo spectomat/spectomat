@@ -470,6 +470,12 @@ floor st2
 st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
 is "an empty floor predicts FINISH" "$(printf '%s\n' "$st_out" | grep -c '^FINISH$')" "1"
 
+# A slug at SPECIFY/REVIEW-SPEC/PLAN/ARCHIVE must still show in the plans
+# section, not just IMPLEMENT/REVIEW, or it silently vanishes from status.
+floor st3; draft 002-b; spec 001-a yes
+st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
+is "status lists a PLAN-phase slug" "$(printf '%s\n' "$st_out" | grep -c 'phase PLAN')" "1"
+
 # Arming a floor must leave a clean tree. The picker reads `git status` and
 # answers RECOVER to any dirt, so a draft the user dropped into drafts/ must be
 # committed by prepare.sh, or iteration 1 burns on the janitor.

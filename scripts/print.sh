@@ -41,8 +41,7 @@ print_plans() {
     printf "%-24s phase %-10s tasks %2d  done %3d  next: %s\n" "$slug" "$phase" "$tasks_total" "$tasks_done" "$next"
   done < <(jq -r '
     .slugs // {} | to_entries[]
-    | select(.value.phase == "IMPLEMENT" or .value.phase == "REVIEW")
-    | [.key, .value.phase, (.value.tasks_total // 0), (.value.tasks_done // 0)] | @tsv
+    | [.key, (.value.phase // "?"), (.value.tasks_total // 0), (.value.tasks_done // 0)] | @tsv
   ' "$STATE_FILE" 2>/dev/null | sort)
 }
 
