@@ -9,7 +9,11 @@
 print_iteration() {
   echo "--- flow ---"
   if [[ -f "$STATE_FILE" ]]; then
-    echo "active: iteration $(state_field iteration) of $(state_field max_iterations)"
+    if [[ "$(state_field active)" == "true" ]]; then
+      echo "active: iteration $(state_field iteration) of $(state_field max_iterations)"
+    else
+      echo "cancelled: was at iteration $(state_field iteration) of $(state_field max_iterations) — /spectomat:run resumes it"
+    fi
   else
     echo "not running"
   fi
@@ -27,18 +31,19 @@ memory_entries() {
   grep -c '^- ' "$MEMORY" | tr -d ' '
 }
 
-# One line per plan: task count, ticked/open steps across its task files, next open task.
 print_plans() {
-  local p slug tasks ticked open next
-  for p in "$FLOOR"/plans/*.md; do
-    [[ -f "$p" ]] || continue
-    slug="$(basename "$p" .md)"
-    tasks=$(find "$FLOOR/plans/$slug" -maxdepth 1 -name 'task-*.md' 2>/dev/null | wc -l | tr -d ' ')
-    ticked=$(cat "$FLOOR/plans/$slug"/task-*.md 2>/dev/null | grep -cE '^- \[x\]' || true)
-    open=$(cat "$FLOOR/plans/$slug"/task-*.md 2>/dev/null | grep -cE '^- \[ \]' || true)
-    next=$(grep -lE '^- \[ \]' "$FLOOR/plans/$slug"/task-*.md 2>/dev/null | head -1)
-    printf "%-24s tasks %2d  steps done %3d  open %3d  next: %s\n" "$slug" "$tasks" "$ticked" "$open" "${next:+$(basename "$next")}"
-  done
+  local slug phase tasks_total tasks_done next
+  [[ -f "$STATE_FILE" ]] || return 0
+  while IFS=$'\t' read -r slug phase tasks_total tasks_done; do
+    [[ -n "$slug" ]] || continue
+    next="-"
+    [[ "$phase" != "IMPLEMENT" ]] || next=$((tasks_done + 1))
+    printf "%-24s phase %-10s tasks %2d  done %3d  next: %s\n" "$slug" "$phase" "$tasks_total" "$tasks_done" "$next"
+  done < <(jq -r '
+    .slugs // {} | to_entries[]
+    | select(.value.phase == "IMPLEMENT" or .value.phase == "REVIEW")
+    | [.key, .value.phase, (.value.tasks_total // 0), (.value.tasks_done // 0)] | @tsv
+  ' "$STATE_FILE" 2>/dev/null | sort)
 }
 
 print_blocked() {
