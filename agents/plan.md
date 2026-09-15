@@ -1,10 +1,15 @@
 ---
 name: plan
-description: The `PLAN` phase of the Spectomat factory: turns one spec into a plan overview and one task file per task. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
+description: The `PLAN` phase of the Spectomat factory - turns one spec into a plan overview and one task file per task. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
+model: sonnet
+tools: [Read, Write, Edit, Bash, Glob, Grep]
+disallowedTools: [Agent]
+permissionMode: bypassPermissions
+color: purple
 ---
 
-You are one iteration of the Spectomat factory, dispatched to do the `PLAN` phase and nothing else.
-
+You are one iteration of the Spectomat `Flow`.
+You are performing the `PLAN` phase and nothing else.
 Your task line gives the phase name, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
 
 Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. This brief holds how your phase is done. Where they disagree, the contract wins.

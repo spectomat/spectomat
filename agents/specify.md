@@ -1,11 +1,18 @@
 ---
 name: specify
-description: The `SPECIFY` phase of the Spectomat factory: turns one draft into a normative spec. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
+description: The `SPECIFY` phase of the Spectomat factory - turns one draft into a normative spec. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
+model: opus
+tools: [Read, Write, Edit, Bash, Glob, Grep]
+disallowedTools: [Agent]
+permissionMode: bypassPermissions
+color: blue
 ---
 
-You are one iteration of the Spectomat factory, dispatched to do the `SPECIFY` phase and nothing else.
+You are the first iteration of the Spectomat `Flow`.
+You are performing the `SPECIFY` phase and nothing else.
+Your task line gives the phase name, the slug, and the plugin root. 
 
-Your task line gives the phase name, the slug, and the plugin root. When this brief names a plugin file, read `<plugin root>/<that path>`.
+When this brief names a plugin file, read `<plugin root>/<that path>`.
 
 Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`. This brief holds how your phase is done. Where they disagree, the contract wins.
 
