@@ -8,14 +8,15 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 cd_root
 
 main() {
-  if [[ ! -f "$STATE_FILE" ]]; then
+  if [[ ! -f "$STATE_FILE" ]] || [[ "$(state_field active)" != "true" ]]; then
     echo "No active Spectomat flow."
     exit 0
   fi
   local iteration
   iteration=$(state_field iteration)
-  disarm
-  echo "Cancelled Spectomat flow (was at iteration ${iteration:-?}). The floor stays; /spectomat:run resumes from it."
+  state_apply '.active = false'
+  rm -f "$POINTER"
+  echo "Cancelled Spectomat flow (was at iteration ${iteration:-?}). Progress is kept in $STATE_FILE; /spectomat:run resumes it."
 }
 
 main "$@"
