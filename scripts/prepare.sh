@@ -124,7 +124,7 @@ report_floor() {
 
 # Refuse to arm when a flow is already active or there is nothing to work on.
 require_startable() {
-  if [[ -f "$STATE_FILE" ]]; then
+  if [[ -f "$STATE_FILE" ]] && [[ "$(state_field active)" == "true" ]]; then
     echo
     echo "❌ Not starting: a flow is already active ($STATE_FILE). Run /spectomat:cancel first."
     exit 1
@@ -152,18 +152,39 @@ require_startable() {
 # Arm the flow: the state the Stop hook reads on every exit attempt, and the
 # pointer it feeds back. Both are written on every run, so a pointer holding a
 # stale PLUGIN_ROOT - the plugin reinstalled at a new cache path - is replaced
-# rather than migrated. The state is four fields, so it is written here instead
-# of rendered from a template. MAX_ITERATIONS is unquoted in the JSON;
-# parse_args has already required it to match ^[0-9]+$.
+# rather than migrated. Resume a cancelled (inactive) state if one exists, else
+# create fresh. MAX_ITERATIONS is unquoted in the JSON; parse_args has already
+# required it to match ^[0-9]+$.
 arm_flow() {
-  cat > "$STATE_FILE" <<EOF
+  local s
+  if [[ -f "$STATE_FILE" ]]; then
+    state_apply '
+      .active = true
+      | .iteration = 1
+      | .max_iterations = ($m | tonumber)
+      | .session_id = $sid
+      | .started_at = $now
+      | .slugs = (.slugs // {})
+    ' --arg m "$MAX_ITERATIONS" --arg sid "${CLAUDE_CODE_SESSION_ID:-}" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  else
+    cat > "$STATE_FILE" <<EOF
 {
+  "active": true,
   "iteration": 1,
   "max_iterations": $MAX_ITERATIONS,
   "session_id": "${CLAUDE_CODE_SESSION_ID:-}",
-  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "slugs": {}
 }
 EOF
+  fi
+
+  for f in "$FLOOR"/drafts/*.md; do
+    [[ -f "$f" ]] || continue
+    s="$(basename "$f" .md)"
+    [[ -n "$(slug_phase "$s")" ]] || slug_add "$s" SPECIFY
+  done
+
   render_template "$TEMPLATES/pointer.md" "$POINTER" \
     PLUGIN_ROOT="$PLUGIN_ROOT"
 }
