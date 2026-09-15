@@ -10,7 +10,11 @@ SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "phase.sh"
-pk() { is "$1" "$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")" "$2"; }
+
+# pk NAME WANT — run the picker and check its plain verdict ("PHASE" or
+# "PHASE slug"), the same shape it printed before it grew a frontmatter
+# block. The frontmatter-shape tests below cover the block's other fields.
+pk() { is "$1" "$(verdict "$FIXTURE" "$SCRIPTS")" "$2"; }
 
 floor p_empty
 pk "an empty floor is FINISH" "FINISH"
@@ -94,5 +98,26 @@ before=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "
 pk "the picker still says IMPLEMENT" "IMPLEMENT 001-a"
 after=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "$FIXTURE" && git status --porcelain)
 is "the picker mutates nothing" "$after" "$before"
+
+# The block carries everything the pointer prompt needs to dispatch —
+# subagent, brief and plugin_root — with no lookup table of its own, so those
+# fields are tested directly rather than through pk's phase/slug extraction.
+plugin_root_expect="$(cd "$SCRIPTS/.." && pwd)"
+
+floor p_frontmatter; draft 001-a
+out="$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")"
+is "the block opens and closes with a fence" "$(printf '%s\n' "$out" | sed -n '1p;$p' | tr '\n' '|')" '---|---|'
+is "subagent names the phase agent" "$(printf '%s\n' "$out" | grep '^subagent:')" "subagent:spectomat:specify"
+is "brief points at the phase's brief file" "$(printf '%s\n' "$out" | grep '^brief:')" "brief:$plugin_root_expect/agents/specify.md"
+is "plugin_root is the absolute plugin path" "$(printf '%s\n' "$out" | grep '^plugin_root:')" "plugin_root:$plugin_root_expect"
+
+floor p_frontmatter_hyphen; spec 001-a
+out="$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")"
+is "a hyphenated phase lowercases whole, not just its first word" "$(printf '%s\n' "$out" | grep '^subagent:')" "subagent:spectomat:review-spec"
+
+floor p_frontmatter_recover; dirty
+out="$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")"
+is "RECOVER's slug field is empty" "$(printf '%s\n' "$out" | grep '^slug:')" "slug:"
+is "RECOVER's subagent is the janitor" "$(printf '%s\n' "$out" | grep '^subagent:')" "subagent:spectomat:recover"
 
 finish

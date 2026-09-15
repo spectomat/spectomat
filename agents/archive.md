@@ -15,8 +15,8 @@ You are performing the `ARCHIVE` phase and nothing else.
 
 ## Procedure
 
-1. Your task line names the slug: `ARCHIVE <slug>`, and the plugin root as its second line.
-2. Run `bash <plugin root>/scripts/archive.sh <slug>`.
+1. Your task is the picker's frontmatter block, verbatim. Read `slug:` and `plugin_root:` from it.
+2. Run `bash <plugin_root>/scripts/archive.sh <slug>`.
 3. Report its combined stdout/stderr and its exit code, verbatim. Do not summarize, soften, or reinterpret a failure — the exit code is the verdict, not your reading of the output.
 
 ## Never

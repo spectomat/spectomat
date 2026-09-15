@@ -27,7 +27,7 @@ abort() { echo "$1" >&2; disarm; exit 0; }
 
 stop_corrupt() {
   echo "⚠️  Spectomat flow: state corrupted" >&2
-  echo "   Files: $STATE_FILE, $POINTER" >&2
+  echo "   File: $STATE_FILE" >&2
   echo "   Problem: $1" >&2
   echo "   The flow is stopping. Run /spectomat:run again to start fresh." >&2
   disarm
@@ -119,8 +119,7 @@ continue_iteration() {
   local next_iteration prompt_text temp_file system_msg
   next_iteration=$((ITERATION + 1))
 
-  prompt_text=$(cat "$POINTER" 2>/dev/null || true)
-  [[ -n "$prompt_text" ]] || stop_corrupt "$POINTER is empty or missing"
+  prompt_text=$(pointer_prompt)
 
   temp_file="${STATE_FILE}.tmp.$$"
   jq --argjson n "$next_iteration" '.iteration = $n' "$STATE_FILE" > "$temp_file" \

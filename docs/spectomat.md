@@ -1,6 +1,6 @@
 # Spectomat
 
-A Claude Code plugin that turns raw ideas into committed, tested code without anyone watching. The operator drops a Markdown draft into `.spectomat/drafts/` and runs `/spectomat:run`; a Stop hook then feeds the session the same pointer prompt over and over, and each pass — an **iteration** — advances exactly one idea by exactly one phase.
+A Claude Code plugin that turns raw ideas into committed, tested code without anyone watching. The operator drops a Markdown draft into `.spectomat/drafts/` and runs `/spectomat:run`; a Stop hook then generates and feeds the session the same pointer prompt over and over, and each pass — an **iteration** — advances exactly one idea by exactly one phase.
 
 The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the project-owned contract holds only the invariants that outlive both.**
 
@@ -14,7 +14,7 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 | --- | --- | --- |
 | Operator | the human | drops drafts in `.spectomat/drafts/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `contract.md` and `memory.md` |
 | Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches exactly one subagent; does no factory work |
-| Picker | `scripts/phase.sh` | reads the floor, `log.md` and `git status`; prints one line naming the phase |
+| Picker | `scripts/phase.sh` | reads the floor, `log.md` and `git status`; prints one frontmatter block naming the phase and everything needed to dispatch it |
 | Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase and commits it |
 | Archiver | `spectomat:archive`, wrapping `scripts/archive.sh` | the brief invokes the script and relays its result unchanged; the script performs the `ARCHIVE` phase: gates, moves, commit, log |
 | Janitor | `spectomat:recover` | recovers a dirty tree, or a floor the picker cannot classify |
@@ -24,34 +24,39 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 
 ```text
 Stop hook
-  └─ session receives pointer.md, fed back by the Stop hook
+  └─ session receives the pointer prompt, generated fresh and fed back by the Stop hook
        │
-       └─ bash {{PLUGIN_ROOT}}/scripts/phase.sh   →  exactly one line
-          │
-          ├─ "SPECIFY <slug>"    →  Agent(spectomat:specify)     draft → spec
-          ├─ "REVIEW-SPEC <slug>" → Agent(spectomat:review-spec) spec → reviewed spec
-          ├─ "PLAN <slug>"       →  Agent(spectomat:plan)        reviewed spec → plan
-          ├─ "IMPLEMENT <slug>"  →  Agent(spectomat:implement)   plan → next task
-          ├─ "REVIEW <slug>"     →  Agent(spectomat:review)      finished plan → verdict
-          ├─ "ARCHIVE <slug>"    →  Agent(spectomat:archive)      bash scripts/archive.sh <slug>, relayed
-          ├─ "RECOVER"           →  Agent(spectomat:recover)
-          └─ "FINISH"            →  Agent(spectomat:finish)       session then emits <promise>FACTORY EMPTY</promise>
+       └─ bash {{PLUGIN_ROOT}}/scripts/phase.sh   →  exactly one frontmatter block:
+          │                                            phase, slug, subagent, brief, plugin_root
+          ├─ phase:SPECIFY        →  Agent(spectomat:specify)     draft → spec
+          ├─ phase:REVIEW-SPEC    →  Agent(spectomat:review-spec) spec → reviewed spec
+          ├─ phase:PLAN           →  Agent(spectomat:plan)        reviewed spec → plan
+          ├─ phase:IMPLEMENT      →  Agent(spectomat:implement)   plan → next task
+          ├─ phase:REVIEW         →  Agent(spectomat:review)      finished plan → verdict
+          ├─ phase:ARCHIVE        →  Agent(spectomat:archive)      bash scripts/archive.sh <slug>, relayed
+          ├─ phase:RECOVER        →  Agent(spectomat:recover)
+          └─ phase:FINISH         →  Agent(spectomat:finish)       session then emits <promise>FACTORY EMPTY</promise>
 ```
+
+Every arrow's target — the `subagent` and `brief` field — is computed by `phase.sh` itself, not looked up by the pointer: the agent name is the phase lowercased (`REVIEW-SPEC` → `review-spec`), so the block is the one place that mapping lives.
 
 ## 2. Domain Model
 
-The floor is `.spectomat/`: `drafts/`, `specs/`, `plans/`, `snippets/`, `done/`, `work/`, plus `log.md`, `contract.md`, `memory.md`, `state.json` and `pointer.md`. The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
+The floor is `.spectomat/`: `drafts/`, `specs/`, `plans/`, `snippets/`, `done/`, `work/`, plus `log.md`, `contract.md`, `memory.md` and `state.json`. The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
 
 ### 2.1 `verdict`
 
-The picker's entire output. One line on stdout, exit code 0.
+The picker's entire output: a single YAML-frontmatter-shaped block (`---` … `---`) on stdout, exit code 0.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `phase` | `SPECIFY`\|`REVIEW-SPEC`\|`PLAN`\|`IMPLEMENT`\|`REVIEW`\|`ARCHIVE`\|`FINISH`\|`RECOVER` | which phase applies, or `FINISH` for none, or `RECOVER` for a dirty tree |
-| `slug` | string, absent for `FINISH` and `RECOVER` | the draft file name without `.md`, as the operator named it |
+| `slug` | string, empty for `FINISH` and `RECOVER` | the draft file name without `.md`, as the operator named it |
+| `subagent` | string, e.g. `spectomat:review-spec` | the `subagent_type` to pass the Agent tool — `spectomat:` plus `phase` lowercased |
+| `brief` | absolute path | the brief file to hand that subagent, `{{PLUGIN_ROOT}}/agents/<phase lowercased>.md` |
+| `plugin_root` | absolute path | the plugin root, so a brief can still reach `templates/` and other plugin files with no plugin path of its own |
 
-Identity: there is exactly one verdict per iteration, and it is not stored — the picker is re-run, never remembered. Written by: `scripts/phase.sh` only.
+Identity: there is exactly one verdict per iteration, and it is not stored — the picker is re-run, never remembered. Written by: `scripts/phase.sh` only. `subagent`, `brief` and `plugin_root` are derived fields, not independent state — all three follow from `phase` and `PLUGIN_ROOT`, so the pointer needs no lookup table of its own (§3.3).
 
 ### 2.2 `strike ledger`
 
@@ -79,11 +84,11 @@ Identity: one per floor. Written by: `prepare.sh` at first render, and the opera
 
 ### 3.1 Trigger and input
 
-Trigger: the Stop hook blocks a session exit and feeds back `pointer.md`. Input: the floor as the previous iteration left it. Idempotency: the picker is a pure function of the floor, `state.json`, and `git status`, so running it twice with no intervening change yields the same verdict.
+Trigger: the Stop hook blocks a session exit and feeds back the pointer prompt. Input: the floor as the previous iteration left it. Idempotency: the picker is a pure function of the floor, `state.json`, and `git status`, so running it twice with no intervening change yields the same verdict.
 
 ### 3.2 The iteration
 
-1. The session runs `bash {{PLUGIN_ROOT}}/scripts/phase.sh` and reads one line.
+1. The session runs `bash {{PLUGIN_ROOT}}/scripts/phase.sh` and reads one frontmatter block.
 2. It dispatches per §3.3.
 3. It prints at most five lines of the report and stops, which fires the Stop hook again.
 
@@ -91,15 +96,11 @@ The session reads no contract, no floor file and no source. Its context accumula
 
 ### 3.3 Dispatch
 
-| Verdict | Action |
-| --- | --- |
-| `SPECIFY <slug>` / `REVIEW-SPEC <slug>` / `PLAN <slug>` / `IMPLEMENT <slug>` / `REVIEW <slug>` / `ARCHIVE <slug>` | launch exactly one subagent, `run_in_background: false`, `subagent_type: "spectomat:<phase>"` when that type is listed; otherwise `general-purpose` with the body of `{{PLUGIN_ROOT}}/agents/<phase>.md` after its frontmatter as the brief |
-| `RECOVER` | launch one subagent as above, with `spectomat:recover` / `agents/recover.md` |
-| `FINISH` | launch one subagent as above, with `spectomat:finish` / `agents/finish.md`; print its closing report and emit the promise as the last line |
+The pointer has no lookup table: every field it needs is in the block. It launches exactly one subagent — `run_in_background: false`, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` (after that file's own frontmatter) as the task's brief — for every `phase`, `SPECIFY` through `FINISH` alike. `FINISH`'s subagent prints the closing report; the session itself still emits the promise as the last line (§3.5).
 
-The task line handed to a subagent is two lines: the verdict verbatim, then `Plugin root: <absolute path>`. A brief therefore carries no plugin path of its own but can still reach `templates/`.
+The task handed to the subagent is the picker's frontmatter block, verbatim, fences included — the pointer neither reformats it nor extracts fields from it. A brief therefore carries no plugin path of its own but can still reach `templates/` by reading `plugin_root:` out of its own task.
 
-The fallback rule is one rule stated once and applied to all six agents; the verdict's first word lowercased is the agent name, so `REVIEW-SPEC` dispatches `spectomat:review-spec` from `agents/review-spec.md`; §6.1 fixes the file names so the fallback path is computable from the phase name.
+`subagent` and `brief` are not a rule the pointer applies — they are fields `phase.sh` already computed, one rule stated once, in the script: the phase lowercased is the agent name, so `REVIEW-SPEC` names `spectomat:review-spec` and `agents/review-spec.md`; §6.1 fixes the file names so the mapping holds for every phase.
 
 ### 3.4 Failure path
 
@@ -137,10 +138,13 @@ Named constants, each defined once here and nowhere else in the system:
 ### 5.1 `pick_phase` — `scripts/phase.sh`
 
 ```text
+# emit(phase, slug='') prints the frontmatter block (§2.1): phase, slug, and
+# subagent/brief/plugin_root derived from phase alone.
+
 pick_phase():
   cd_root()
-  if not isdir(FLOOR):                       print "FINISH"; return 0
-  if `git status --porcelain` is non-empty:  print "RECOVER"; return 0
+  if not isdir(FLOOR):                       emit('FINISH'); return 0
+  if `git status --porcelain` is non-empty:  emit('RECOVER'); return 0
 
   # read state.json and build candidate sets by phase
   state = parse state.json
@@ -153,10 +157,10 @@ pick_phase():
                         ('REVIEW-SPEC', slugs_in(state, 'REVIEW-SPEC')),
                         ('SPECIFY', slugs_in(state, 'SPECIFY')) ]:
       pick = least_struck(phase, set)
-      if pick is not NONE:  print phase + " " + pick; return 0
+      if pick is not NONE:  emit(phase, pick); return 0
 
-  if slugs_in(state, any) is empty and drafts/ has no new .md:  print "FINISH"
-  else:                                                           print "RECOVER"
+  if slugs_in(state, any) is empty and drafts/ has no new .md:  emit('FINISH')
+  else:                                                           emit('RECOVER')
   return 0
 ```
 
@@ -270,7 +274,6 @@ The log line's numbers are the gate count, not test counts: a script has first-h
 | `agents/review.md` | finished plan → verdict or fix tasks — `spectomat:review` |
 | `agents/recover.md` | the janitor — `spectomat:recover` |
 | `templates/contract.md`, `memory.md` | rendered into the project once, then owned by it |
-| `templates/pointer.md` | the prompt fed back every iteration, re-rendered every run, gitignored |
 | `templates/spec.md`, `plan.md`, `task.md` | the shapes the `SPECIFY`, `REVIEW-SPEC` and `PLAN` phases fill in |
 | `templates/guide.md` | the user guide, printed by `/spectomat:help`; holds the glossary |
 | `commands/run.md`, `status.md`, `cancel.md`, `help.md` | the four slash commands |
@@ -284,7 +287,7 @@ It holds no phase sections (D3) and no craft prose (D11): text no operator would
 
 ### 6.3 The briefs
 
-Each brief holds the craft of one phase and is read only on that phase's iterations. A brief carries no `{{KEY}}` placeholder — it is never rendered — and no plugin path: the task line supplies one at dispatch (§3.3).
+Each brief holds the craft of one phase and is read only on that phase's iterations. A brief carries no `{{KEY}}` placeholder — it is never rendered — and no plugin path: its task's `plugin_root:` field supplies one at dispatch (§3.3).
 
 `agents/implement.md` is the largest brief by a wide margin, carrying task execution, TDD and systematic debugging. That is the point of the design and not a smell: the `SPECIFY` phase pays nothing for it.
 
@@ -292,18 +295,17 @@ No brief dispatches another agent. The `IMPLEMENT` phase writes its task's code 
 
 ### 6.4 The state and the pointer
 
-An armed flow is two gitignored files: `state.json` (data) and `pointer.md` (prompt). Together they encode the flow's progress and dispatch: `state.json` records which slug is in which phase and how many times each phase has failed; `pointer.md` instructs the session which agent to run.
+An armed flow's only persistent file is the gitignored `state.json`: it records which slug is in which phase and how many times each phase has failed, and its `active` flag is what "armed" means. The pointer prompt fed back each iteration is not a file — `pointer_prompt()` in `scripts/utils.sh` generates it fresh from a fixed heredoc every time it is called, substituting `PLUGIN_ROOT` (already a shell variable in every script that sources `utils.sh`) the same way `render_template` substitutes a template's `{{KEY}}` placeholders (D12).
 
 | File | Schema | Read by | Written by |
 | --- | --- | --- | --- |
 | `state.json` | `{active: bool, iteration: int, max_iterations: int, session_id: string, started_at: timestamp, slugs: {<slug>: {phase: string, tasks_total: int, tasks_done: int, strikes: {<phase>: int}}}}` | `phase.sh`, `print.sh`, `stop-hook.sh`, phase agents (via `state_field` and slug helpers) | `prepare.sh` at arming; every phase brief and `archive.sh` after their commit; `stop-hook.sh` bumps `iteration`; `/spectomat:cancel` sets `active: false` |
-| `pointer.md` | the picker call plus the §3.3 dispatch table | fed back verbatim to the session | `prepare.sh` only — never mutated |
 
-**The resume path:** When `/spectomat:run` is invoked with an inactive flow (`state.json` exists and `active: false`), `prepare.sh` re-arms by setting `active: true` and re-rendering `pointer.md` instead of refusing. This restores the flow from where it stopped, continuing from the same `iteration` counter, with all slug phases and strike counts preserved in `state.json.slugs`.
+**The resume path:** When `/spectomat:run` is invoked with an inactive flow (`state.json` exists and `active: false`), `prepare.sh` re-arms by setting `active: true` instead of refusing. This restores the flow from where it stopped, continuing from the same `iteration` counter, with all slug phases and strike counts preserved in `state.json.slugs`. There is no second file to re-render on resume — `pointer_prompt()` produces the same text on the first call and the hundredth.
 
-**Disarming:** `disarm()` is called only at FINISH (all work done), at the iteration cap, or on corrupt state. It removes both `state.json` and `pointer.md` together. `/spectomat:cancel` is different: it only sets `active: false` and removes `pointer.md`, leaving `state.json` intact so `/spectomat:run` can resume.
+**Disarming:** `disarm()` is called only at FINISH (all work done), at the iteration cap, or on corrupt state. It removes `state.json`; there is nothing else on disk for it to clean up. `/spectomat:cancel` is different: it only sets `active: false`, leaving `state.json` intact so `/spectomat:run` can resume.
 
-Splitting the files keeps each one honest: the state is data a script parses, the pointer is a prompt a model reads, and neither has to skip past the other. `state.json`'s `active` flag gates the resume path, and a pointer cannot outlive its state (D12).
+Generating the prompt instead of rendering it to disk keeps it honest: `state.json` is data a script parses, the pointer is a prompt a model reads, and there is no file that can go stale — a plugin reinstalled at a new cache path can never leave a pointer holding the old one — or outlive the state it belongs to (D12).
 
 Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). The picker reads them in plain alphabetical order of the file name, which is the operator's only lever on the order they are worked.
 
@@ -320,7 +322,7 @@ Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). T
 
 ### 7.2 `status` predicts the next phase
 
-`status.sh` calls `print_next`, which prints a `--- next ---` section holding the picker's verdict verbatim, e.g. `IMPLEMENT 003-auth`. Because it is the identical code path the next iteration takes, the prediction cannot drift from the decision. The picker mutates nothing (§5.1 note 6), so this is safe to run at any time.
+`status.sh` calls `print_next`, which prints a `--- next ---` section holding the picker's frontmatter block verbatim, e.g. `phase:IMPLEMENT` / `slug:003-auth` / … . Because it is the identical code path the next iteration takes, the prediction cannot drift from the decision. The picker mutates nothing (§5.1 note 6), so this is safe to run at any time.
 
 ### 7.3 Installation
 
@@ -341,16 +343,18 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D9 | `prepare.sh` renders `contract.md` once and never rewrites it | a migration that regenerates an old contract from the template, carrying the gate lines across | a migration path can only overwrite the file the operator is told to edit, and one that has never migrated anything is untested weight on the script every run executes |
 | D10 | `templates/memory.md`'s own header carries what earns a line; the contract carries only when to read and write it | the rules in both files, kept in step by hand | duplicated rules drift, and keeping them in step was a manual instruction to a human. Every iteration reads `memory.md` in Orient anyway, so the header costs no extra read |
 | D11 | Craft prose lives in the brief that uses it — gate-reading in `agents/implement.md`, "`SPECIFY` and `PLAN` skip the gates" in those two briefs | keeping it in the contract, where every phase reads it | the contract is the operator's only editable surface; text no operator would ever edit is craft, not steering, and D3 already put craft in the briefs |
-| D12 | An armed flow is `state.json` (data) plus `pointer.md` (prompt), created and removed together | one Markdown file with the state in frontmatter and the prompt in its body | one file forced every reader to parse past the other: `awk '/^---$/{i++; next} i>=2'` in two scripts to reach the prompt, and a `sed \| grep \| sed` pipeline to reach a field. Split, the state is `jq`-addressable in one call and the prompt is a file you `cat`. The names stop competing too — neither file is both things |
+| D12 | State and the pointer prompt are addressed as two different kinds of thing: `state.json` is data a script parses with `jq`, the prompt is text a model reads | one Markdown file with the state in frontmatter and the prompt in its body | one file forced every reader to parse past the other: `awk '/^---$/{i++; next} i>=2'` in two scripts to reach the prompt, and a `sed \| grep \| sed` pipeline to reach a field. Kept apart, the state is `jq`-addressable in one call and the prompt needs no parsing at all. The names stop competing too — neither thing pretends to be the other. See D23 for how the prompt itself is produced without a second file |
 | D13 | The operator puts drafts into `drafts/` and names them; `prepare.sh` only commits what it finds there | `prepare.sh` moving `wishlist/*.md` into `drafts/` under a number issued from a committed `.inc` counter | intake is the project's business, not the factory's. It cost a second inbox directory, a counter file with a git lifecycle opposite to the state it sat next to, and staging both ends of every move so arming still ended on a clean tree. Without it the floor has one entrance and drafts are worked in plain alphabetical order of whatever the operator called them |
 | D14 | The `IMPLEMENT` phase writes its task's code itself | an implementer subagent it dispatches, reports back from and resumes | the picker already gives one fresh agent per task, so a subagent bought no context isolation and cost a placeholder-filled brief sent verbatim, a report file as the return channel, a `DONE / BLOCKED / NEEDS_CONTEXT` protocol and a re-dispatch rule — all of it deleted. What it loses is real but small: a cheap model for code writing, and a stronger one on the last fix round |
 | D15 | `REVIEW` is one phase per plan, run when `state.json` says every task is closed | a reviewer subagent per task commit, with `MAX_FIX_ROUNDS` fix rounds inside the `IMPLEMENT` phase | per-task review was the one unit of work the picker could not see: no verdict, no log line, no strike, not resumable, a sub-state-machine with its own constant hidden inside another phase. As a phase it is an iteration like any other; its findings become task files that get the full TDD cycle instead of "send the findings back" rounds; and it reads the plan whole, which is the only way to see a helper written twice, code one task orphaned, or an interface that drifted between one task's `Produces` and another's `Consumes`. The cost is latency — a defect in task 1 surfaces after task 8 — bounded because the gates still run on every task and the plan's `Interfaces` rows are what guard the seams |
 | D16 | `REVIEW-SPEC` is one phase per spec, run once between `SPECIFY` and `PLAN`, and it revises the spec in place | a self-review checklist inside the `SPECIFY` brief; an approve-or-flag reviewer that sends the spec back to `SPECIFY` | the author cannot read its own spec cold, and the planner is the first reader that can be misled; a fresh agent with only the spec and the draft is the cheapest cold read. It fixes rather than flags because the fix for a spec is a sentence, and a `SPECIFY` round trip would rewrite the whole file to change one line. Each fix is a `revised` row in §10, so the trail is as traceable as an `assumed` one. One round, latched by `- Verdict: READY` in §17, the same grammar as the plan latch, so the picker learns nothing new |
 | D17 | The picker reads `state.json.slugs` to determine each slug's phase, instead of deriving it from floor-file checks | file-content checks (`- Verdict:` lines, task file existence, etc.) | deterministic and testable: the phase decision is now an explicit field, not an inference. The picker never mutates files, so the state is the only thing that changes when a phase advances. This makes the state the single source of truth for the flow's progress and makes resume possible |
 | D18 | Strike counts are stored in `state.json.slugs[slug].strikes[phase]`, not derived from `log.md` | log-line-counting logic in the picker and `strike_count` | the state is now the authoritative record of phase failures, and `log.md` becomes write-only audit trail. This makes `strike_count` fast (one `jq` call, no grep) and makes strikes observable in the state, enabling inspection and recovery |
-| D19 | `/spectomat:cancel` sets `active: false` and removes `pointer.md`, but keeps `state.json` | full disarm, removing both files | this enables resume: a session can pause a flow with `/spectomat:cancel`, and `/spectomat:run` resumes it from the same iteration, with all slug phases and strikes preserved. Without it, a pause-and-resume would restart the flow and lose all progress |
+| D19 | `/spectomat:cancel` sets `active: false` but keeps `state.json` | full disarm, removing `state.json` | this enables resume: a session can pause a flow with `/spectomat:cancel`, and `/spectomat:run` resumes it from the same iteration, with all slug phases and strikes preserved. Without it, a pause-and-resume would restart the flow and lose all progress |
 | D20 | Each slug carries `phase`, `tasks_total`, `tasks_done`, and `strikes` in `state.json.slugs[slug]` | per-phase tracking only, rebuilt at each phase | observable progress: the state encodes not just what phase a slug is in, but how many tasks are in its plan and how many are done. This makes the flow's progress queryable without parsing floor files, and makes recovery from a crashed phase more precise |
-| D21 | Every verdict, `ARCHIVE` and `FINISH` included, dispatches through a subagent, so `templates/pointer.md`'s table has one row shape for all seven — `spectomat:archive` invokes `archive.sh` and relays its exit code unchanged; `spectomat:finish` reads the log and floor to compose the closing report, and the session still emits the promise | keeping `ARCHIVE` a bare script call and `FINISH` pointer-only text, as D2 and D14 both argue for mechanical work | operator preference for a uniform dispatch table outweighed the extra hop, once each wrapper was written to add no judgement of its own: `spectomat:archive`'s brief forbids moving a file, running a gate, or reinterpreting a non-zero exit as success, and `spectomat:finish`'s brief forbids writing to `state.json` or emitting the promise itself. D2's reliability guarantee is unweakened by the wrapper, since `archive.sh` still performs every mutation and still owns its own exit code — the agent can only relay it, not launder it |
+| D21 | Every verdict, `ARCHIVE` and `FINISH` included, dispatches through a subagent, so dispatch has one row shape for all seven — `spectomat:archive` invokes `archive.sh` and relays its exit code unchanged; `spectomat:finish` reads the log and floor to compose the closing report, and the session still emits the promise | keeping `ARCHIVE` a bare script call and `FINISH` pointer-only text, as D2 and D14 both argue for mechanical work | operator preference for a uniform dispatch table outweighed the extra hop, once each wrapper was written to add no judgement of its own: `spectomat:archive`'s brief forbids moving a file, running a gate, or reinterpreting a non-zero exit as success, and `spectomat:finish`'s brief forbids writing to `state.json` or emitting the promise itself. D2's reliability guarantee is unweakened by the wrapper, since `archive.sh` still performs every mutation and still owns its own exit code — the agent can only relay it, not launder it |
+| D22 | `phase.sh` computes `subagent` and `brief` itself and emits them in its frontmatter block (§2.1, §3.3), so the uniform row shape D21 fixed lives in one script instead of also being restated as a table in the pointer prompt | keeping a dispatch table in the pointer prompt, matching each verdict to a `subagent_type` and brief path by hand | the mapping is a pure function of `phase` (lowercase it, prefix `spectomat:`, join with `PLUGIN_ROOT`) that `phase.sh` already has every input for; a table restating it in the pointer was a second place the same seven rows could drift out of step with `agents/*.md`'s actual file names, with no test catching the mismatch until a dispatch failed. The picker still only prints and mutates nothing (§5.1 note 6) |
+| D23 | The pointer prompt is generated by `pointer_prompt()` in `scripts/utils.sh` — a fixed heredoc with `PLUGIN_ROOT` substituted at call time — and never written to disk | `templates/pointer.md`, rendered into `.spectomat/pointer.md` at arm time and re-rendered on every resume | the text never varies except for `PLUGIN_ROOT`, which every script that sources `utils.sh` already holds as a shell variable; rendering it to a gitignored file bought nothing but a second path for `disarm()` to clean up, a resume step that had to re-render it, and a file that could hold a stale `PLUGIN_ROOT` if the plugin was reinstalled at a new cache path between arms. Generating it fresh in `continue_iteration()` and in `prepare.sh`'s arm preview removes all three at once, and it is exercised directly in `pointer_prompt_test.sh` (§10) rather than through a rendered file's contents |
 
 ## 9. Acceptance Criteria
 
@@ -358,7 +362,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 
 | Id | Criterion | Verified by |
 | --- | --- | --- |
-| AC-1.1 | `phase.sh` prints exactly one line and exits 0 for every floor state in §10.3 | selftest |
+| AC-1.1 | `phase.sh` prints exactly one frontmatter block and exits 0 for every floor state in §10.3 | selftest |
 | AC-1.2 | Priority holds: with candidates in all six stages, the verdict is `ARCHIVE` | selftest |
 | AC-1.3 | A plan directory with zero `task-*.md` files does not yield `ARCHIVE` | selftest |
 | AC-1.4 | A reviewed spec whose plan overview exists but has zero task files yields `PLAN` | selftest |
@@ -369,6 +373,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-1.7 | Given two candidates in one stage, the one with fewer strikes is named | selftest |
 | AC-1.8 | A candidate at `STRIKE_LIMIT` is skipped; if all are, the next stage is used | selftest |
 | AC-1.9 | `phase.sh` leaves the floor and the git index byte-identical | selftest |
+| AC-1.10 | The block's `subagent` and `brief` fields are `spectomat:<phase lowercased>` and `{{PLUGIN_ROOT}}/agents/<phase lowercased>.md`, for a hyphenated phase too | selftest |
 | AC-2.1 | `gate_block` returns the operator's edited lines, dropping comments and blanks | selftest |
 | AC-2.2 | `run_gates` returns non-zero on the first failing line and names it | selftest |
 | AC-2.3 | `strike_count` returns 0 when the slug has no `strikes` entry for that phase | selftest |
@@ -377,13 +382,14 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-3.3 | At the third strike `archive.sh` moves the trail with the `.blocked` infix, and `print_blocked` lists both files | selftest |
 | AC-3.4 | `archive.sh` makes exactly one commit, and touches no file outside the floor | selftest |
 | AC-4.1 | `status.sh` prints the picker's verdict verbatim | manual, scratch repo |
-| AC-4.2 | Arming writes a valid `state.json` with `active: true`, `iteration: 1`, numeric `max_iterations`, `session_id`, `started_at`, and `slugs: {}`, and a `pointer.md` with no frontmatter and no unresolved `{{KEY}}` | selftest |
-| AC-4.3 | `/spectomat:cancel` sets `active: false`, removes `pointer.md`, and keeps `state.json` and the floor | selftest |
+| AC-4.2 | Arming writes a valid `state.json` with `active: true`, `iteration: 1`, numeric `max_iterations`, `session_id`, `started_at`, and `slugs: {}` | selftest |
+| AC-4.3 | `/spectomat:cancel` sets `active: false` and keeps `state.json` and the floor | selftest |
 | AC-4.4 | `prepare.sh` commits a draft dropped into `drafts/`, tracked or not, and leaves a clean tree | selftest |
 | AC-4.6 | `prepare.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
-| AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, and feeds back `pointer.md` verbatim | selftest |
+| AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, and feeds back the pointer prompt verbatim | selftest |
 | AC-4.8 | A session that did not arm the flow neither advances nor ends it, and an unreadable state file is left in place for `/spectomat:cancel` | selftest |
 | AC-4.9 | The promise and the iteration cap both disarm the flow | selftest |
+| AC-4.10 | `pointer_prompt()` resolves `PLUGIN_ROOT` with no unresolved `{{KEY}}` placeholder left in its output | selftest |
 | AC-4.5 | Drafts are taken in alphabetical order of the file name, whatever their modification times | selftest |
 | AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
 | AC-5.2 | Both plugin manifests validate `--strict` | manual |
@@ -416,7 +422,7 @@ bash 3.2, `jq`, no build, no package manager, no network. `scripts/utils.sh` is 
 
 | Placeholder | Rendered into | Value |
 | --- | --- | --- |
-| `{{PLUGIN_ROOT}}` | `pointer.md` | absolute plugin path; locates `scripts/phase.sh`, `scripts/archive.sh` and `agents/*.md` |
+| `{{PLUGIN_ROOT}}` | `pointer_prompt()` in `scripts/utils.sh` (in memory, never a file) | absolute plugin path; locates `scripts/phase.sh`, `scripts/archive.sh` and `agents/*.md` |
 | `{{REPO}}` | `contract.md`, `memory.md` | the repository root, substituted at the one and only render |
 | `{{GATES}}` | `contract.md` | the gate command compiled by `gates.sh`, substituted at the one and only render |
 
@@ -482,7 +488,7 @@ Nested `claude -p` must always be given `--model opus`; the CLI rejects the defa
 | `ARCHIVE` never fires on a plan with no task files | the failure archives unbuilt work and is invisible until someone reads `done/` |
 | a `.blocked` trail is still listed by `print_blocked` | a blocked slug that nothing reports is a silently dropped idea |
 | no brief carries a `{{KEY}}` placeholder | briefs are never rendered, so a placeholder would reach an agent literally |
-| arming and cancelling touch both `state.json` and `pointer.md` | a pointer outliving its state would be fed back to a later flow with no counter behind it; a state without a pointer stops the flow with a corruption message |
+| arming and cancelling touch only `state.json` | a second file for the pointer prompt would need its own cleanup on every disarm path, and could go stale if the plugin moved between arms (D23) |
 | only the session that armed a flow may end it, an unreadable state file included | the hook fires in every session of the project, so a guard that runs before the session check lets a stranger delete a flow it does not own |
 | `prepare.sh` refuses to arm on a dirty tree | the picker answers `RECOVER` to any dirt, so arming over work in progress spends the entire cap on the janitor |
 | `NOTICE.md` names only files that exist | a licence notice pointing at deleted files does not discharge the obligation |

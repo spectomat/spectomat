@@ -8,7 +8,6 @@
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
 STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
-POINTER="$FLOOR/pointer.md"      # the prompt the Stop hook feeds back; gitignored
 CONTRACT="$FLOOR/contract.md"
 MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; committed
 
@@ -30,9 +29,9 @@ state_field() {
   jq -r --arg k "$1" '.[$k] // empty' "$STATE_FILE" 2>/dev/null || true
 }
 
-# Remove both halves of an armed flow. The state file is the armed flag; the
-# pointer is its payload, and a pointer left behind would outlive its state.
-disarm() { rm -f "$STATE_FILE" "$POINTER"; }
+# Remove the armed flag. Nothing else needs cleaning up: the prompt the Stop
+# hook feeds back is generated fresh by pointer_prompt(), not stored on disk.
+disarm() { rm -f "$STATE_FILE"; }
 
 # Render a template, replacing every {{KEY}} with its value:
 #   render_template SRC DEST KEY=value ...
@@ -51,6 +50,47 @@ render_template() {
     body="${body//\{\{$key\}\}/$val}"
   done
   printf '%s' "$body" > "$dest"
+}
+
+# The prompt the Stop hook feeds back every iteration, and what prepare.sh
+# previews when it arms a flow. No template file on disk: PLUGIN_ROOT is
+# already a shell variable in every script that sources this file, so it is
+# substituted the same way render_template does, straight into the heredoc.
+pointer_prompt() {
+  local body
+  body=$(cat <<'EOF'
+# Spectomat pointer
+
+Fresh context each iteration. Do no factory work here.
+
+## 1. Ask the picker
+
+Run `bash {{PLUGIN_ROOT}}/scripts/phase.sh` once. It prints exactly one frontmatter block and exits 0:
+
+```text
+---
+phase:<PHASE>
+slug:<slug, empty for RECOVER and FINISH>
+subagent:<subagent_type>
+brief:<absolute path to the brief file>
+plugin_root:<absolute plugin path>
+---
+```
+
+Do not interpret the floor, the contract or the code yourself — act only on that block.
+
+## 2. Act on that block, and only on it
+
+Launch exactly one subagent with the Agent tool: `run_in_background: false`, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` — its own frontmatter stripped — as the brief.
+
+The task handed to the subagent is the block phase.sh printed, verbatim, fences included. Do not reformat it, extract fields out of it, or drop any line — the subagent reads `phase:`, `slug:` and `plugin_root:` for itself.
+
+## 3. Report and stop
+
+Print the report in at most five lines, then stop. Never retry a failed iteration here — the next iteration is a new picker call and a new subagent. Write `<promise>FACTORY EMPTY</promise>` only when the block's `phase` was `FINISH`; it is a verdict you relay, never a judgement you make.
+EOF
+)
+  printf '%s\n' "${body//\{\{PLUGIN_ROOT\}\}/$PLUGIN_ROOT}"
 }
 
 # True when $1 carries the completion promise. Whitespace is stripped from the

@@ -6,8 +6,8 @@
 # Creates .spectomat/{drafts,specs,plans,snippets,done}, renders contract.md and
 # memory.md when absent, commits what it created (contract, memory, ignore
 # rules, drafts the user dropped in), and arms the Stop hook by writing
-# state.json and rendering templates/pointer.md. Default 100 iterations, the
-# promise "FACTORY EMPTY". Refuses when a flow is armed or the floor is empty.
+# state.json. Default 100 iterations, the promise "FACTORY EMPTY". Refuses
+# when a flow is armed or the floor is empty.
 
 set -euo pipefail
 
@@ -57,7 +57,6 @@ prepare_floor() {
   mkdir -p "$FLOOR"/{drafts,specs,plans,snippets,done}
   ensure_gitignored "$STATE_FILE"
   ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
-  ensure_gitignored "$POINTER"
   ensure_gitignored "$FLOOR/work/"
   ensure_gitignored "$FLOOR/log.md"
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
@@ -149,12 +148,10 @@ require_startable() {
   fi
 }
 
-# Arm the flow: the state the Stop hook reads on every exit attempt, and the
-# pointer it feeds back. Both are written on every run, so a pointer holding a
-# stale PLUGIN_ROOT - the plugin reinstalled at a new cache path - is replaced
-# rather than migrated. Resume a cancelled (inactive) state if one exists, else
-# create fresh. MAX_ITERATIONS is unquoted in the JSON; parse_args has already
-# required it to match ^[0-9]+$.
+# Arm the flow: the state the Stop hook reads on every exit attempt. Resume a
+# cancelled (inactive) state if one exists, else create fresh. MAX_ITERATIONS
+# is unquoted in the JSON; parse_args has already required it to match
+# ^[0-9]+$.
 arm_flow() {
   local s
   if [[ -f "$STATE_FILE" ]]; then
@@ -184,9 +181,6 @@ EOF
     s="$(basename "$f" .md)"
     [[ -n "$(slug_phase "$s")" ]] || slug_add "$s" SPECIFY
   done
-
-  render_template "$TEMPLATES/pointer.md" "$POINTER" \
-    PLUGIN_ROOT="$PLUGIN_ROOT"
 }
 
 announce() {
@@ -196,14 +190,13 @@ announce() {
 
 Iteration: 1 of $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo "$MAX_ITERATIONS"; else echo "unlimited"; fi)
 State: $STATE_FILE
-Pointer: $POINTER
 Cancel: /spectomat:cancel
 
 When you try to exit, the Stop hook feeds the prompt below back to you.
 Each iteration asks scripts/phase.sh which phase applies and dispatches it.
 The flow ends when the picker answers FINISH, or at the iteration cap.
 EOF
-  cat "$POINTER"
+  pointer_prompt
 }
 
 main() {

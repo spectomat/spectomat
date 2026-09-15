@@ -51,8 +51,8 @@ A Claude Code plugin, not an application. No dependencies, no build.
 
 - `scripts/` — bash, no other runtime:
   - `utils.sh` holds the shared paths and helpers the others source,
-  - `prepare.sh` sets up the floor `.spectomat/`, renders `contract.md` and `memory.md`, and arms the flow by writing `state.json` and `pointer.md`,
-  - `phase.sh` is the picker: one verdict line per iteration, dispatching to a phase brief, the archiver or the janitor,
+  - `prepare.sh` sets up the floor `.spectomat/`, renders `contract.md` and `memory.md`, and arms the flow by writing `state.json`,
+  - `phase.sh` is the picker: one verdict block per iteration, naming the phase and the subagent/brief to dispatch it to — a phase brief, the archiver or the janitor,
   - `archive.sh` is the `ARCHIVE` phase end to end: ticks, gates, moves the trail to `done/` and commits,
   - `status.sh` summarises flow and floor; its sections live in `print.sh`,
   - `cancel.sh` disarms the flow and reports the iteration it was at,
@@ -62,7 +62,7 @@ A Claude Code plugin, not an application. No dependencies, no build.
   - `guide.md` (the user guide `/spectomat:help` prints),
   - `contract.md` (placeholders `{{REPO}}` and `{{GATES}}`),
   - `memory.md` (placeholder `{{REPO}}`; the codebase facts every iteration reads and adds to, committed in the project),
-  - `state.json` (the flow's state: `{{SESSION_ID}}`, `{{MAX_ITERATIONS}}`, `{{STARTED_AT}}`) and `pointer.md` (the prompt the Stop hook feeds back, with `{{PLUGIN_ROOT}}` locating `agents/` briefs),
+  - `state.json` (the flow's state: `{{SESSION_ID}}`, `{{MAX_ITERATIONS}}`, `{{STARTED_AT}}`),
   - `spec.md` (the skeleton `writing-specs` points at),
   - `plan.md` (overview skeleton, placeholder `{{SLUG}}`)
   - `task.md` (per-task brief skeleton, placeholders `{{SLUG}}`, `{{N}}`); `writing-plans` points at the last two.

@@ -2,7 +2,7 @@
 
 You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file is your only memory of intent, `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read this file in full before doing anything.
 
-Your task line names the phase, the slug, and the plugin root; when a brief names a plugin file, read `<plugin root>/<that path>`. A brief holds how its phase is done; where it disagrees with this file, this file wins.
+Your task is the picker's frontmatter block, verbatim: `phase:`, `slug:` and `plugin_root:` among its fields. When a brief names a plugin file, read `<plugin_root>/<that path>`. A brief holds how its phase is done; where it disagrees with this file, this file wins.
 
 Repository: `{{REPO}}`
 
@@ -21,7 +21,6 @@ Nobody is watching. **Never ask a question.** Where an input is silent, decide, 
   contract.md  this file
   memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit
   state.json   the flow's state: iteration counter, cap, session, and every tracked slug's phase, task counters and strikes — gitignored, changed only through the helpers in the plugin's scripts/utils.sh, never by hand
-  pointer.md   the prompt the Stop hook feeds back each iteration — gitignored, never edit
   work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky — gitignored
 ```
 
@@ -31,8 +30,8 @@ A `slug` is the draft's file name without `.md`. Spec, plan and done entries kee
 
 Every iteration, in order:
 
-1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `pointer.md`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/` files except to move them.
-2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task line names it and the slug. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
+1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/` files except to move them.
+2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task's `phase:` and `slug:` fields name it. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
 3. **Verify** with the gates — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them,
 4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
 5. **Log** one line to `log.md`, then stop the iteration. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In the `IMPLEMENT` phase the task's result entry is one `chore(<slug>): …` commit after the task commit.

@@ -1,7 +1,7 @@
 #!/bin/bash
 # stop-hook.sh — runs on every iteration of every flow and is the only script
-# that can end one. Its fixture is a state file, a pointer and a transcript;
-# its input is the JSON payload Claude Code pipes in.
+# that can end one. Its fixture is a state file and a transcript; its input is
+# the JSON payload Claude Code pipes in.
 #
 #   scripts/tests/stop_hook_test.sh          tests the scripts next to it
 #   scripts/tests/stop_hook_test.sh DIR      tests the scripts in DIR
@@ -19,7 +19,6 @@ hook_floor() {
   rm -rf "$HOOK"; mkdir -p "$HOOK/.spectomat"
   printf '{"active": true, "iteration": %s, "max_iterations": %s, "session_id": "%s", "started_at": "t"}\n' \
     "$2" "$3" "$1" > "$HOOK/.spectomat/state.json"
-  printf 'POINTER PROMPT\n' > "$HOOK/.spectomat/pointer.md"
   transcript 'working on it'
 }
 
@@ -39,10 +38,14 @@ fire() {
 hook_state() { [[ -e "$HOOK/.spectomat/state.json" ]] && echo yes || echo no; }
 hook_iter()  { jq -r .iteration "$HOOK/.spectomat/state.json" 2>/dev/null; }
 
+# The pointer prompt stop-hook.sh feeds back, computed the same way it does:
+# by sourcing utils.sh (in a subshell, so PLUGIN_ROOT etc. do not leak here).
+POINTER_PROMPT="$(source "$SCRIPTS/utils.sh" && pointer_prompt)"
+
 hook_floor OWNER 1 5
 out=$(fire OWNER)
 is "the owner is blocked from exiting" "$(printf '%s' "$out" | jq -r .decision)" "block"
-is "the pointer is fed back"           "$(printf '%s' "$out" | jq -r .reason)"   "POINTER PROMPT"
+is "the pointer is fed back"           "$(printf '%s' "$out" | jq -r .reason)"   "$POINTER_PROMPT"
 is "the iteration is bumped"           "$(hook_iter)" "2"
 
 # Session isolation: the hook fires in every session of the project, and only
@@ -75,7 +78,6 @@ out=$(fire OWNER)
 case "$out" in *"FACTORY EMPTY"*) got=yes ;; *) got=no ;; esac
 is "the promise ends the flow"        "$got" "yes"
 is "the promise disarms"              "$(hook_state)" "no"
-is "the promise removes the pointer"  "$([[ -e "$HOOK/.spectomat/pointer.md" ]] && echo yes || echo no)" "no"
 
 hook_floor OWNER 3 3
 out=$(fire OWNER)

@@ -28,8 +28,7 @@ floor_template() {
     git init -q .
     git config user.email t@example.com
     git config user.name t
-    printf '%s\n' '.spectomat/state.json' '.spectomat/pointer.md' \
-                   '.spectomat/work/' '.spectomat/log.md' > .gitignore
+    printf '%s\n' '.spectomat/state.json' '.spectomat/work/' '.spectomat/log.md' > .gitignore
     printf '# Spectomat factory log\n\n' > .spectomat/log.md
     printf '{"slugs": {}}\n' > .spectomat/state.json
     git add .gitignore
@@ -135,6 +134,18 @@ strike() {
   jq --arg s "$slug" --arg p "$phase" --argjson n "$n" \
     '.slugs[$s] //= {} | .slugs[$s].strikes //= {} | .slugs[$s].strikes[$p] = $n' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
     && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
+}
+
+# verdict DIR SCRIPTS — run phase.sh in DIR and print "PHASE" or "PHASE SLUG",
+# extracted from its frontmatter block's phase/slug fields. Shared by every
+# test that only cares about the plain verdict, not the block's dispatch
+# fields (subagent, brief, plugin_root — covered directly in phase_test.sh).
+verdict() {
+  local dir="$1" scripts="$2" out phase slug
+  out="$(cd "$dir" && bash "$scripts/phase.sh")"
+  phase="$(printf '%s\n' "$out" | sed -n 's/^phase://p')"
+  slug="$(printf '%s\n' "$out" | sed -n 's/^slug://p')"
+  if [[ -z "$slug" ]]; then printf '%s\n' "$phase"; else printf '%s %s\n' "$phase" "$slug"; fi
 }
 
 # --- assertions ------------------------------------------------------------

@@ -15,7 +15,6 @@ main() {
   local iteration
   iteration=$(state_field iteration)
   state_apply '.active = false'
-  rm -f "$POINTER"
   echo "Cancelled Spectomat flow (was at iteration ${iteration:-?}). Progress is kept in $STATE_FILE; /spectomat:run resumes it."
 }
 

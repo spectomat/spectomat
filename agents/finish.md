@@ -23,4 +23,4 @@ The picker (`scripts/phase.sh`) already verified both of `FINISH`'s conditions b
 
 - Write to `state.json`, `log.md`, or any floor file. `FINISH` reports on the floor; it does not move it.
 - Re-run `phase.sh` or second-guess its `FINISH` verdict.
-- Emit `<promise>FACTORY EMPTY</promise>` yourself — the pointer emits it, once it relays your report, exactly as pointer.md's own procedure already does for every verdict.
+- Emit `<promise>FACTORY EMPTY</promise>` yourself — the pointer emits it, once it relays your report, exactly as its own procedure already does for every verdict.

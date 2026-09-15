@@ -1,15 +1,30 @@
 #!/bin/bash
 # Spectomat phase picker — which phase the next iteration must do.
 #
-#   phase.sh        prints one line and exits 0:
-#                     "SPECIFY <slug>"    draft -> spec
-#                     "REVIEW-SPEC <slug>" spec -> revised spec, ready to plan
-#                     "PLAN <slug>"       reviewed spec -> plan
-#                     "IMPLEMENT <slug>"  plan -> next task
-#                     "REVIEW <slug>"     finished plan -> verdict, or fix tasks
-#                     "ARCHIVE <slug>"    reviewed plan -> done
-#                     "RECOVER"           dirty tree, or a floor no stage claims
-#                     "FINISH"            nothing left; the flow may end
+#   phase.sh        prints one frontmatter block and exits 0:
+#                     phase:SPECIFY        draft -> spec
+#                     phase:REVIEW-SPEC    spec -> revised spec, ready to plan
+#                     phase:PLAN           reviewed spec -> plan
+#                     phase:IMPLEMENT      plan -> next task
+#                     phase:REVIEW         finished plan -> verdict, or fix tasks
+#                     phase:ARCHIVE        reviewed plan -> done
+#                     phase:RECOVER        dirty tree, or a floor no stage claims
+#                     phase:FINISH         nothing left; the flow may end
+#
+#                   The block also names the subagent to dispatch, the brief
+#                   file to hand it, and the plugin root, so the pointer prompt
+#                   the Stop hook feeds back (pointer_prompt in utils.sh) needs
+#                   no lookup table of its own:
+#
+#                     ---
+#                     phase:<PHASE>
+#                     slug:<slug, empty for RECOVER and FINISH>
+#                     subagent:spectomat:<agent>
+#                     brief:<PLUGIN_ROOT>/agents/<agent>.md
+#                     plugin_root:<PLUGIN_ROOT>
+#                     ---
+#
+#                   <agent> is <PHASE> lowercased, e.g. REVIEW-SPEC -> review-spec.
 #
 # Pure: reads the floor, state.json and git status, writes nothing. The
 # session runs it once per iteration and /spectomat:status runs it on demand.
@@ -19,11 +34,36 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 cd_root
 
+# Print the verdict as a frontmatter block: phase, slug (empty for RECOVER and
+# FINISH), and everything the pointer prompt needs to dispatch a subagent with
+# no lookup table of its own — the agent name, brief path and plugin root are
+# all computable from the phase alone.
+emit() {
+  local phase="$1" slug="${2:-}" agent
+  agent="$(printf '%s' "$phase" | tr '[:upper:]' '[:lower:]')"
+  cat <<EOF
+---
+phase:$phase
+slug:$slug
+subagent:spectomat:$agent
+brief:$PLUGIN_ROOT/agents/$agent.md
+plugin_root:$PLUGIN_ROOT
+---
+EOF
+}
+
 # Slugs of the .md files directly inside a floor directory, alphabetically.
+# plans/ also holds <slug>.result.md and <slug>.ruling.md, siblings IMPLEMENT
+# writes next to the overview (see implement.md): skip them, or each looks
+# like a second, untracked slug and check_orphans below misfires RECOVER on
+# every task close.
 slugs_in() {
   local f
   for f in "$FLOOR/$1"/*.md; do
     [[ -f "$f" ]] || continue
+    case "$f" in
+      *.result.md|*.ruling.md) continue ;;
+    esac
     printf '%s\n' "$(basename "$f" .md)"
   done
 }
@@ -68,18 +108,18 @@ check_orphans() {
 
 main() {
   local pick
-  [[ -d "$FLOOR" ]] || { echo "FINISH"; exit 0; }
-  [[ -z "$(git status --porcelain 2>/dev/null)" ]] || { echo "RECOVER"; exit 0; }
-  check_orphans || { echo "RECOVER"; exit 0; }
+  [[ -d "$FLOOR" ]] || { emit FINISH; exit 0; }
+  [[ -z "$(git status --porcelain 2>/dev/null)" ]] || { emit RECOVER; exit 0; }
+  check_orphans || { emit RECOVER; exit 0; }
 
-  pick=$(slugs_at ARCHIVE     | least_struck ARCHIVE);     [[ -z "$pick" ]] || { echo "ARCHIVE $pick"; exit 0; }
-  pick=$(slugs_at REVIEW      | least_struck REVIEW);      [[ -z "$pick" ]] || { echo "REVIEW $pick"; exit 0; }
-  pick=$(slugs_at IMPLEMENT   | least_struck IMPLEMENT);   [[ -z "$pick" ]] || { echo "IMPLEMENT $pick"; exit 0; }
-  pick=$(slugs_at PLAN        | least_struck PLAN);        [[ -z "$pick" ]] || { echo "PLAN $pick"; exit 0; }
-  pick=$(slugs_at REVIEW-SPEC | least_struck REVIEW-SPEC); [[ -z "$pick" ]] || { echo "REVIEW-SPEC $pick"; exit 0; }
-  pick=$(slugs_at SPECIFY     | least_struck SPECIFY);     [[ -z "$pick" ]] || { echo "SPECIFY $pick"; exit 0; }
+  pick=$(slugs_at ARCHIVE     | least_struck ARCHIVE);     [[ -z "$pick" ]] || { emit ARCHIVE "$pick"; exit 0; }
+  pick=$(slugs_at REVIEW      | least_struck REVIEW);      [[ -z "$pick" ]] || { emit REVIEW "$pick"; exit 0; }
+  pick=$(slugs_at IMPLEMENT   | least_struck IMPLEMENT);   [[ -z "$pick" ]] || { emit IMPLEMENT "$pick"; exit 0; }
+  pick=$(slugs_at PLAN        | least_struck PLAN);        [[ -z "$pick" ]] || { emit PLAN "$pick"; exit 0; }
+  pick=$(slugs_at REVIEW-SPEC | least_struck REVIEW-SPEC); [[ -z "$pick" ]] || { emit REVIEW-SPEC "$pick"; exit 0; }
+  pick=$(slugs_at SPECIFY     | least_struck SPECIFY);     [[ -z "$pick" ]] || { emit SPECIFY "$pick"; exit 0; }
 
-  if [[ -z "$(all_slugs)" ]]; then echo "FINISH"; else echo "RECOVER"; fi
+  if [[ -z "$(all_slugs)" ]]; then emit FINISH; else emit RECOVER; fi
 }
 
 main "$@"
