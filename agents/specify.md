@@ -61,7 +61,7 @@ When in doubt between the two, take architectural. A draft that looks bounded an
 
 **In an existing codebase**, read the structure before proposing, follow its patterns, and include a targeted improvement only where existing code blocks the draft. Nothing unrelated.
 
-**A draft that asks for several independent systems** is neither brainstormed into one spec nor silently cut to one: it is a strike. Write no spec, leave the draft in place, log `(strike N: draft asks for K independent systems: a, b)`, and stop; the operator splits it.
+**A draft that asks for several independent systems** is neither brainstormed into one spec nor silently cut to one: it is a strike. Write no spec, leave the draft in place, bump the slug's `state.json` strike count for `SPECIFY` (`scripts/utils.sh`'s `slug_strike`), log `(strike N: draft asks for K independent systems: a, b)`, and stop; the operator splits it.
 
 ## Shape
 
@@ -108,4 +108,4 @@ The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would
 - [ ] the review section (§17) exists and is empty — the `REVIEW-SPEC` phase fills it
 - [ ] no doubt from the draft survives: every hedge became a normative sentence and a §10 row
 
-Record memory, commit `<type>(<slug>): …`, log one line, report.
+Record memory, commit `<type>(<slug>): …`, advance `.spectomat/state.json`: set the slug's phase to `REVIEW-SPEC` (`scripts/utils.sh`'s `slug_set_phase`), log one line, report.
