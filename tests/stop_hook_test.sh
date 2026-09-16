@@ -99,6 +99,7 @@ is "an empty floor ends the flow"  "$(msg "$out" | grep -c 'flow complete')" "1"
 is "the report counts what shipped" "$(msg "$out" | grep -c 'Shipped 1')"     "1"
 is "the report counts what blocked" "$(msg "$out" | grep -c 'blocked 1')"     "1"
 is "the report names the blocked slug" "$(msg "$out" | grep -c '002-b')"      "1"
+is "the report's tally line" "$(msg "$out" | sed -n '2p')" "   Shipped 1 · blocked 1 · 4 iterations."
 is "the flow does not block"        "$(printf '%s' "$out" | jq -r '.decision // ""')" ""
 is "an empty floor disarms"         "$(hook_state)" "no"
 

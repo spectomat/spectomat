@@ -15,7 +15,7 @@ bash -n scripts/*.sh tests/*.sh                          # syntax only
 scripts/selftest.sh                                              # utils.sh, picker, archiver, prepare.sh, Stop hook
 ```
 
-`scripts/selftest.sh` runs every `tests/*_test.sh` file and reports the combined tally — the picker, the archiver, `prepare.sh` arming and refusing, and the Stop hook driven with a fabricated `{"session_id","transcript_path"}` payload. What it cannot cover is the live runtime: exercise a real flow in a scratch git repo, never here. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.
+`scripts/selftest.sh` runs every `tests/*_test.sh` file and reports the combined tally — the picker, the archiver, `prepare.sh` arming and refusing, and the Stop hook driven with a fabricated `{session_id}` payload. What it cannot cover is the live runtime: exercise a real flow in a scratch git repo, never here. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.
 
 Each file under `tests/` is one section (`phase_test.sh`, `archive_test.sh`, `prepare_test.sh`, …), owns its own fixtures via the shared harness in `tests/lib.sh`, and is independently runnable and selectable: `bash tests/phase_test.sh` drives just the picker. Within a file, assertions are still one linear script of `is NAME GOT WANT` calls, printing `ok`/`FAIL` per assertion; the whole suite runs top to bottom in under 8 seconds. An optional `DIR` argument — to `scripts/selftest.sh` or to any one `tests/*_test.sh` file — points the run at a different `scripts/` copy — the installed cache under `~/.claude/plugins/cache/spectomat/`, for instance — instead of the one next to it.
 

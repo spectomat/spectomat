@@ -34,7 +34,7 @@ done
 is "contract.md's three strikes deletes the slug" \
   "$(grep -q 'slug_delete' "$(dirname "$SCRIPTS")/templates/contract.md" && echo yes || echo no)" "yes"
 # archive.md is a thin wrapper (D21): the mutation stays in archive.sh. FINISH
-# has no brief at all (D23) — the Stop hook ends the flow and composes the
+# has no brief at all (D24) — the Stop hook ends the flow and composes the
 # report, so no agent can claim the floor is empty.
 is "archive.md invokes archive.sh" "$(grep -q 'archive.sh' "$AGENTS/archive.md" && echo yes || echo no)" "yes"
 is "archive.md never calls slug_delete itself" "$(grep -q 'slug_delete' "$AGENTS/archive.md" && echo yes || echo no)" "no"
