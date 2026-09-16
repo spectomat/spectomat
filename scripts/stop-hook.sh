@@ -1,6 +1,8 @@
 #!/bin/bash
 # Spectomat flow Stop hook.
 # While the state file exists, block session exit and feed the pointer back.
+# The flow ends when scripts/phase.sh answers FINISH, or at the iteration cap;
+# no transcript is read and no promise string is trusted.
 
 set -euo pipefail
 
@@ -13,14 +15,15 @@ MAX_ITERATIONS=""
 STATE_SESSION=""
 STATE_ACTIVE=""
 STATE_BROKEN=""   # why the state file could not be parsed, when it could not
-# Set by require_transcript / read_last_output
-TRANSCRIPT_PATH=""
-LAST_OUTPUT=""
 
 # --- helpers ---
 
-# End the flow normally: message on stdout, flow disarmed.
-finish() { echo "$1"; disarm; exit 0; }
+# End the flow normally: the message reaches the operator as systemMessage,
+# the flow is disarmed. A Stop hook that exits 0 with plain stdout surfaces
+# only in transcript mode, and since FINISH no longer dispatches an agent
+# there is no assistant message left to carry the ending. No "decision" key,
+# so the stop itself proceeds.
+finish() { jq -n --arg msg "$1" '{"systemMessage": $msg}'; disarm; exit 0; }
 
 # End the flow on a problem: message on stderr, flow disarmed.
 abort() { echo "$1" >&2; disarm; exit 0; }
@@ -32,6 +35,32 @@ stop_corrupt() {
   echo "   The flow is stopping. Run /spectomat:run again to start fresh." >&2
   disarm
   exit 0
+}
+
+# The picker's verdict for the floor as it stands now. phase.sh cd_root's
+# itself, so this is safe from any cwd, and it mutates nothing.
+ask_picker() {
+  bash "$PLUGIN_ROOT/scripts/phase.sh" 2>/dev/null | sed -n 's/^phase://p'
+}
+
+# The lines the flow ends on, at most four. archive.sh's require_ready demands
+# specs/<slug>.md before anything moves, so every archived slug leaves exactly
+# one done/<slug>.spec.md or one done/<slug>.spec.blocked.md — never both and
+# never neither, which makes these counts slug counts. print_blocked in
+# print.sh matches '*.blocked.md' instead, listing up to four files per slug:
+# right for /spectomat:status, wrong for a count.
+closing_report() {
+  local shipped blocked names
+  shipped=$(count "$FLOOR/done" '*.spec.md')
+  blocked=$(count "$FLOOR/done" '*.spec.blocked.md')
+  printf '✅ Spectomat flow complete: the floor is empty and the tree is clean.\n'
+  printf '   Shipped %s · blocked %s · %s iterations.\n' "$shipped" "$blocked" "$ITERATION"
+  if [[ "$blocked" -gt 0 ]]; then
+    names=$(find "$FLOOR/done" -maxdepth 1 -name '*.spec.blocked.md' -type f 2>/dev/null \
+      | sed 's|.*/||; s|\.spec\.blocked\.md$||' | sort | tr '\n' ' ')
+    printf '   Blocked after %s strikes: %s\n' "$STRIKE_LIMIT" "${names% }"
+    printf '   Reasons are in %s/log.md; /spectomat:status lists them.\n' "$FLOOR"
+  fi
 }
 
 # --- phases ---
@@ -84,36 +113,6 @@ require_below_max() {
   fi
 }
 
-require_transcript() {
-  TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path')
-  [[ -f "$TRANSCRIPT_PATH" ]] || abort "⚠️  Spectomat flow: transcript not found at $TRANSCRIPT_PATH. The flow is stopping."
-  grep -q '"role":"assistant"' "$TRANSCRIPT_PATH" || abort "⚠️  Spectomat flow: no assistant messages in transcript. The flow is stopping."
-}
-
-# Each content block is its own JSONL line with role=assistant. Take the last
-# text block of the last 100 assistant lines; a turn of only tool calls yields
-# "" and the flow simply continues.
-read_last_output() {
-  local last_lines jq_exit
-  last_lines=$(grep '"role":"assistant"' "$TRANSCRIPT_PATH" | tail -n 100)
-  set +e
-  LAST_OUTPUT=$(echo "$last_lines" | jq -rs '
-    map(.message.content[]? | select(.type == "text") | .text) | last // ""
-  ' 2>&1)
-  jq_exit=$?
-  set -e
-  if [[ $jq_exit -ne 0 ]]; then
-    abort "⚠️  Spectomat flow: failed to parse transcript ($LAST_OUTPUT). The flow is stopping."
-  fi
-}
-
-# Finish when the last output carries the exact completion promise.
-check_promise() {
-  if promised_empty "$LAST_OUTPUT"; then
-    finish "✅ Spectomat flow: detected <promise>FACTORY EMPTY</promise>"
-  fi
-}
-
 # Bump the iteration counter in place and emit the block decision with the prompt.
 continue_iteration() {
   local next_iteration prompt_text temp_file system_msg
@@ -146,9 +145,7 @@ main() {
   require_sane_state
   [[ "$STATE_ACTIVE" == "true" ]] || exit 0
   require_below_max
-  require_transcript
-  read_last_output
-  check_promise
+  [[ "$(ask_picker)" != FINISH ]] || finish "$(closing_report)"
   continue_iteration
   exit 0
 }

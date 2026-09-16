@@ -19,8 +19,10 @@ cd_root() {
 
 die() { echo "❌ $*" >&2; exit 1; }
 
-# Number of .md files directly inside a floor directory (0 when it is missing).
-count() { find "$1" -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' '; }
+# Number of files matching GLOB (default '*.md') directly inside a directory,
+# 0 when it is missing. The glob is passed to find -name, so it must be
+# quoted at the call site, not expanded by the shell.
+count() { find "$1" -maxdepth 1 -name "${2:-*.md}" -type f 2>/dev/null | wc -l | tr -d ' '; }
 
 # Value of one key in the state file; empty when absent or unreadable.
 # Reading several keys at once is one jq call, not several - see read_state
@@ -92,13 +94,6 @@ EOF
 )
   printf '%s\n' "${body//\{\{PLUGIN_ROOT\}\}/$PLUGIN_ROOT}"
 }
-
-# True when $1 carries the completion promise. Whitespace is stripped from the
-# haystack rather than parsed out of the tags, so any line breaks or indentation
-# the model puts inside <promise>...</promise> still match. That also makes the
-# test lenient about spacing within the words themselves, which costs nothing:
-# no other wording ends the flow.
-promised_empty() { [[ "${1//[[:space:]]/}" == *"<promise>FACTORYEMPTY</promise>"* ]]; }
 
 # Failed attempts at one phase for one slug before that slug is blocked.
 STRIKE_LIMIT=3
