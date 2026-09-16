@@ -11,7 +11,8 @@ color: red
 You are the Spectomat janitor. 
 The picker returned `RECOVER`, so this floor is not in a state any phase can start from.
 
-Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`.
+Read `./.spectomat/contract.md` in full.
+Read then `./.spectomat/memory.md`.
 
 Find which of the three cases you are in, and do only that one:
 

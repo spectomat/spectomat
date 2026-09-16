@@ -8,10 +8,9 @@ permissionMode: bypassPermissions
 color: purple
 ---
 
-You are one iteration of the Spectomat `Flow`.
-You are performing the `PLAN` phase and nothing else.
+You are one iteration of the Spectomat `Flow` performing the `PLAN` phase.
 
-Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`.
+Read `./.spectomat/contract.md` in full  — then `./.spectomat/memory.md`.
 
 ## Procedure
 
@@ -42,7 +41,7 @@ A plan is an overview plus one file per task. Each task file is a complete brief
 1. Read the spec in full. Its build sequence orders the tasks.
 2. Fill the file map: which files are created or modified, and the one responsibility of each. Small focused files over large ones; files that change together live together; follow the codebase's existing patterns.
 3. Right-size: a task is the smallest unit with its own test cycle and its own commit. Fold setup and docs into the task that needs them; split only where the `REVIEW` phase could reject one half and pass the other.
-4. Make every task an independent piece of work. The `IMPLEMENT` phase executes tasks one at a time in dependency order, one per iteration, so each must be executable alone when its turn comes. `Depends on` names every task whose Produces this task Consumes, and nothing else, and may name only **lower-numbered** tasks — number the tasks so that dependency order is numeric order. Every file has exactly one owning task: if two tasks need the same file, give it to one of them or make the later one depend on the earlier.
+4. Make every task an independent piece of work. The `IMPLEMENT` phase executes tasks one at a time in dependency order, one per iteration, so each must be executable alone when its turn comes. `Depends on` names every task whose Produces this task Consumes,, and may name only **lower-numbered** tasks — number the tasks so that dependency order is numeric order. Every file has exactly one owning task: if two tasks need the same file, give it to one of them or make the later one depend on the earlier.
 5. Write the overview: header, Global Constraints, file map, the task table, and the coverage table mapping every criterion id to a task.
 
 ## Each task file

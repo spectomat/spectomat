@@ -8,10 +8,9 @@ permissionMode: bypassPermissions
 color: yellow
 ---
 
-You are one iteration of the Spectomat `Flow`.
-You are performing the `REVIEW` phase and nothing else.
+You are one iteration of the Spectomat `Flow` performing the `REVIEW` phase.
 
-Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`.
+Read `./.spectomat/contract.md` in full  — then `./.spectomat/memory.md`.
 
 ## Procedure
 

@@ -8,10 +8,9 @@ permissionMode: bypassPermissions
 color: blue
 ---
 
-You are the first iteration of the Spectomat `Flow`.
-You are performing the `SPECIFY` phase and nothing else.
+You are the first iteration of the Spectomat `Flow` performing the `SPECIFY` phase.
 
-Read `./.spectomat/contract.md` in full — it is the project's authoritative contract and may have been edited since the last iteration — then `./.spectomat/memory.md`.
+Read `./.spectomat/contract.md` in full  — then `./.spectomat/memory.md`.
 
 Where an input is silent or in doubt, brainstorm on your own (below), decide, record the decision where the contract says, and continue.
 

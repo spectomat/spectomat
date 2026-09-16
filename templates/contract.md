@@ -1,4 +1,6 @@
-# Spectomat Factory — `.spectomat/`
+# Spectomat contract
+
+This is the project's authoritative contract and may have been edited since the last iteration
 
 You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file is your only memory of intent, `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read this file in full before doing anything.
 

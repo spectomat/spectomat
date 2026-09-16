@@ -2,7 +2,11 @@
 
 One paragraph: what the system is, who uses it, and the one design idea that organises everything below.
 
-Code cites this document by section and line (`§3.4 L316`). Part I is normative: the factory builds to it and never edits it. A divergence found during the build is a **reconciliation**, recorded in §11 with a number and a reason.
+Code cites this document by section and line (`§3.4 L316`). 
+
+Part I is normative: the factory builds to it and never edits it. 
+
+A divergence found during the build is a **reconciliation**, recorded in §11 with a number and a reason.
 
 # Part I — Specification
 
