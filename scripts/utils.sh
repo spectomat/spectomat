@@ -83,13 +83,13 @@ Do not interpret the floor, the contract or the code yourself — act only on th
 
 ## 2. Act on that block, and only on it
 
-Launch exactly one subagent with the Agent tool: `run_in_background: false`, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` — its own frontmatter stripped — as the brief.
+Launch exactly one subagent with the Agent tool: `run_in_background: false`, `subagent_type` set to the `subagent` field of that block, and the body of the file named by `brief` — its own frontmatter stripped — as the brief. The one exception is a block whose `subagent` field is empty, which only `FINISH` produces: dispatch nothing and go to step 3.
 
 The task handed to the subagent is the block phase.sh printed, verbatim, fences included. Do not reformat it, extract fields out of it, or drop any line — the subagent reads `phase:`, `slug:` and `plugin_root:` for itself.
 
 ## 3. Report and stop
 
-Print the report in at most five lines, then stop. Never retry a failed iteration here — the next iteration is a new picker call and a new subagent. Write `<promise>FACTORY EMPTY</promise>` only when the block's `phase` was `FINISH`; it is a verdict you relay, never a judgement you make.
+Print the report in at most five lines, then stop. Never retry a failed iteration here — the next iteration is a new picker call and a new subagent. A `FINISH` block means the flow has already ended and the Stop hook has reported it; say so in one line and stop. There is no promise to write and nothing to confirm.
 EOF
 )
   printf '%s\n' "${body//\{\{PLUGIN_ROOT\}\}/$PLUGIN_ROOT}"

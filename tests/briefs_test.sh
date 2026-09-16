@@ -11,13 +11,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "briefs"
 AGENTS="$(dirname "$SCRIPTS")/agents"
-for a in specify review-spec plan implement review archive finish recover; do
+for a in specify review-spec plan implement review archive recover; do
   is "agents/$a.md exists" "$([[ -f "$AGENTS/$a.md" ]] && echo yes || echo no)" "yes"
   is "agents/$a.md is named $a" "$(sed -n 's/^name: *//p' "$AGENTS/$a.md" | head -1)" "$a"
   is "agents/$a.md has a description" \
     "$(grep -c '^description: ' "$AGENTS/$a.md")" "1"
 done
-is "AGENT_COUNT is 8" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "8"
+is "AGENT_COUNT is 7" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "7"
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "no brief points at the deleted prompts/" \
   "$(grep -l 'prompts/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
@@ -33,9 +33,12 @@ for a in specify review-spec implement review recover; do
 done
 is "contract.md's three strikes deletes the slug" \
   "$(grep -q 'slug_delete' "$(dirname "$SCRIPTS")/templates/contract.md" && echo yes || echo no)" "yes"
-# archive.md and finish.md are thin wrappers (D21): the mutation stays in
-# archive.sh, and the promise stays the pointer's, never the brief's own.
+# archive.md is a thin wrapper (D21): the mutation stays in archive.sh. FINISH
+# has no brief at all (D23) — the Stop hook ends the flow and composes the
+# report, so no agent can claim the floor is empty.
 is "archive.md invokes archive.sh" "$(grep -q 'archive.sh' "$AGENTS/archive.md" && echo yes || echo no)" "yes"
 is "archive.md never calls slug_delete itself" "$(grep -q 'slug_delete' "$AGENTS/archive.md" && echo yes || echo no)" "no"
+is "there is no finish brief" "$([[ -e "$AGENTS/finish.md" ]] && echo yes || echo no)" "no"
+is "no brief mentions the retired promise" "$(grep -l 'FACTORY EMPTY' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 
 finish
