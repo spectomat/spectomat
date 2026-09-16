@@ -6,7 +6,7 @@
 # Creates .spectomat/{drafts,specs,plans,snippets,done}, renders contract.md and
 # memory.md when absent, commits what it created (contract, memory, ignore
 # rules, drafts the user dropped in), and arms the Stop hook by writing
-# state.json. Default 100 iterations, the promise "FACTORY EMPTY". Refuses
+# state.json. Default 100 iterations. Refuses
 # when a flow is armed or the floor is empty.
 
 set -euo pipefail

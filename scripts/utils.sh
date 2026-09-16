@@ -19,8 +19,10 @@ cd_root() {
 
 die() { echo "❌ $*" >&2; exit 1; }
 
-# Number of .md files directly inside a floor directory (0 when it is missing).
-count() { find "$1" -maxdepth 1 -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' '; }
+# Number of files matching GLOB (default '*.md') directly inside a directory,
+# 0 when it is missing. The glob is passed to find -name, so it must be
+# quoted at the call site, not expanded by the shell.
+count() { find "$1" -maxdepth 1 -name "${2:-*.md}" -type f 2>/dev/null | wc -l | tr -d ' '; }
 
 # Value of one key in the state file; empty when absent or unreadable.
 # Reading several keys at once is one jq call, not several - see read_state
@@ -81,24 +83,17 @@ Do not interpret the floor, the contract or the code yourself — act only on th
 
 ## 2. Act on that block, and only on it
 
-Launch exactly one subagent with the Agent tool: `run_in_background: false`, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` — its own frontmatter stripped — as the brief.
+Launch exactly one subagent with the Agent tool: `run_in_background: false`, `subagent_type` set to the `subagent` field of that block, and the body of the file named by `brief` — its own frontmatter stripped — as the brief. The one exception is a block whose `subagent` field is empty, which only `FINISH` produces: dispatch nothing and go to step 3.
 
 The task handed to the subagent is the block phase.sh printed, verbatim, fences included. Do not reformat it, extract fields out of it, or drop any line — the subagent reads `phase:`, `slug:` and `plugin_root:` for itself.
 
 ## 3. Report and stop
 
-Print the report in at most five lines, then stop. Never retry a failed iteration here — the next iteration is a new picker call and a new subagent. Write `<promise>FACTORY EMPTY</promise>` only when the block's `phase` was `FINISH`; it is a verdict you relay, never a judgement you make.
+Print the report in at most five lines, then stop. Never retry a failed iteration here — the next iteration is a new picker call and a new subagent. A `FINISH` block means the flow has already ended and the Stop hook has reported it; say so in one line and stop. There is no promise to write and nothing to confirm.
 EOF
 )
   printf '%s\n' "${body//\{\{PLUGIN_ROOT\}\}/$PLUGIN_ROOT}"
 }
-
-# True when $1 carries the completion promise. Whitespace is stripped from the
-# haystack rather than parsed out of the tags, so any line breaks or indentation
-# the model puts inside <promise>...</promise> still match. That also makes the
-# test lenient about spacing within the words themselves, which costs nothing:
-# no other wording ends the flow.
-promised_empty() { [[ "${1//[[:space:]]/}" == *"<promise>FACTORYEMPTY</promise>"* ]]; }
 
 # Failed attempts at one phase for one slug before that slug is blocked.
 STRIKE_LIMIT=3
