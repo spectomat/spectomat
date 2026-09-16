@@ -4,7 +4,7 @@ A Claude Code plugin that turns raw ideas into committed, tested code without an
 
 The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the project-owned contract holds only the invariants that outlive both.**
 
-Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPEC`** spec → reviewed spec, **`PLAN`** reviewed spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Every phase, plus `RECOVER` and `FINISH`, is a subagent with its own brief, so the pointer dispatches one way for every verdict (D2); `ARCHIVE`'s brief does no archiving itself — it only invokes `scripts/archive.sh` and relays its exit code, because a script that exits non-zero on a failing gate is still stronger evidence than an agent claiming the gate passed.
+Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPEC`** spec → reviewed spec, **`PLAN`** reviewed spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Every phase, plus `RECOVER`, is a subagent with its own brief, dispatched the same way by the pointer (D2); `FINISH` is the exception — the Stop hook ends the flow itself, dispatching nobody (D24). `ARCHIVE`'s brief does no archiving itself — it only invokes `scripts/archive.sh` and relays its exit code, because a script that exits non-zero on a failing gate is still stronger evidence than an agent claiming the gate passed.
 
 ## 1. System Overview
 
@@ -18,7 +18,6 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 | Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase and commits it |
 | Archiver | `spectomat:archive`, wrapping `scripts/archive.sh` | the brief invokes the script and relays its result unchanged; the script performs the `ARCHIVE` phase: gates, moves, commit, log |
 | Janitor | `spectomat:recover` | recovers a dirty tree, or a floor the picker cannot classify |
-| Finisher | `spectomat:finish` | confirms the floor is empty and composes the closing report; the session itself still emits the promise |
 
 ### 1.2 The system in one picture
 
@@ -35,7 +34,7 @@ Stop hook
           ├─ phase:REVIEW         →  Agent(spectomat:review)      finished plan → verdict
           ├─ phase:ARCHIVE        →  Agent(spectomat:archive)      bash scripts/archive.sh <slug>, relayed
           ├─ phase:RECOVER        →  Agent(spectomat:recover)
-          └─ phase:FINISH         →  Agent(spectomat:finish)       session then emits <promise>FACTORY EMPTY</promise>
+          └─ phase:FINISH         →  dispatches nothing; the Stop hook ends the flow and reports
 ```
 
 Every arrow's target — the `subagent` and `brief` field — is computed by `phase.sh` itself, not looked up by the pointer: the agent name is the phase lowercased (`REVIEW-SPEC` → `review-spec`), so the block is the one place that mapping lives.
@@ -96,7 +95,7 @@ The session reads no contract, no floor file and no source. Its context accumula
 
 ### 3.3 Dispatch
 
-The pointer has no lookup table: every field it needs is in the block. It launches exactly one subagent — `run_in_background: false`, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` (after that file's own frontmatter) as the task's brief — for every `phase`, `SPECIFY` through `FINISH` alike. `FINISH`'s subagent prints the closing report; the session itself still emits the promise as the last line (§3.5).
+The pointer has no lookup table: every field it needs is in the block. It launches exactly one subagent — `run_in_background: false`, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` (after that file's own frontmatter) as the task's brief — for every `phase` from `SPECIFY` through `RECOVER`. `FINISH` is the exception: its block names no `subagent` and no `brief`, because the Stop hook ends the flow on that verdict before the pointer ever sees it (§3.5). A pointer that does see a `FINISH` block — from `/spectomat:status`, or a janitor running the picker by hand — dispatches nothing.
 
 The task handed to the subagent is the picker's frontmatter block, verbatim, fences included — the pointer neither reformats it nor extracts fields from it. A brief therefore carries no plugin path of its own but can still reach `templates/` by reading `plugin_root:` out of its own task.
 
@@ -110,7 +109,9 @@ An iteration that dies mid-phase leaves a dirty tree; the next picker returns `R
 
 ### 3.5 Completion
 
-The session emits `<promise>FACTORY EMPTY</promise>` if and only if the picker printed `FINISH`. The picker prints `FINISH` only when `drafts/`, `specs/` and `plans/` hold no `.md` files **and** `git status --porcelain` is silent, both evaluated in that invocation.
+The Stop hook ends the flow if and only if the picker answers `FINISH` in that hook invocation. The picker answers `FINISH` only when `drafts/`, `specs/` and `plans/` hold no `.md` files **and** `git status --porcelain` is silent, both evaluated in that invocation. No model output is consulted: the hook runs `scripts/phase.sh` itself and reads no transcript, so nothing a session writes can end a flow or keep one alive.
+
+The hook composes the closing report from `done/`: one `<slug>.spec.md` per shipped slug, one `<slug>.spec.blocked.md` per blocked one, both guaranteed by `archive.sh`'s `require_ready` (§5.5). It reaches the operator as the hook's `systemMessage`.
 
 ## 4. Boundaries
 
@@ -355,6 +356,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D21 | Every verdict, `ARCHIVE` and `FINISH` included, dispatches through a subagent, so dispatch has one row shape for all seven — `spectomat:archive` invokes `archive.sh` and relays its exit code unchanged; `spectomat:finish` reads the log and floor to compose the closing report, and the session still emits the promise | keeping `ARCHIVE` a bare script call and `FINISH` pointer-only text, as D2 and D14 both argue for mechanical work | operator preference for a uniform dispatch table outweighed the extra hop, once each wrapper was written to add no judgement of its own: `spectomat:archive`'s brief forbids moving a file, running a gate, or reinterpreting a non-zero exit as success, and `spectomat:finish`'s brief forbids writing to `state.json` or emitting the promise itself. D2's reliability guarantee is unweakened by the wrapper, since `archive.sh` still performs every mutation and still owns its own exit code — the agent can only relay it, not launder it |
 | D22 | `phase.sh` computes `subagent` and `brief` itself and emits them in its frontmatter block (§2.1, §3.3), so the uniform row shape D21 fixed lives in one script instead of also being restated as a table in the pointer prompt | keeping a dispatch table in the pointer prompt, matching each verdict to a `subagent_type` and brief path by hand | the mapping is a pure function of `phase` (lowercase it, prefix `spectomat:`, join with `PLUGIN_ROOT`) that `phase.sh` already has every input for; a table restating it in the pointer was a second place the same seven rows could drift out of step with `agents/*.md`'s actual file names, with no test catching the mismatch until a dispatch failed. The picker still only prints and mutates nothing (§5.1 note 6) |
 | D23 | The pointer prompt is generated by `pointer_prompt()` in `scripts/utils.sh` — a fixed heredoc with `PLUGIN_ROOT` substituted at call time — and never written to disk | `templates/pointer.md`, rendered into `.spectomat/pointer.md` at arm time and re-rendered on every resume | the text never varies except for `PLUGIN_ROOT`, which every script that sources `utils.sh` already holds as a shell variable; rendering it to a gitignored file bought nothing but a second path for `disarm()` to clean up, a resume step that had to re-render it, and a file that could hold a stale `PLUGIN_ROOT` if the plugin was reinstalled at a new cache path between arms. Generating it fresh in `continue_iteration()` and in `prepare.sh`'s arm preview removes all three at once, and it is exercised directly in `pointer_prompt_test.sh` (§10) rather than through a rendered file's contents |
+| D24 | The Stop hook runs `phase.sh` itself and ends the flow on `FINISH`, composing the closing report in bash; `FINISH` dispatches no agent and the `<promise>FACTORY EMPTY</promise>` string is retired | keeping the promise as the signal; keeping `agents/finish.md` and latching the finished iteration in `state.json` | the promise put the verdict's authority in the model's hands: `check_promise` never consulted the picker, so any text carrying the string ended a flow, a tool-call-final turn stranded one, and a dirty tree at finish time ended the flow instead of reaching the janitor. D1 claimed a false completion promise was structurally impossible; this makes that true. Supersedes D21 for `FINISH` only — `ARCHIVE`'s wrapper is untouched, and D2's and D14's argument that mechanical work stays mechanical is what `FINISH` returns to. A `state.json` latch was rejected because `FINISH` is a stable predicate and an actuator inside the process that evaluates it fires exactly once with no memory |
 
 ## 9. Acceptance Criteria
 
@@ -388,7 +390,8 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-4.6 | `prepare.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
 | AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, and feeds back the pointer prompt verbatim | selftest |
 | AC-4.8 | A session that did not arm the flow neither advances nor ends it, and an unreadable state file is left in place for `/spectomat:cancel` | selftest |
-| AC-4.9 | The promise and the iteration cap both disarm the flow | selftest |
+| AC-4.9 | An empty floor with a clean tree disarms the flow and reports what shipped and what was blocked; the iteration cap disarms it too | selftest |
+| AC-4.11 | An empty floor with a dirty tree does not end the flow: the hook blocks and the next verdict is `RECOVER` | selftest |
 | AC-4.10 | `pointer_prompt()` resolves `PLUGIN_ROOT` with no unresolved `{{KEY}}` placeholder left in its output | selftest |
 | AC-4.5 | Drafts are taken in alphabetical order of the file name, whatever their modification times | selftest |
 | AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
@@ -401,7 +404,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 
 | Id | Criterion | Verified by |
 | --- | --- | --- |
-| E2E-1 | A scratch repo with two drafts runs to `<promise>FACTORY EMPTY</promise>`, producing two archived trails and committed code | `claude -p` run, §10.5 |
+| E2E-1 | A scratch repo with two drafts runs until the Stop hook reports the flow complete, producing two archived trails and committed code | `claude -p` run, §10.5 |
 | E2E-2 | An iteration killed mid-`IMPLEMENT` leaves a dirty tree; the next iteration's verdict is `RECOVER` and the janitor restores a clean tree | manual, scratch repo |
 
 ### 9.3 Non-functional
@@ -474,7 +477,7 @@ claude plugin validate .claude-plugin/marketplace.json --strict
 | Not covered | Checked instead by |
 | --- | --- |
 | whether the runtime loads `AGENT_COUNT` agents | `claude -p … --debug-file <f> --model opus`, then grep `<f>` for `Loaded 6 agents from plugin`; a `-p` prompt asking Claude to list agent types reports NONE even when they are loaded, so it must not be used |
-| whether a full flow reaches the promise | `claude -p "/spectomat:run 25" --plugin-dir . --model opus` in a scratch repo with two drafts |
+| whether a full flow reaches `FINISH` | `claude -p "/spectomat:run 25" --plugin-dir . --model opus` in a scratch repo with two drafts |
 | whether the Stop hook releases against the real runtime | the selftest drives it with a fabricated payload; only a live session proves Claude Code honours the `block` decision |
 | whether `prepare.sh` keeps an edited contract | arming twice in a scratch repo, editing `contract.md` between runs |
 
