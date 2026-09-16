@@ -9,7 +9,7 @@
 #                     phase:REVIEW         finished plan -> verdict, or fix tasks
 #                     phase:ARCHIVE        reviewed plan -> done
 #                     phase:RECOVER        dirty tree, or a floor no stage claims
-#                     phase:FINISH         nothing left; the flow may end
+#                     phase:FINISH         nothing left; the Stop hook ends the flow
 #
 #                   The block also names the subagent to dispatch, the brief
 #                   file to hand it, and the plugin root, so the pointer prompt
@@ -19,8 +19,8 @@
 #                     ---
 #                     phase:<PHASE>
 #                     slug:<slug, empty for RECOVER and FINISH>
-#                     subagent:spectomat:<agent>
-#                     brief:<PLUGIN_ROOT>/agents/<agent>.md
+#                     subagent:spectomat:<agent>   (empty for FINISH)
+#                     brief:<PLUGIN_ROOT>/agents/<agent>.md   (empty for FINISH)
 #                     plugin_root:<PLUGIN_ROOT>
 #                     ---
 #
@@ -38,15 +38,21 @@ cd_root
 # FINISH), and everything the pointer prompt needs to dispatch a subagent with
 # no lookup table of its own — the agent name, brief path and plugin root are
 # all computable from the phase alone.
+#
+# FINISH is the exception: the Stop hook ends the flow on that verdict, so
+# there is no agent to dispatch and no brief to hand it, and both fields stay
+# empty. RECOVER has an empty slug but a real agent; do not group them.
 emit() {
-  local phase="$1" slug="${2:-}" agent
-  agent="$(printf '%s' "$phase" | tr '[:upper:]' '[:lower:]')"
+  local phase="$1" slug="${2:-}" agent=""
+  if [[ "$phase" != FINISH ]]; then
+    agent="$(printf '%s' "$phase" | tr '[:upper:]' '[:lower:]')"
+  fi
   cat <<EOF
 ---
 phase:$phase
 slug:$slug
-subagent:spectomat:$agent
-brief:$PLUGIN_ROOT/agents/$agent.md
+subagent:${agent:+spectomat:$agent}
+brief:${agent:+$PLUGIN_ROOT/agents/$agent.md}
 plugin_root:$PLUGIN_ROOT
 ---
 EOF

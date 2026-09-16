@@ -120,4 +120,14 @@ out="$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")"
 is "RECOVER's slug field is empty" "$(printf '%s\n' "$out" | grep '^slug:')" "slug:"
 is "RECOVER's subagent is the janitor" "$(printf '%s\n' "$out" | grep '^subagent:')" "subagent:spectomat:recover"
 
+# FINISH dispatches nothing: the Stop hook ends the flow on this verdict, so
+# the block names no agent and no brief. RECOVER, which does dispatch, keeps
+# both — the two empty-slug verdicts are not alike here.
+floor p_frontmatter_finish
+out="$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")"
+is "FINISH's slug field is empty"     "$(printf '%s\n' "$out" | grep '^slug:')"        "slug:"
+is "FINISH names no subagent"         "$(printf '%s\n' "$out" | grep '^subagent:')"    "subagent:"
+is "FINISH names no brief"            "$(printf '%s\n' "$out" | grep '^brief:')"       "brief:"
+is "FINISH still names plugin_root"   "$(printf '%s\n' "$out" | grep '^plugin_root:')" "plugin_root:$plugin_root_expect"
+
 finish
