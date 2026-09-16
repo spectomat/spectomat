@@ -1,6 +1,6 @@
 # spectomat
 
-Spec-driven dark factory for Claude Code.
+Spec-driven code development flow for Claude Code.
 
 Drop ideas into `.spectomat/drafts/`, call one `/spectomat:run` command, and an unattended flow turns each idea into a spec, each spec into a plan and tasks, and then executes all of them to produce well-tested, committed code.
 

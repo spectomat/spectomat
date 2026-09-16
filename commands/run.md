@@ -1,12 +1,12 @@
 ---
-description: "Run the unattended dark factory"
+description: "Run the unattended code development flow"
 argument-hint: "[max-iterations]  (default 100)"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Agent", "Task"]
 ---
 
 # Spectomat run
 
-Run the unattended dark factory - floor setup
+Run the unattended code development flow - floor setup
 and the start of iterations over `drafts → specs → plans → executed plans → done` phases:
 
 ```!

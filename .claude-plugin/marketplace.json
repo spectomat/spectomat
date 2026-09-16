@@ -11,7 +11,7 @@
     {
       "name": "spectomat",
       "source": "./",
-      "description": "Spec-driven dark factory: drafts to specs to plans to code, unattended"
+      "description": "Spec-driven code development flow: drafts to specs to plans to code, unattended"
     }
   ]
 }

@@ -91,4 +91,4 @@ Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` 
 - **Contract** is `.spectomat/contract.md`: the rules, the gates and the steps every iteration re-reads.
 - **Memory** is `.spectomat/memory.md`: durable facts about the codebase — map, commands, patterns, traps — read by every iteration, added to inside the phase commit. The contract is what the factory knows about the job, the memory what it knows about the project.
 - **Verification Gate** is one command in the Verification Gates block of the contract that must exit 0 once per task in the `IMPLEMENT` phase and once in the `ARCHIVE` phase.
-- **Dark factory** is a production line that runs *unattended*, lights off. Here: a flow that turns ideas into committed code without asking anyone.
+- **code development flow** is a production line that runs *unattended*, lights off. Here: a flow that turns ideas into committed code without asking anyone.
