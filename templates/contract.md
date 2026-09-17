@@ -98,3 +98,5 @@ Numbers, never adjectives. A log line without numbers did not run the gates.
 - ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
 - ❌ DO NOT Spawn a subagent — each phase is already the fresh context it gets; do the work yourself.
 - ❌ DO NOT Create a branch or worktree — every phase works on the current branch.
+- ❌ DO NOT Touch any repository but the one under flow — not the plugin's own checkout, not a sibling project. `git stash`, commit or checkout outside this project destroys work no phase owns. A dirty tree elsewhere is never yours to clear; if a script refuses because of it, that refusal is the correct outcome.
+- ❌ DO NOT Ask the caller to run a command you were denied — a denial ends the phase. Record it, log the strike, and stop; routing it upward launders a permission the operator withheld.

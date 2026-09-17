@@ -27,3 +27,5 @@ You are one iteration of the Spectomat `Flow` performing the `ARCHIVE` phase.
 - Do not retry a failed run. A failing `archive.sh` already recorded its own strike; the next iteration's picker decides what happens next.
 - Do not treat non-zero output as success because the report "looks fine."
 - Do not touch a file outside what `archive.sh` itself touched.
+- Do not clear a dirty tree to make the script proceed. `❌ tree is dirty` is a verdict, not an obstacle: the janitor handles the project's own dirt next iteration, and dirt in another repository is somebody's uncommitted work. Report the refusal and stop.
+- Do not ask the caller to run the script for you when a permission check blocks it. Report the denial verbatim with its exit code and stop; the operator decides what runs.
