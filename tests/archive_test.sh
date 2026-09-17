@@ -1,7 +1,6 @@
 #!/bin/bash
 # archive.sh — the ARCHIVE phase: green/red gates, strikes, blocking, and the
-# unchecked-move regression that leaves the tree dirty rather than committing
-# a partial move.
+# marker file that finishes a slug in place without moving its trail.
 #
 #   tests/archive_test.sh              tests ../scripts
 #   tests/archive_test.sh DIR          tests the scripts in DIR
@@ -23,10 +22,11 @@ commits() { ( cd "$FIXTURE" && git rev-list --count HEAD ); }
 
 ready pass 001-a 'true'
 n0=$(commits); arc 001-a; is "a green gate exits 0" "$?" "0"
-is "the spec moved"    "$(there done/001-a.spec.md)" "yes"
-is "the plan moved"    "$(there done/001-a.plan.md)" "yes"
-is "the task dir moved" "$(there done/001-a)"        "yes"
-is "specs/ is empty"   "$(there specs/001-a.md)"     "no"
+is "done.md marks the slug finished" "$(there 001-a/done.md)"    "yes"
+is "no blocked.md is written"        "$(there 001-a/blocked.md)" "no"
+is "the spec stays put"              "$(there 001-a/spec.md)"    "yes"
+is "the plan stays put"              "$(there 001-a/plan.md)"    "yes"
+is "the task files stay put"         "$(there 001-a/task-01-x.md)" "yes"
 is "exactly one commit" "$(( $(commits) - n0 ))"     "1"
 is "the tree is clean" "$(cd "$FIXTURE" && git status --porcelain)" ""
 is "the log names the gate result" "$(grep -c 'gates passed' "$FIXTURE/.spectomat/log.md")" "1"
@@ -36,45 +36,41 @@ is "the commit touches only the floor" \
 is "archiving deletes the slug from state.json" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"] // "gone"' .spectomat/state.json)" "gone"
 
 ready fail 001-a 'false'
-arc 001-a; is "a red gate exits 1" "$?" "1"
-is "nothing moved"     "$(there done/001-a.spec.md)" "no"
-is "the spec stayed"   "$(there specs/001-a.md)"     "yes"
+n0=$(commits); arc 001-a; is "a red gate exits 1" "$?" "1"
+is "no marker is written"  "$(there 001-a/done.md)"    "no"
+is "no blocked marker yet" "$(there 001-a/blocked.md)" "no"
+is "the spec stayed"       "$(there 001-a/spec.md)"    "yes"
+is "a red gate commits nothing" "$(( $(commits) - n0 ))" "0"
 is "a strike is logged" "$(grep -c '(strike 1)' "$FIXTURE/.spectomat/log.md")" "1"
 arc 001-a; is "the second strike counts up" "$(grep -c '(strike 2)' "$FIXTURE/.spectomat/log.md")" "1"
 arc 001-a; is "the third strike exits 0" "$?" "0"
-is "the blocked spec moved" "$(there done/001-a.spec.blocked.md)" "yes"
-is "the blocked plan moved" "$(there done/001-a.plan.blocked.md)" "yes"
-is "print_blocked lists both" \
-  "$(cd "$FIXTURE" && find .spectomat/done -maxdepth 1 -name '*.blocked.md' | wc -l | tr -d ' ')" "2"
+is "the third strike writes blocked.md" "$(there 001-a/blocked.md)" "yes"
+is "a blocked slug gets no done.md"     "$(there 001-a/done.md)"    "no"
+is "blocked.md names the reason" "$(grep -c 'gate failed' "$FIXTURE/.spectomat/001-a/blocked.md")" "1"
+is "the blocked trail stays on the floor" "$(there 001-a/spec.md)" "yes"
 is "blocking archive deletes the slug from state.json" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"] // "gone"' .spectomat/state.json)" "gone"
 
 ready dirt 001-a 'true'; dirty
 arc 001-a; is "a dirty tree is refused" "$?" "1"
-is "nothing moved on a dirty tree" "$(there done/001-a.spec.md)" "no"
+is "nothing is marked on a dirty tree" "$(there 001-a/done.md)" "no"
 
 ready nosuch 001-a 'true'
 arc 002-b; is "an unknown slug is refused" "$?" "1"
 
-echo "archive.sh: unchecked move/commit failures (regression)"
-# conflict PATH — pre-place and commit a file at a done/ destination so the
-# git mv that targets it is refused; the tree must stay clean going in, or
-# require_ready would reject it for the wrong reason.
-conflict() { printf 'conflict\n' > "$FIXTURE/.spectomat/$1"; fixture_commit; }
+# A slug that already carries a marker is out of the flow: archiving it again
+# would write a second commit over finished work, and (for a blocked slug)
+# would silently promote it to shipped.
+echo "archive.sh: a finished slug is refused"
+ready twice 001-a 'true'
+arc 001-a; n0=$(commits)
+arc 001-a; is "archiving a done slug exits non-zero" "$?" "1"
+is "the second archive commits nothing" "$(( $(commits) - n0 ))" "0"
 
-ready blk1 001-a 'true'
-conflict done/001-a.spec.md
+ready blkdone 001-a 'true'
+printf 'blocked\n' > "$FIXTURE/.spectomat/001-a/blocked.md"; fixture_commit
 n0=$(commits); arc 001-a
-is "a blocked spec move exits non-zero"        "$?" "1"
-is "no commit is made when the spec can't move" "$(( $(commits) - n0 ))" "0"
-is "a strike is logged for the failed move"    "$(grep -c '(strike 1)' "$FIXTURE/.spectomat/log.md")" "1"
-is "the spec never moved"                      "$(there specs/001-a.md)" "yes"
-is "the plan never moved either"               "$(there plans/001-a.md)" "yes"
-
-ready blk2 001-a 'true'
-conflict done/001-a.spec.md
-conflict done/001-a.plan.md
-n0=$(commits); arc 001-a
-is "both destinations blocked exits non-zero" "$?" "1"
-is "zero new commits when nothing could move" "$(( $(commits) - n0 ))" "0"
+is "archiving a blocked slug exits non-zero" "$?" "1"
+is "a blocked slug is never promoted to done" "$(there 001-a/done.md)" "no"
+is "the refusal commits nothing" "$(( $(commits) - n0 ))" "0"
 
 finish

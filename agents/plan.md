@@ -14,20 +14,20 @@ You are one iteration of the Spectomat `Flow` performing the `PLAN` phase.
 
 - `./.spectomat/contract.md` in full
 - `./.spectomat/memory.md`
-- the spec `specs/<slug>.md` in full — its build sequence orders the tasks
+- the spec `<slug>/spec.md` in full — its build sequence orders the tasks
 
 ## Procedure
 
 ```text
-specs/<slug>.md ──▶ [ PLAN ] ──┬──▶ plans/<slug>.md
-                               └──▶ plans/<slug>/task-NN-*.md
-                       │
-                       ▼
-        state: slug_start_tasks → IMPLEMENT
+<slug>/spec.md ──▶ [ PLAN ] ──┬──▶ <slug>/plan.md
+                              └──▶ <slug>/task-NN-*.md
+                      │
+                      ▼
+       state: slug_start_tasks → IMPLEMENT
 ```
 
-1. Write the overview `.spectomat/plans/<slug>.md` from `<plugin root>/templates/plan.md`, following Before the tasks below.
-2. Write one self-contained task file per task under `.spectomat/plans/<slug>/`, from `<plugin root>/templates/task.md`, following Each task file below.
+1. Write the overview `.spectomat/<slug>/plan.md` from `<plugin root>/templates/plan.md`, following Before the tasks below.
+2. Write one self-contained task file per task under `.spectomat/<slug>/`, from `<plugin root>/templates/task.md`, following Each task file below.
 3. Run the Self-review below and fix inline.
 4. Record memory, commit `<type>(<slug>): …`.
 5. Advance `.spectomat/state.json`: call `slug_start_tasks <slug> <N>` with N the number of task files written.
@@ -41,9 +41,9 @@ specs/<slug>.md ──▶ [ PLAN ] ──┬──▶ plans/<slug>.md
 - Save to:
 
 ```text
-.spectomat/plans/<slug>.md                       overview
-.spectomat/plans/<slug>/task-01-<name>.md        one per task, zero-padded, in execution order
-.spectomat/snippets/<slug>/task-01-step1.<ext>   the code for that task's code-bearing steps
+.spectomat/<slug>/plan.md               overview
+.spectomat/<slug>/task-01-<name>.md     one per task, zero-padded, in execution order
+.spectomat/<slug>/task-01-step1.<ext>   the code for that task's code-bearing steps
 ```
 
 - Do not ask which execution mode to use; the `IMPLEMENT` phase always runs one task per iteration.
@@ -63,8 +63,8 @@ Follow `<plugin root>/templates/task.md` exactly. A task file is read by an agen
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths; **Interfaces** with exact names and signatures consumed from earlier tasks and produced for later ones.
 - **Covers** — the criterion ids this task's tests name.
-- **Steps** — five numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/snippets/<slug>/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. Number the steps 1–5; `state.json`'s `tasks_total`/`tasks_done` (not the task files) are what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
-- **Rulings and Result** are not sections of the task file: the `IMPLEMENT` phase records them later, one entry per task, in the plan's `<slug>.ruling.md` and `<slug>.result.md`. Write neither file yourself.
+- **Steps** — five numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/<slug>/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. Number the steps 1–5; `state.json`'s `tasks_total`/`tasks_done` (not the task files) are what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
+- **Rulings and Result** are not sections of the task file: the `IMPLEMENT` phase records them later, one entry per task, in the plan's `ruling.md` and `result.md`. Write neither file yourself.
 
 ## Self-review
 
@@ -75,4 +75,4 @@ After writing every file, check them against the spec yourself:
 3. **Consistency** — a name, signature or type consumed in a later task is produced, spelled the same, by a task it depends on.
 4. **Ownership** — no file appears in the Files of two tasks unless the later one depends on the earlier, and no `Depends on` names a higher number.
 5. **Self-containment** — read one task file alone: could it be executed without the plan? If not, copy in what is missing.
-6. **Snippets exist** — every snippet path a task file names under `.spectomat/snippets/<slug>/` is a file you actually wrote.
+6. **Snippets exist** — every snippet path a task file names under `.spectomat/<slug>/` is a file you actually wrote.

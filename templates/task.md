@@ -1,7 +1,7 @@
 # Task {{N}}: {{SLUG}}  <component>
 
-**Plan:** .spectomat/plans/{{SLUG}}.md
-**Spec:** .spectomat/specs/{{SLUG}}.md — §<sections this task implements>
+**Plan:** .spectomat/{{SLUG}}/plan.md
+**Spec:** .spectomat/{{SLUG}}/spec.md — §<sections this task implements>
 **Covers:** AC-1.1, AC-1.2
 **Depends on:** Task <M> (or none)
 
@@ -22,9 +22,9 @@ One sentence: what exists when this task is done that did not before.
 
 ## Steps
 
-1. **Step 1: Write the failing test** — create `exact/path.test.js` with the content of `.spectomat/snippets/{{SLUG}}/task-{{N}}-step1.js`
+1. **Step 1: Write the failing test** — create `exact/path.test.js` with the content of `.spectomat/{{SLUG}}/task-{{N}}-step1.js`
 2. **Step 2: Run it, expect FAIL** — `npm test -- exact/path.test.js`, fails with "fn is not defined"
-3. **Step 3: Minimal implementation** — create `exact/path.js` with the content of `.spectomat/snippets/{{SLUG}}/task-{{N}}-step3.js`
+3. **Step 3: Minimal implementation** — create `exact/path.js` with the content of `.spectomat/{{SLUG}}/task-{{N}}-step3.js`
 4. **Step 4: Run it, expect PASS** — same command; the full suite stays green
 5. **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the `IMPLEMENT` phase stages exactly this task's Files and makes one commit
 

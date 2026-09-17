@@ -25,22 +25,14 @@ hook_floor() {
     && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
 }
 
-# empty_floor — remove the draft and its state entry, so the picker says
-# FINISH. The removal is committed, or the tree is dirty and the answer is
-# RECOVER instead.
+# empty_floor — remove the unfinished slug and its state entry, so the picker
+# says FINISH. The removal is committed, or the tree is dirty and the answer is
+# RECOVER instead. Slugs archived() marked are finished and stay put: the
+# closing report counts them.
 empty_floor() {
-  rm -f "$FIXTURE/.spectomat/drafts/001-a.md"
+  rm -rf "$FIXTURE/.spectomat/001-a"
   jq 'del(.slugs["001-a"])' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
     && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
-  fixture_commit
-}
-
-# archived SLUG [blocked] — a finished trail in done/, as archive.sh leaves it.
-archived() {
-  local infix=""
-  [[ -z "${2:-}" ]] || infix=".blocked"
-  printf 'spec\n' > "$FIXTURE/.spectomat/done/$1.spec$infix.md"
-  printf 'plan\n' > "$FIXTURE/.spectomat/done/$1.plan$infix.md"
   fixture_commit
 }
 
@@ -91,17 +83,17 @@ is "a cancelled flow bumps nothing" "$(hook_iter)" "1"
 
 # The flow ends on the picker's FINISH verdict, not on anything a model said.
 hook_floor h_finish OWNER 4 20
-archived 001-a
-archived 002-b blocked
 empty_floor
+archived 003-c
+archived 002-b blocked
 out=$(fire OWNER)
-is "an empty floor ends the flow"  "$(msg "$out" | grep -c 'flow complete')" "1"
+is "a finished floor ends the flow"  "$(msg "$out" | grep -c 'flow complete')" "1"
 is "the report counts what shipped" "$(msg "$out" | grep -c 'Shipped 1')"     "1"
 is "the report counts what blocked" "$(msg "$out" | grep -c 'blocked 1')"     "1"
 is "the report names the blocked slug" "$(msg "$out" | grep -c '002-b')"      "1"
 is "the report's tally line" "$(msg "$out" | sed -n '2p')" "   Shipped 1 · blocked 1 · 4 iterations."
 is "the flow does not block"        "$(printf '%s' "$out" | jq -r '.decision // ""')" ""
-is "an empty floor disarms"         "$(hook_state)" "no"
+is "a finished floor disarms"         "$(hook_state)" "no"
 
 # The bug the promise could not see: an empty floor in a dirty tree is
 # RECOVER, so the flow must continue instead of ending on a mess.
@@ -109,7 +101,7 @@ hook_floor h_finish_dirty OWNER 4 20
 empty_floor
 dirty
 out=$(fire OWNER)
-is "an empty floor with a dirty tree keeps going" "$(printf '%s' "$out" | jq -r .decision)" "block"
+is "a finished floor with a dirty tree keeps going" "$(printf '%s' "$out" | jq -r .decision)" "block"
 is "a dirty finish does not disarm"               "$(hook_state)" "yes"
 
 hook_floor h_cap OWNER 3 3

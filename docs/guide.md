@@ -22,10 +22,14 @@ claude plugin install spectomat@spectomat
 
 ```text
 .spectomat/
-  drafts/     ideas, one .md each; the file name is the slug, worked in alphabetical order
-  specs/      written by SPECIFY from each draft, then revised once by REVIEW-SPEC; or put a finished spec here yourself
-  plans/      PLAN writes an overview per spec plus <slug>/task-NN-<name>.md per task, each a self-contained brief
-  done/       spec + plan moved here by ARCHIVE once REVIEW has passed the plan and the gates are green
+  drafts/     the inbox: ideas, one .md each; the file name is the slug. `run` moves each into its own slug dir
+  <slug>/     everything of one idea, for its whole life — nothing is moved when it finishes
+    draft.md    the idea as you wrote it
+    spec.md     written by SPECIFY from the draft, then revised once by REVIEW-SPEC; or put a finished spec here yourself
+    plan.md     the overview PLAN writes, plus task-NN-<name>.md per task, each a self-contained brief
+    ruling.md   decisions and defects that bind one task; result.md records each closed task's commits
+    done.md     written by ARCHIVE once REVIEW has passed the plan and the gates are green
+    blocked.md  written instead, with the reason, when a phase fails three times
   log.md      one line per phase, gitignored
   contract.md the rules, re-read every iteration
   gates.sh    the project's single gate command — generated once, yours to edit
@@ -43,27 +47,27 @@ Stop hook ──▶ feeds back the pointer prompt ──▶ picker (scripts/phas
 ```
 
 ```text
-drafts/*.md ──SPECIFY──▶ specs/*.md ──REVIEW-SPEC──▶ reviewed spec ──PLAN──▶ plans/<slug>.md
+<slug>/draft.md ──SPECIFY──▶ spec.md ──REVIEW-SPEC──▶ reviewed spec ──PLAN──▶ plan.md + task-NN-*.md
                                                                                    │
                                                                             IMPLEMENT×n (TDD, gates, one commit)
                                                                                    │
                                                                                    ▼
-                                         done/ ◀──ARCHIVE── verdict ◀──REVIEW── finished plan
+                                       done.md ◀──ARCHIVE── verdict ◀──REVIEW── finished plan
                                                                 │
                                                                 └──fix tasks──▶ back to IMPLEMENT (≤2 rounds)
 ```
 
-`RECOVER` sends a dirty tree to the janitor instead of any of the above; `FINISH` fires once `drafts/`, `specs/` and `plans/` are all empty and the tree is clean, and the Stop hook ends the flow and prints what shipped. Nothing the session says can end a flow: the hook runs the picker itself.
+`RECOVER` sends a dirty tree to the janitor instead of any of the above; `FINISH` fires once every slug dir is finished — each carrying `done.md` or `blocked.md` — and the tree is clean, and the Stop hook ends the flow and prints what shipped. Nothing the session says can end a flow: the hook runs the picker itself.
 
 Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` outrank `IMPLEMENT`, which outranks `PLAN`, which outranks `REVIEW-SPEC`, which outranks a fresh `SPECIFY`. Drafts are read in alphabetical order of the file name, so the name is how you fix the order they are worked in.
 
 `contract.md`, `memory.md` and `gates.sh` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the Flow believes about the codebase. Each is checked on its own, so a floor armed before `gates.sh` existed gets it on the next `run`.
 
-> It is dark! Nobody is asked anything. Every open choice becomes an `assumed` row in the spec's Decisions table. Three failed attempts at a phase move the file to `done/<slug>.blocked.md` with the reason.
+> It is dark! Nobody is asked anything. Every open choice becomes an `assumed` row in the spec's Decisions table. Three failed attempts at a phase write `.spectomat/<slug>/blocked.md` with the reason and take the slug out of the flow.
 
 ## Operating it
 
-- **Feed it.** Drop a `.md` idea into `.spectomat/drafts/`. `run` commits whatever it finds there. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `specs/`; the Flow then starts at reviewing it.
+- **Feed it.** Drop a `.md` idea into `.spectomat/drafts/`. `run` moves each draft into its own `.spectomat/<slug>/draft.md` and commits it, leaving `drafts/` empty. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `.spectomat/<slug>/spec.md`; the Flow then starts at reviewing it.
 - **Steer it.** Edit a spec or a plan between iterations. Edit `contract.md` to change the rules, `memory.md` to correct what the Flow believes about the codebase.
 - **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every iteration reads before working and adds to before committing. Seed it by hand before the first run and the Flow starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
 - **Gate it.** The gates are always `./.spectomat/gates.sh`, run once per task in the `IMPLEMENT` phase, before its commit, and once in the `ARCHIVE` phase before archiving. The first `run` writes that script from your `package.json`: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `lint` and `test` script found, one line each in that order. Nothing was detected? You get the script anyway, with commented examples and an honest no-op. Edit the script — it is the one place gates are defined, and gates that are not npm scripts are just more lines in it. `set -e` stops at the first failure, so its exit code is the whole run's. An iteration may never weaken a gate to pass.
@@ -80,14 +84,14 @@ Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` 
 - **Pointer** is the prompt the Stop hook feeds back every iteration, telling the session to run the picker and dispatch on its verdict. Fixed text, generated by `pointer_prompt` in `scripts/utils.sh` — no file on disk.
 - **Picker** is the script `scripts/phase.sh` that prints one verdict block per iteration: `phase` (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`, `ARCHIVE`, `RECOVER`, or `FINISH`), `slug`, and the `subagent`/`brief`/`plugin_root` the pointer dispatches with. The `FINISH` verdict names no `subagent` and no `brief`, because it dispatches nothing.
 - **Phase agent** is a fresh subagent per phase: `spectomat:specify|review-spec|plan|implement|review|archive`; each brief contains the craft of its phase (`agents/specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `archive.md`). A phase agent does its own work and never dispatches another agent — except `archive`, whose own work is invoking `scripts/archive.sh` and relaying its result, never repeating its mutation by hand.
-- **Archiver** is `spectomat:archive` (`agents/archive.md`), a subagent that invokes the script `scripts/archive.sh` and relays its result unchanged. The script performs the `ARCHIVE` phase: verifies gates, moves the trail to `done/`, commits, and drops the slug from `state.json`. The agent does none of that mutation itself.
+- **Archiver** is `spectomat:archive` (`agents/archive.md`), a subagent that invokes the script `scripts/archive.sh` and relays its result unchanged. The script performs the `ARCHIVE` phase: verifies gates, writes `<slug>/done.md`, commits, and drops the slug from `state.json`. The agent does none of that mutation itself.
 - **Janitor** is `spectomat:recover` (`agents/recover.md`): a subagent that recovers from a dirty tree by finishing or discarding a crashed phase's changes, or reconciles a floor the picker could not classify.
 - **Verdict** is the picker's frontmatter block, naming `phase` (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`, `ARCHIVE`, `RECOVER`, or `FINISH`), `slug`, and the `subagent`/`brief`/`plugin_root` fields derived from `phase` alone. (What releases a spec to `PLAN` or a plan to `ARCHIVE` is the slug's phase in `state.json`, written by the phase that finished; a `- Verdict:` line in a spec's §16 or a plan overview is a record of that decision, not the switch.) The `FINISH` verdict names no `subagent` and no `brief`, because it dispatches nothing.
-- **Phase** is one of `SPECIFY` (draft → spec), `REVIEW-SPEC` (spec → reviewed spec), `PLAN` (reviewed spec → plan), `IMPLEMENT` (plan → next task), `REVIEW` (finished plan → verdict), `ARCHIVE` (reviewed plan → done). An iteration does exactly one. Verdicts are upper case; the agent types and brief files that serve them are lower case. The two remaining verdicts are not phases: `RECOVER` hands the floor to the janitor, `FINISH` ends the flow.
+- **Phase** is one of `SPECIFY` (draft → spec), `REVIEW-SPEC` (spec → reviewed spec), `PLAN` (reviewed spec → plan), `IMPLEMENT` (plan → next task), `REVIEW` (finished plan → verdict), `ARCHIVE` (reviewed plan → `done.md`). An iteration does exactly one. Verdicts are upper case; the agent types and brief files that serve them are lower case. The two remaining verdicts are not phases: `RECOVER` hands the floor to the janitor, `FINISH` ends the flow.
 - **Task** is one independent piece of work in a plan, with its own file, its own test cycle and its own commit. The `IMPLEMENT` phase executes exactly one per iteration, in dependency order; the `REVIEW` phase may add more.
 - **Flow** is the sequence of iterations from the first `/spectomat:run` until the picker answers `FINISH` and the Stop hook ends it, or until the iteration cap.
-- **Strike** is one failed attempt at a phase for a slug, counted per phase in `state.json`. Three strikes move the file to `done/<slug>.blocked.md` with the reason and drop the slug from `state.json`, so the flow moves on.
-- **Slug** is a draft's file name without `.md`. Spec, plan and done entries keep it.
+- **Strike** is one failed attempt at a phase for a slug, counted per phase in `state.json`. Three strikes write `.spectomat/<slug>/blocked.md` with the reason and drop the slug from `state.json`, so the flow moves on.
+- **Slug** is a draft's file name without `.md`, and the name of the directory `.spectomat/<slug>/` holding everything of that idea — draft, spec, plan, tasks, snippets and the marker that finishes it.
 - **Floor** is `.spectomat/`: the directories and files the Flow creates and works with in the user's project.
 - **Contract** is `.spectomat/contract.md`: the rules and the steps every iteration re-reads. The gates it names are `.spectomat/gates.sh`.
 - **Memory** is `.spectomat/memory.md`: durable facts about the codebase — map, commands, patterns, traps — read by every iteration, added to inside the phase commit. The contract is what the Flow knows about the job, the memory what it knows about the project.

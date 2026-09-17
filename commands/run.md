@@ -7,7 +7,7 @@ allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Agent", "Task"
 
 Run the code development flow
 
-Floor setup and the start of iterations over `drafts → specs → plans → executed plans → done` phases:
+Floor setup and the start of iterations over `draft → spec → plan → executed plan → done` phases, each slug in its own `.spectomat/<slug>/`:
 
 ```!
 "${CLAUDE_PLUGIN_ROOT}/scripts/prepare.sh" $ARGUMENTS

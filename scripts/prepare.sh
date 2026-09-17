@@ -3,11 +3,10 @@
 #
 #   prepare.sh [MAX_ITERATIONS]
 #
-# Creates .spectomat/{drafts,specs,plans,snippets,done}, renders contract.md and
-# memory.md when absent, commits what it created (contract, memory, ignore
-# rules, drafts the user dropped in), and arms the Stop hook by writing
-# state.json. Default 100 iterations. Refuses
-# when a flow is armed or the floor is empty.
+# Creates .spectomat/drafts/, renders contract.md, memory.md and gates.sh when
+# absent, moves each draft into its own slug dir .spectomat/<slug>/draft.md,
+# commits what it created, and arms the Stop hook by writing state.json.
+# Default 100 iterations. Refuses when a flow is armed or no unfinished slug remains.
 
 set -euo pipefail
 
@@ -18,6 +17,7 @@ TEMPLATES="$PLUGIN_ROOT/templates"
 MAX_ITERATIONS=100
 STAGE=()     # files prepare.sh created this run, committed by commit_floor
 IGNORED=()   # .gitignore lines prepare.sh appended this run, staged by commit_floor
+INTAKEN=()   # slug dirs intake_drafts filled this run, committed by commit_floor
 
 # --- helpers ---
 
@@ -54,12 +54,36 @@ ensure_gitignored() {
 # Floor directories, ignore rules and the log file. Idempotent.
 # The log, the state file and work/ stay local: never committed.
 prepare_floor() {
-  mkdir -p "$FLOOR"/{drafts,specs,plans,snippets,done}
+  mkdir -p "$FLOOR/drafts"
   ensure_gitignored "$STATE_FILE"
   ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
   ensure_gitignored "$FLOOR/work/"
   ensure_gitignored "$FLOOR/log.md"
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
+}
+
+# Move every draft the operator dropped into drafts/ to its own slug dir, as
+# <slug>/draft.md: the floor is slug-major, and drafts/ is a pure inbox that
+# arming empties. The slug is the draft's file name without .md, unchanged.
+#
+# A draft may be tracked or untracked, so this uses a plain mv and lets
+# commit_floor stage both sides with `git add -A`; `git mv` would fail on the
+# untracked case. Runs before commit_floor, so the move lands in the same
+# commit as the floor setup and the tree is clean when the flow arms.
+#
+# A slug dir that already exists is the operator re-dropping a name that is
+# already in the flow: refuse rather than overwrite a draft mid-flight.
+intake_drafts() {
+  local f s
+  for f in "$FLOOR"/drafts/*.md; do
+    [[ -f "$f" ]] || continue
+    s="$(basename "$f" .md)"
+    [[ ! -e "$FLOOR/$s" ]] || die "$FLOOR/$s already exists: rename $f or clear that slug first"
+    mkdir -p "$FLOOR/$s"
+    mv "$f" "$FLOOR/$s/draft.md"
+    INTAKEN+=("$FLOOR/$s")
+    echo "$f -> $FLOOR/$s/draft.md"
+  done
 }
 
 # Stage .gitignore as "what the index had + the lines prepare.sh appended", leaving
@@ -71,15 +95,22 @@ stage_ignore_entries() {
   git update-index --add --cacheinfo "100644,$blob,.gitignore"
 }
 
-# Commit what this run created — contract, memory, ignore rules — plus whatever
-# the user dropped into drafts/, so the flow starts on a clean tree. Nothing else
-# of the user's is staged.
+# Commit what this run created — contract, memory, gates, ignore rules — plus
+# every slug dir on the floor, so the flow starts on a clean tree. That covers
+# both sides of each intake move (drafts/ for the removal, the slug dir for the
+# new draft.md) and a spec or plan the operator wrote by hand, which is floor
+# content just as a draft is. Nothing outside the floor is staged.
 commit_floor() {
-  git add "$FLOOR/drafts" ${STAGE[@]+"${STAGE[@]}"}
+  local d
+  git add -A "$FLOOR/drafts" ${INTAKEN[@]+"${INTAKEN[@]}"} ${STAGE[@]+"${STAGE[@]}"}
+  while IFS= read -r d; do
+    [[ -n "$d" ]] || continue
+    git add -A "$FLOOR/$d"
+  done < <(slug_dirs)
   [[ ${#IGNORED[@]} -eq 0 ]] || stage_ignore_entries
   git diff --cached --quiet && return 0
   local n msg="chore(spectomat): floor setup"
-  n=$(git diff --cached --name-only -- "$FLOOR/drafts" | wc -l | tr -d ' ')
+  n=${#INTAKEN[@]}
   [[ $n -eq 0 ]] || msg+=", $n draft(s)"
   git commit -q -m "$msg"
   echo "committed: $(git log --oneline -1)"
@@ -128,11 +159,14 @@ render_factory() {
   fi
 }
 
-# Print floor counts and a short git status; sets DRAFTS/SPECS/PLANS/DONE.
+# Print floor counts and a short git status; sets ACTIVE and DONE. Runs after
+# intake_drafts, so drafts/ is empty by now and every idea is a slug dir.
 report_floor() {
-  DRAFTS=$(count "$FLOOR/drafts"); SPECS=$(count "$FLOOR/specs"); PLANS=$(count "$FLOOR/plans"); DONE=$(count "$FLOOR/done")
+  ACTIVE=$(slug_active_dirs | wc -l | tr -d ' ')
+  DONE=$(slugs_marked done.md | wc -l | tr -d ' ')
+  BLOCKED=$(slugs_marked blocked.md | wc -l | tr -d ' ')
   echo "--- floor ---"
-  echo "drafts: $DRAFTS   specs: $SPECS   plans: $PLANS   done: $DONE"
+  echo "active: $ACTIVE   done: $DONE   blocked: $BLOCKED"
   git status --porcelain | head -5
 }
 
@@ -143,7 +177,7 @@ require_startable() {
     echo "❌ Not starting: a flow is already active ($STATE_FILE). Run /spectomat:cancel first."
     exit 1
   fi
-  if [[ $((DRAFTS + SPECS + PLANS)) -eq 0 ]]; then
+  if [[ "$ACTIVE" -eq 0 ]]; then
     echo
     echo "❌ Not starting: nothing to do. Drop a .md idea into $FLOOR/drafts/ and run /spectomat:run again."
     exit 1
@@ -191,11 +225,22 @@ arm_flow() {
 EOF
   fi
 
-  for f in "$FLOOR"/drafts/*.md; do
-    [[ -f "$f" ]] || continue
-    s="$(basename "$f" .md)"
-    [[ -n "$(slug_phase "$s")" ]] || slug_add "$s" SPECIFY
-  done
+  # Every unfinished slug dir with no state entry enters the flow at the stage
+  # its files place it: a draft intake_drafts just moved in starts at SPECIFY,
+  # and a spec the operator wrote by hand starts at REVIEW-SPEC. A dir the
+  # files do not place — a plan with no spec, say — is left untracked on
+  # purpose: the picker's orphan check answers RECOVER and the janitor rules
+  # on it, which is the one path that can write to a floor it does not
+  # understand.
+  while IFS= read -r s; do
+    [[ -n "$s" ]] || continue
+    [[ -z "$(slug_phase "$s")" ]] || continue
+    if [[ -f "$FLOOR/$s/draft.md" && ! -f "$FLOOR/$s/spec.md" ]]; then
+      slug_add "$s" SPECIFY
+    elif [[ -f "$FLOOR/$s/spec.md" && ! -f "$FLOOR/$s/plan.md" ]]; then
+      slug_add "$s" REVIEW-SPEC
+    fi
+  done < <(slug_active_dirs)
 }
 
 announce() {
@@ -218,6 +263,7 @@ main() {
   require_git_repo
   prepare_floor
   render_factory
+  intake_drafts
   commit_floor
   report_floor
   require_startable

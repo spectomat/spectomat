@@ -43,21 +43,17 @@ ask_picker() {
   bash "$PLUGIN_ROOT/scripts/phase.sh" 2>/dev/null | sed -n 's/^phase://p'
 }
 
-# The lines the flow ends on, at most four. archive.sh's require_ready demands
-# specs/<slug>.md before anything moves, so every archived slug leaves exactly
-# one done/<slug>.spec.md or one done/<slug>.spec.blocked.md — never both and
-# never neither, which makes these counts slug counts. print_blocked in
-# print.sh matches '*.blocked.md' instead, listing up to four files per slug:
-# right for /spectomat:status, wrong for a count.
+# The lines the flow ends on, at most four. archive.sh writes exactly one
+# marker per finished slug — done.md or blocked.md, never both — inside that
+# slug's own dir, so counting the marked dirs counts slugs directly.
 closing_report() {
   local shipped blocked names
-  shipped=$(count "$FLOOR/done" '*.spec.md')
-  blocked=$(count "$FLOOR/done" '*.spec.blocked.md')
-  printf '✅ Spectomat flow complete: the floor is empty and the tree is clean.\n'
+  shipped=$(slugs_marked done.md | wc -l | tr -d ' ')
+  blocked=$(slugs_marked blocked.md | wc -l | tr -d ' ')
+  printf '✅ Spectomat flow complete: every slug is finished and the tree is clean.\n'
   printf '   Shipped %s · blocked %s · %s iterations.\n' "$shipped" "$blocked" "$ITERATION"
   if [[ "$blocked" -gt 0 ]]; then
-    names=$(find "$FLOOR/done" -maxdepth 1 -name '*.spec.blocked.md' -type f 2>/dev/null \
-      | sed 's|.*/||; s|\.spec\.blocked\.md$||' | sort | tr '\n' ' ')
+    names=$(slugs_marked blocked.md | tr '\n' ' ')
     printf '   Blocked after %s strikes: %s\n' "$STRIKE_LIMIT" "${names% }"
     printf '   Reasons are in %s/log.md; /spectomat:status lists them.\n' "$FLOOR"
   fi

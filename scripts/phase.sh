@@ -7,7 +7,7 @@
 #                     phase:PLAN           reviewed spec -> plan
 #                     phase:IMPLEMENT      plan -> next task
 #                     phase:REVIEW         finished plan -> verdict, or fix tasks
-#                     phase:ARCHIVE        reviewed plan -> done
+#                     phase:ARCHIVE        reviewed plan -> done.md
 #                     phase:RECOVER        dirty tree, or a floor no stage claims
 #                     phase:FINISH         nothing left; the Stop hook ends the flow
 #
@@ -58,22 +58,6 @@ plugin_root:$PLUGIN_ROOT
 EOF
 }
 
-# Slugs of the .md files directly inside a floor directory, alphabetically.
-# plans/ also holds <slug>.result.md and <slug>.ruling.md, siblings IMPLEMENT
-# writes next to the overview (see implement.md): skip them, or each looks
-# like a second, untracked slug and check_orphans below misfires RECOVER on
-# every task close.
-slugs_in() {
-  local f
-  for f in "$FLOOR/$1"/*.md; do
-    [[ -f "$f" ]] || continue
-    case "$f" in
-      *.result.md|*.ruling.md) continue ;;
-    esac
-    printf '%s\n' "$(basename "$f" .md)"
-  done
-}
-
 # Slugs state.json tracks at PHASE, alphabetically.
 slugs_at() {
   jq -r --arg p "$1" '.slugs // {} | to_entries[] | select(.value.phase == $p) | .key' "$STATE_FILE" 2>/dev/null | sort
@@ -84,25 +68,27 @@ all_slugs() {
   jq -r '.slugs // {} | keys[]' "$STATE_FILE" 2>/dev/null | sort
 }
 
-# The one floor path that must exist for a slug parked at PHASE.
+# The one floor path that must exist for a slug parked at PHASE, inside its
+# own slug dir.
 phase_file() {
   local slug="$1" phase="$2"
   case "$phase" in
-    SPECIFY)                  printf '%s\n' "$FLOOR/drafts/$slug.md" ;;
-    REVIEW-SPEC|PLAN)         printf '%s\n' "$FLOOR/specs/$slug.md" ;;
-    IMPLEMENT|REVIEW|ARCHIVE) printf '%s\n' "$FLOOR/plans/$slug.md" ;;
+    SPECIFY)                  printf '%s\n' "$FLOOR/$slug/draft.md" ;;
+    REVIEW-SPEC|PLAN)         printf '%s\n' "$FLOOR/$slug/spec.md" ;;
+    IMPLEMENT|REVIEW|ARCHIVE) printf '%s\n' "$FLOOR/$slug/plan.md" ;;
   esac
 }
 
-# The safety net: every floor .md must have a state.json entry, and every
-# state.json entry must have its phase-appropriate floor file. Directory
-# listings only, never file content.
+# The safety net: every unfinished slug dir must have a state.json entry, and
+# every state.json entry must have its phase-appropriate floor file. Directory
+# listings only, never file content. A finished slug dir (done.md or
+# blocked.md) is out of the flow and has no entry to match.
 check_orphans() {
   local s p
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue
     [[ -n "$(slug_phase "$s")" ]] || return 1
-  done < <(slugs_in drafts; slugs_in specs; slugs_in plans)
+  done < <(slug_active_dirs)
 
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue

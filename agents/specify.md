@@ -16,12 +16,12 @@ You are at the first iteration of the Spectomat `Flow` performing the `SPECIFY` 
 
 - the Contract `./.spectomat/contract.md` in full
 - the Memory `./.spectomat/memory.md` in full
-- the Draft `drafts/<slug>.md` in full
+- the Draft `<slug>/draft.md` in full
 
 ## Procedure
 
-1. Write `specs/<slug>.md` from `<plugin root>/templates/spec.md`. Where an input is silent or in doubt, decide, record the decisions, and continue.
-2. Write The draft's own words go into §1 verbatim where they are precise. The draft is consumed. Then `git mv drafts/<slug>.md done/<slug>.draft.md`.
+1. Write `<slug>/spec.md` from `<plugin root>/templates/spec.md`. Where an input is silent or in doubt, decide, record the decisions, and continue.
+2. The draft's own words go into §1 verbatim where they are precise. The draft is consumed, but stays where it is: `<slug>/draft.md` is the record of what was asked for, and the `REVIEW-SPEC` phase reads it next iteration.
 3. Record memory where a line is earned.
 4. Commit everything with `<type>(<slug>): …`.
 5. Advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC`.
@@ -49,4 +49,4 @@ A spec you cannot write is **a strike, not a guess**: a draft you cannot read, a
 
 Do not advance the slug's phase in `state.json`; instead bump its `SPECIFY` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
-`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — move the draft to `done/<slug>.draft.blocked.md`, then `slug_delete <slug>`, so the picker is not left with a tracked slug whose floor file is gone.
+`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_delete <slug>`, so the picker is not left with a tracked slug the marker has taken out of the flow.

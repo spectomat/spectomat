@@ -41,7 +41,7 @@ Every arrow's target — the `subagent` and `brief` field — is computed by `ph
 
 ## 2. Domain Model
 
-The floor is `.spectomat/`: `drafts/`, `specs/`, `plans/`, `snippets/`, `done/`, `work/`, plus `log.md`, `contract.md`, `memory.md` and `state.json`. The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
+The floor is `.spectomat/`: `drafts/` as the one entrance, one directory `<slug>/` per idea holding that idea's whole trail, `work/`, plus `log.md`, `contract.md`, `memory.md`, `gates.sh` and `state.json`. A slug dir carrying `done.md` or `blocked.md` is finished and out of the flow (D26). The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
 
 ### 2.1 `verdict`
 
@@ -104,15 +104,15 @@ The task handed to the subagent is the picker's frontmatter block, verbatim, fen
 
 ### 3.4 Failure path
 
-A phase agent that cannot finish appends `(strike N)` to its log line and stops; the next iteration's picker skips that slug in favour of the next candidate in the same stage (§5.2). On its own third strike the agent moves the offending file to `done/<slug>.blocked.md`, deletes the slug's `state.json` entry with `slug_delete` and logs the reason (D5); the delete is not optional, because an entry with no floor file behind it makes `check_orphans` answer `RECOVER` for every remaining iteration (§5.2). `archive.sh` does the same for the `ARCHIVE` phase by moving the whole trail with a `.blocked` infix (§5.5).
+A phase agent that cannot finish appends `(strike N)` to its log line and stops; the next iteration's picker skips that slug in favour of the next candidate in the same stage (§5.2). On its own third strike the agent writes `<slug>/blocked.md` with the reason, deletes the slug's `state.json` entry with `slug_delete` and logs the reason (D5); the delete is not optional, because an entry for a slug the marker has taken out of the flow makes `check_orphans` answer `RECOVER` for every remaining iteration (§5.2). `archive.sh` does the same for the `ARCHIVE` phase (§5.5). Nothing moves: the trail stays in the slug dir.
 
 An iteration that dies mid-phase leaves a dirty tree; the next picker returns `RECOVER` before any other test, and the janitor either finishes and commits the phase or discards the paths the factory owns.
 
 ### 3.5 Completion
 
-The Stop hook ends the flow if and only if the picker answers `FINISH` in that hook invocation. The picker answers `FINISH` only when `drafts/`, `specs/` and `plans/` hold no `.md` files **and** `git status --porcelain` is silent, both evaluated in that invocation. No model output is consulted: the hook runs `scripts/phase.sh` itself and reads no transcript, so nothing a session writes can end a flow or keep one alive.
+The Stop hook ends the flow if and only if the picker answers `FINISH` in that hook invocation. The picker answers `FINISH` only when no unfinished slug dir remains — every one carries `done.md` or `blocked.md` — **and** `git status --porcelain` is silent, both evaluated in that invocation. No model output is consulted: the hook runs `scripts/phase.sh` itself and reads no transcript, so nothing a session writes can end a flow or keep one alive.
 
-The hook composes the closing report from `done/`: one `<slug>.spec.md` per shipped slug, one `<slug>.spec.blocked.md` per blocked one, both guaranteed by `archive.sh`'s `require_ready` (§5.5). It reaches the operator as the hook's `systemMessage`.
+The hook composes the closing report from the markers: one `<slug>/done.md` per shipped slug, one `<slug>/blocked.md` per blocked one, exactly one of the two per finished slug, guaranteed by `archive.sh` (§5.5). It reaches the operator as the hook's `systemMessage`.
 
 ## 4. Boundaries
 
@@ -161,7 +161,7 @@ pick_phase():
       pick = least_struck(phase, set)
       if pick is not NONE:  emit(phase, pick); return 0
 
-  if slugs_in(state, any) is empty and drafts/ has no new .md:  emit('FINISH')
+  if slugs_in(state, any) is empty and no unfinished slug dir remains:  emit('FINISH')
   else:                                                           emit('RECOVER')
   return 0
 ```
@@ -170,11 +170,11 @@ Normative notes, each of which a naive reading would get wrong:
 
 1. **`ARCHIVE` and `REVIEW` are tested before `IMPLEMENT`**, matching the contract's priority: work in progress is finished before anything new starts.
 2. **A slug's phase is stored in `state.json.slugs[slug].phase`**, not derived from floor files. Once in a phase, the slug stays until the brief advances it.
-3. **`check_orphans` enforces agreement between floor and state.** A slug in state with no floor file, or a floor file with no state entry, is an orphan; the picker exits with error and the next iteration's verdict is `RECOVER`.
-4. **New drafts in `drafts/` enter state as `SPECIFY` at arm time**, not when the picker first sees them; `prepare.sh` walks `drafts/*.md` and calls `slug_add` for every one with no state entry yet, so the picker never adds a slug itself.
+3. **`check_orphans` enforces agreement between floor and state.** A slug in state with no phase-appropriate floor file, or an unfinished slug dir with no state entry, is an orphan; the picker exits with error and the next iteration's verdict is `RECOVER`. A finished slug dir is out of the flow and has no state entry to match.
+4. **Drafts enter state at arm time**, not when the picker first sees them: `prepare.sh` moves each `drafts/*.md` to `<slug>/draft.md`, commits it, and calls `slug_add` — `SPECIFY` for a slug dir holding only a draft, `REVIEW-SPEC` for a hand-written `spec.md` — so the picker never adds a slug itself and never reads `drafts/` (D26).
 5. **`ARCHIVE` and `REVIEW` are split by phase** (`state.json.slugs[slug].phase` is `ARCHIVE` or `REVIEW`), not by a line in the plan. The `REVIEW` phase advances a slug from `IMPLEMENT` to `REVIEW`; only `REVIEW` returning a verdict advances it to `ARCHIVE`.
-6. **A floor that matches no stage is `RECOVER`, not `FINISH`.** A slug in state with no corresponding floor file is an orphan; leftover files, or a slug parked at `STRIKE_LIMIT`, are anomalies only the janitor can clear.
-7. **`RECOVER` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with an empty floor is `archive.sh` having died between its moves and its commit, leaving slugs in state with no floor files.
+6. **A floor that matches no stage is `RECOVER`, not `FINISH`.** A slug in state with no corresponding floor file is an orphan; an unfinished slug dir the files place nowhere, or a slug parked at `STRIKE_LIMIT`, are anomalies only the janitor can clear.
+7. **`RECOVER` precedes every stage test**; only the floor-existence guard runs before it. A dirty tree with no unfinished slug dir is a phase having died between its writes and its commit.
 8. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
 
 ### 5.2 `least_struck` — `scripts/utils.sh`
@@ -233,24 +233,23 @@ Invoked by the `spectomat:archive` subagent (`agents/archive.md`), which relays 
 ```text
 archive(slug):
   cd_root()
-  require `git status --porcelain` silent                       else exit 1
-  require exists(specs/<slug>.md) and exists(plans/<slug>.md)   else exit 1
+  require `git status --porcelain` silent                            else exit 1
+  require exists(<slug>/spec.md) and exists(<slug>/plan.md)          else exit 1
+  require not slug_finished(slug)   # no done.md, no blocked.md      else exit 1
 
   if run_gates() != 0:
       n = slug_strike(slug, 'ARCHIVE')
       log '- <ts> · ARCHIVE · <slug> · gate failed: <cmd> (strike ' + n + ')'
-      if n >= STRIKE_LIMIT:  block = '.blocked'  and continue to the moves
+      if n >= STRIKE_LIMIT:  block = true  and continue to the marker
       else:                  exit 1
   else:
-      block = ''
+      block = false
       gate_result = 'passed'
 
-  git mv specs/<slug>.md  done/<slug>.spec<block>.md  or strike_and_exit
-  git mv plans/<slug>.md  done/<slug>.plan<block>.md  or strike_and_exit
-  if isdir(plans/<slug>):
-      git mv plans/<slug>  done/<slug>              or strike_and_exit
+  if block:  write <slug>/blocked.md  with the strike count and the failed gate
+  else:      write <slug>/done.md     with the timestamp and the gate result
 
-  git add -A done/ specs/ plans/ snippets/
+  git add -A <slug>/
   git commit -m 'chore(<slug>): archived' (or '… blocked after 3 strikes')
       or strike_and_exit
 
@@ -258,9 +257,11 @@ archive(slug):
   log '- <ts> · ARCHIVE · <slug> · archived · gates passed'
 ```
 
-**Every mutation is checked.** The script runs under `set -uo pipefail` with no `-e`, so a failed command does not abort, and an unchecked failure here is the one defect this design cannot survive: a partial move that still commits leaves a CLEAN tree, so the picker never answers `RECOVER`, the janitor never runs, and a spec whose plan was already archived reads as a fresh `PLAN` phase. `strike_and_exit` records a strike in `state.json` — so the slug blocks after three — then exits 1 leaving the tree exactly as it landed: dirty for the janitor if a move partially applied, unchanged and safe to retry if none did. Exiting without a strike would wedge the flow, because the picker answers `ARCHIVE` again next iteration and the same move fails again until the cap.
+**One marker, no moves.** Finishing a slug writes a single new file in that slug's own directory, so there is no partial state to survive: either the marker and its commit landed or neither did (D26). This replaces a six-move sequence whose every step had to be checked, because a partial move that still committed left a CLEAN tree — the picker never answered `RECOVER`, the janitor never ran, and a spec whose plan had already been archived read as a fresh `PLAN` phase.
 
-The third strike takes the `.blocked` infix rather than a separate code path, so the moves are written once. `print_blocked` matches `*.blocked.md`.
+**The commit is still checked.** The script runs under `set -uo pipefail` with no `-e`, so a failed command does not abort. `strike_and_exit` records a strike in `state.json` — so the slug blocks after three — then exits 1, leaving the marker uncommitted and the tree dirty for the janitor. Exiting without a strike would wedge the flow, because the picker answers `ARCHIVE` again next iteration and the same commit fails again until the cap.
+
+**A finished slug is refused.** `require not slug_finished` keeps a second `ARCHIVE` from committing over finished work, and keeps a blocked slug from being silently promoted to shipped. The third strike differs from a pass only in which marker is written, so the path is written once. `print_blocked` lists the slug dirs carrying `blocked.md`.
 
 The log line reports the gate outcome, not test counts: a script has first-hand knowledge that `gates.sh` exited 0, and no knowledge of what it printed (D4).
 
@@ -319,7 +320,7 @@ An armed flow's only persistent file is the gitignored `state.json`: it records 
 
 Generating the prompt instead of rendering it to disk keeps it honest: `state.json` is data a script parses, the pointer is a prompt a model reads, and there is no file that can go stale — a plugin reinstalled at a new cache path can never leave a pointer holding the old one — or outlive the state it belongs to (D12).
 
-Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). The picker reads them in plain alphabetical order of the file name, which is the operator's only lever on the order they are worked.
+Drafts arrive in `drafts/` already named: the plugin issues no numbers and renames nothing (D13). Arming moves each into its own `<slug>/draft.md` and empties `drafts/` (D26). The picker reads slugs in plain alphabetical order of that name, which is the operator's only lever on the order they are worked.
 
 ## 7. Operator surface
 
@@ -327,7 +328,7 @@ Drafts arrive in `drafts/` already named: the plugin has no intake step (D13). T
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1; resumes an inactive flow if one exists, else refuses when a flow is armed, the floor is empty, or the tree is dirty |
+| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1; resumes an inactive flow if one exists, else refuses when a flow is armed, no unfinished slug remains, or the tree is dirty |
 | `/spectomat:status` | the next verdict, the current iteration, floor counts, per-plan step progress, blocked files, log tail |
 | `/spectomat:cancel` | marks the flow inactive and removes the pointer; keeps `state.json` so `/spectomat:run` can resume it |
 | `/spectomat:help` | prints `docs/guide.md` |
@@ -356,7 +357,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D10 | `templates/memory.md`'s own header carries what earns a line; the contract carries only when to read and write it | the rules in both files, kept in step by hand | duplicated rules drift, and keeping them in step was a manual instruction to a human. Every iteration reads `memory.md` in Orient anyway, so the header costs no extra read |
 | D11 | Craft prose lives in the brief that uses it — gate-reading in `agents/implement.md`, "`SPECIFY` and `PLAN` skip the gates" in those two briefs | keeping it in the contract, where every phase reads it | the contract is the operator's only editable surface; text no operator would ever edit is craft, not steering, and D3 already put craft in the briefs |
 | D12 | State and the pointer prompt are addressed as two different kinds of thing: `state.json` is data a script parses with `jq`, the prompt is text a model reads | one Markdown file with the state in frontmatter and the prompt in its body | one file forced every reader to parse past the other: `awk '/^---$/{i++; next} i>=2'` in two scripts to reach the prompt, and a `sed \| grep \| sed` pipeline to reach a field. Kept apart, the state is `jq`-addressable in one call and the prompt needs no parsing at all. The names stop competing too — neither thing pretends to be the other. See D23 for how the prompt itself is produced without a second file |
-| D13 | The operator puts drafts into `drafts/` and names them; `prepare.sh` only commits what it finds there | `prepare.sh` moving `wishlist/*.md` into `drafts/` under a number issued from a committed `.inc` counter | intake is the project's business, not the factory's. It cost a second inbox directory, a counter file with a git lifecycle opposite to the state it sat next to, and staging both ends of every move so arming still ended on a clean tree. Without it the floor has one entrance and drafts are worked in plain alphabetical order of whatever the operator called them |
+| D13 | The operator puts drafts into `drafts/` and names them; `prepare.sh` only moves and commits what it finds there (D26) | `prepare.sh` moving `wishlist/*.md` into `drafts/` under a number issued from a committed `.inc` counter | intake is the project's business, not the factory's. It cost a second inbox directory, a counter file with a git lifecycle opposite to the state it sat next to, and staging both ends of every move so arming still ended on a clean tree. Without it the floor has one entrance and drafts are worked in plain alphabetical order of whatever the operator called them |
 | D14 | The `IMPLEMENT` phase writes its task's code itself | an implementer subagent it dispatches, reports back from and resumes | the picker already gives one fresh agent per task, so a subagent bought no context isolation and cost a placeholder-filled brief sent verbatim, a report file as the return channel, a `DONE / BLOCKED / NEEDS_CONTEXT` protocol and a re-dispatch rule — all of it deleted. What it loses is real but small: a cheap model for code writing, and a stronger one on the last fix round |
 | D15 | `REVIEW` is one phase per plan, run when `state.json` says every task is closed | a reviewer subagent per task commit, with `MAX_FIX_ROUNDS` fix rounds inside the `IMPLEMENT` phase | per-task review was the one unit of work the picker could not see: no verdict, no log line, no strike, not resumable, a sub-state-machine with its own constant hidden inside another phase. As a phase it is an iteration like any other; its findings become task files that get the full TDD cycle instead of "send the findings back" rounds; and it reads the plan whole, which is the only way to see a helper written twice, code one task orphaned, or an interface that drifted between one task's `Produces` and another's `Consumes`. The cost is latency — a defect in task 1 surfaces after task 8 — bounded because the gates still run on every task and the plan's `Interfaces` rows are what guard the seams |
 | D16 | `REVIEW-SPEC` is one phase per spec, run once between `SPECIFY` and `PLAN`, and it revises the spec in place | a self-review checklist inside the `SPECIFY` brief; an approve-or-flag reviewer that sends the spec back to `SPECIFY` | the author cannot read its own spec cold, and the planner is the first reader that can be misled; a fresh agent with only the spec and the draft is the cheapest cold read. It fixes rather than flags because the fix for a spec is a sentence, and a `SPECIFY` round trip would rewrite the whole file to change one line. Each fix is a `revised` row in §10, so the trail is as traceable as an `assumed` one. One round, latched by `- Verdict: READY` in §16, the same grammar as the plan latch, so the picker learns nothing new |
@@ -369,6 +370,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D23 | The pointer prompt is generated by `pointer_prompt()` in `scripts/utils.sh` — a fixed heredoc with `PLUGIN_ROOT` substituted at call time — and never written to disk | `templates/pointer.md`, rendered into `.spectomat/pointer.md` at arm time and re-rendered on every resume | the text never varies except for `PLUGIN_ROOT`, which every script that sources `utils.sh` already holds as a shell variable; rendering it to a gitignored file bought nothing but a second path for `disarm()` to clean up, a resume step that had to re-render it, and a file that could hold a stale `PLUGIN_ROOT` if the plugin was reinstalled at a new cache path between arms. Generating it fresh in `continue_iteration()` and in `prepare.sh`'s arm preview removes all three at once, and it is exercised directly in `pointer_prompt_test.sh` (§10) rather than through a rendered file's contents |
 | D24 | The Stop hook runs `phase.sh` itself and ends the flow on `FINISH`, composing the closing report in bash; `FINISH` dispatches no agent and the `<promise>FACTORY EMPTY</promise>` string is retired | keeping the promise as the signal; keeping `agents/finish.md` and latching the finished iteration in `state.json` | the promise put the verdict's authority in the model's hands: `check_promise` never consulted the picker, so any text carrying the string ended a flow, a tool-call-final turn stranded one, and a dirty tree at finish time ended the flow instead of reaching the janitor. D1 claimed a false completion promise was structurally impossible; this makes that true. Supersedes D21 for `FINISH` only — `ARCHIVE`'s wrapper is untouched, and D2's and D14's argument that mechanical work stays mechanical is what `FINISH` returns to. A `state.json` latch was rejected because `FINISH` is a stable predicate and an actuator inside the process that evaluates it fires exactly once with no memory |
 | D25 | The gates are always `./.spectomat/gates.sh`, generated once by `prepare.sh` from `package.json` and edited there by the operator | the gate commands living as lines inside `contract.md`'s Verification Gates fence, parsed out by `gate_block` | the fence made the contract both prose and executable data, and paid for it twice: an awk fence parser plus a comment/blank filter in `utils.sh`, with its own test file, and an operator whose gates were shell but whose editing surface was Markdown — one stray fence in the file above and the gates silently changed. A script is the honest shape for a list of commands: `set -e` chains them, `bash gates.sh` is the whole of `run_gates`, and the exit code is the script's own rather than something the factory assembles. It is also directly runnable by hand, which the fence never was. The operator keeps one editable file per concern — `contract.md` for the rules, `gates.sh` for the checks — and the contract's Verification Gates section disappears entirely: with the path fixed and `run_gates` hardcoding it, step 3 of the Iteration Contract names the script in passing and that is the whole of it (D11). The cost is a fourth rendered file on the floor, checked on its own like the others, so an older floor picks it up on the next `run` |
+| D26 | The floor is slug-major: everything of one idea lives in `.spectomat/<slug>/` for its whole life, and `ARCHIVE` finishes it by writing a `done.md` (or `blocked.md`) marker in place | stage directories `specs/`, `plans/`, `snippets/` with a `done/` the trail is moved into, under a `.blocked` infix on the third strike | the stage-major floor spread one idea across four directories under three naming schemes, so reading a slug's trail meant four `ls`es and archiving it meant six checked `git mv`s. Its worst failure was structural: a partial move that still committed left a CLEAN tree, so the picker never answered `RECOVER`, the janitor never ran, and a spec whose plan had already moved read as a fresh `PLAN` phase (§5.6). A marker cannot partially apply — either the file and its commit landed or neither did — and moving nothing means nothing can half-move. The trail also stays where every task file, `result.md` entry and commit message already points, which a move invalidated. The cost is that finished work stays on the floor: `done/` no longer separates it, so the picker must skip a marked dir, `slug_dirs`/`slug_active_dirs` in `utils.sh` carry that rule for every script, and `drafts/` becomes a pure inbox that arming empties into slug dirs — which in exchange lets a hand-written `spec.md` arm at `REVIEW-SPEC` instead of stranding the floor at `RECOVER` |
 
 ## 9. Acceptance Criteria
 
@@ -378,12 +380,12 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | --- | --- | --- |
 | AC-1.1 | `phase.sh` prints exactly one frontmatter block and exits 0 for every floor state in §10.3 | selftest |
 | AC-1.2 | Priority holds: with candidates in all six stages, the verdict is `ARCHIVE` | selftest |
-| AC-1.3 | A plan directory with zero `task-*.md` files does not yield `ARCHIVE` | selftest |
+| AC-1.3 | A slug dir with a `plan.md` and zero `task-*.md` files does not yield `ARCHIVE` | selftest |
 | AC-1.4 | A reviewed spec whose plan overview exists but has zero task files yields `PLAN` | selftest |
 | AC-1.6 | A spec whose slug's phase is `REVIEW-SPEC` yields `REVIEW-SPEC` in the picker; when advanced to `PLAN` it yields `PLAN` | selftest |
 | AC-1.7 | A strike logged at `REVIEW-SPEC` does not count at `REVIEW`, nor the reverse | selftest |
-| AC-1.5 | A dirty tree yields `RECOVER`, even when the floor is empty | selftest |
-| AC-1.6 | `FINISH` requires all three directories empty **and** a silent `git status` | selftest |
+| AC-1.5 | A dirty tree yields `RECOVER`, even when no unfinished slug remains | selftest |
+| AC-1.6 | `FINISH` requires every slug dir finished — `done.md` or `blocked.md` — **and** a silent `git status` | selftest |
 | AC-1.7 | Given two candidates in one stage, the one with fewer strikes is named | selftest |
 | AC-1.8 | A candidate at `STRIKE_LIMIT` is skipped; if all are, the next stage is used | selftest |
 | AC-1.9 | `phase.sh` leaves the floor and the git index byte-identical | selftest |
@@ -391,14 +393,14 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-2.1 | `prepare.sh` renders an executable `.spectomat/gates.sh` once, from `package.json`, and never overwrites an existing one | selftest |
 | AC-2.2 | `run_gates` returns non-zero when `gates.sh` exits non-zero, and names it; a floor without `gates.sh` passes | selftest |
 | AC-2.3 | `strike_count` returns 0 when the slug has no `strikes` entry for that phase | selftest |
-| AC-3.1 | `archive.sh` with a failing gate moves nothing and exits non-zero | selftest |
+| AC-3.1 | `archive.sh` with a failing gate writes no marker, commits nothing and exits non-zero | selftest |
 | AC-3.2 | `archive.sh` logs `(strike N)` with N one higher than the log showed | selftest |
-| AC-3.3 | At the third strike `archive.sh` moves the trail with the `.blocked` infix, and `print_blocked` lists both files | selftest |
-| AC-3.4 | `archive.sh` makes exactly one commit, and touches no file outside the floor | selftest |
+| AC-3.3 | At the third strike `archive.sh` writes `<slug>/blocked.md` and no `done.md`, and `print_blocked` lists that slug | selftest |
+| AC-3.4 | `archive.sh` makes exactly one commit, touches no file outside the floor, and refuses a slug that already carries a marker | selftest |
 | AC-4.1 | `status.sh` prints the picker's verdict verbatim | manual, scratch repo |
 | AC-4.2 | Arming writes a valid `state.json` with `active: true`, `iteration: 1`, numeric `max_iterations`, `session_id`, `started_at`, and `slugs: {}` | selftest |
 | AC-4.3 | `/spectomat:cancel` sets `active: false` and keeps `state.json` and the floor | selftest |
-| AC-4.4 | `prepare.sh` commits a draft dropped into `drafts/`, tracked or not, and leaves a clean tree | selftest |
+| AC-4.4 | `prepare.sh` moves a draft dropped into `drafts/` to `<slug>/draft.md`, tracked or not, commits it and leaves a clean tree; a hand-written `<slug>/spec.md` arms at `REVIEW-SPEC` | selftest |
 | AC-4.6 | `prepare.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
 | AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, and feeds back the pointer prompt verbatim | selftest |
 | AC-4.8 | A session that did not arm the flow neither advances nor ends it, and an unreadable state file is left in place for `/spectomat:cancel` | selftest |
@@ -416,7 +418,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 
 | Id | Criterion | Verified by |
 | --- | --- | --- |
-| E2E-1 | A scratch repo with two drafts runs until the Stop hook reports the flow complete, producing two archived trails and committed code | `claude -p` run, §10.5 |
+| E2E-1 | A scratch repo with two drafts runs until the Stop hook reports the flow complete, producing two slug dirs each carrying `done.md` and committed code | `claude -p` run, §10.5 |
 | E2E-2 | An iteration killed mid-`IMPLEMENT` leaves a dirty tree; the next iteration's verdict is `RECOVER` and the janitor restores a clean tree | manual, scratch repo |
 
 ### 9.3 Non-functional
@@ -449,12 +451,14 @@ The bash equivalent of a port and a fake. Every case in `tests/*.sh` builds one,
 
 ```text
 floor(dir, spec):   under a fresh `mktemp -d`, `git init`, then create the
-                    floor described by spec — drafts, specs, plan overviews,
-                    a given number of task files (their contents inert — the
-                    task counters in state.json carry the progress),
-                    a state.json with given slugs, phases, task counters, and
-                    strikes, a log.md with given strike lines for audit trail,
-                    and a gates.sh running given commands
+                    floor described by spec — one <slug>/ directory per idea
+                    holding its draft, spec, plan overview and a given number
+                    of task files (their contents inert — the task counters in
+                    state.json carry the progress), a done.md or blocked.md
+                    marker for a finished slug, a state.json with given slugs,
+                    phases, task counters, and strikes, a log.md with given
+                    strike lines for audit trail, and a gates.sh running given
+                    commands
 ```
 
 State is built programmatically via jq to create the `.slugs` object:
@@ -500,8 +504,9 @@ Nested `claude -p` must always be given `--model opus`; the CLI rejects the defa
 | Invariant | Why a test and not a rule |
 | --- | --- |
 | the picker mutates nothing | it is called by `status` on demand and by every iteration; a stray write would corrupt the floor silently |
-| `ARCHIVE` never fires on a plan with no task files | the failure archives unbuilt work and is invisible until someone reads `done/` |
-| a `.blocked` trail is still listed by `print_blocked` | a blocked slug that nothing reports is a silently dropped idea |
+| `ARCHIVE` never fires on a plan with no task files | the failure archives unbuilt work and is invisible until someone reads the slug dir |
+| a blocked slug is still listed by `print_blocked` | a blocked slug that nothing reports is a silently dropped idea |
+| a slug carrying a marker is never archived again | a second `ARCHIVE` would commit over finished work, and would promote a blocked slug to shipped |
 | no brief carries a `{{KEY}}` placeholder | briefs are never rendered, so a placeholder would reach an agent literally |
 | arming and cancelling touch only `state.json` | a second file for the pointer prompt would need its own cleanup on every disarm path, and could go stale if the plugin moved between arms (D23) |
 | only the session that armed a flow may end it, an unreadable state file included | the hook fires in every session of the project, so a guard that runs before the session check lets a stranger delete a flow it does not own |

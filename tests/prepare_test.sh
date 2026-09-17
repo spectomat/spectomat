@@ -11,7 +11,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # Arming a floor must leave a clean tree. The picker reads `git status` and
 # answers RECOVER to any dirt, so a draft the user dropped into drafts/ must be
-# committed by prepare.sh, or iteration 1 burns on the janitor.
+# moved into its slug dir and committed by prepare.sh, or iteration 1 burns on
+# the janitor.
 echo "prepare.sh drafts"
 
 # One `git init` for every case below, copied like floor() does.
@@ -35,7 +36,9 @@ mkdir -p "$DROP/.spectomat/drafts"
 printf 'idea\n' > "$DROP/.spectomat/drafts/001-thing.md"
 (cd "$DROP" && bash "$SCRIPTS/prepare.sh" 3) >/dev/null 2>&1
 is "a dropped draft leaves a clean tree" "$(cd "$DROP" && git status --porcelain)" ""
-is "the draft is committed"     "$(cd "$DROP" && git log -1 --name-only --format= | grep -c 'drafts/001-thing.md')" "1"
+is "the draft moves into its slug dir" "$([[ -f "$DROP/.spectomat/001-thing/draft.md" ]] && echo yes || echo no)" "yes"
+is "drafts/ is emptied by arming"      "$(ls "$DROP/.spectomat/drafts" | wc -l | tr -d ' ')" "0"
+is "the draft is committed at its new path" "$(cd "$DROP" && git log -1 --name-only --format= | grep -c '001-thing/draft.md')" "1"
 is "iteration 1 is SPECIFY"     "$(verdict "$DROP" "$SCRIPTS")" "SPECIFY 001-thing"
 
 # A draft the user already committed leaves nothing to stage; arming must still
@@ -53,6 +56,18 @@ mkdir -p "$DROP2/.spectomat/drafts"
 (cd "$DROP2" && bash "$SCRIPTS/prepare.sh" 3) >/dev/null 2>&1
 is "a committed draft arms cleanly" "$(cd "$DROP2" && git status --porcelain)" ""
 is "a committed draft reaches SPECIFY" "$(verdict "$DROP2" "$SCRIPTS")" "SPECIFY 001-thing"
+
+# A spec the operator wrote by hand has no draft to arm from, so arming must
+# place it at REVIEW-SPEC itself; otherwise the slug dir has no state entry and
+# the picker's orphan check sends every iteration to the janitor.
+HAND="$TMP/handspec"
+mkdir -p "$HAND"
+cp -R "$REPO_TEMPLATE/." "$HAND"
+mkdir -p "$HAND/.spectomat/001-mine"
+printf 'spec\n' > "$HAND/.spectomat/001-mine/spec.md"
+(cd "$HAND" && bash "$SCRIPTS/prepare.sh" 3) >/dev/null 2>&1
+is "a hand-written spec arms cleanly"    "$(cd "$HAND" && git status --porcelain)" ""
+is "a hand-written spec reaches REVIEW-SPEC" "$(verdict "$HAND" "$SCRIPTS")" "REVIEW-SPEC 001-mine"
 
 # Unrelated work in progress would make the picker answer RECOVER every iteration, so
 # prepare.sh refuses to arm rather than spend the whole cap on the janitor.

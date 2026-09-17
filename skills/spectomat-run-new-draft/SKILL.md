@@ -20,9 +20,9 @@ progress or cancel (that's `spectomat:status` / `spectomat:cancel`).
 1. **Find the project root.** `.spectomat/` lives at the repo root the user is working in. If
    `.spectomat/drafts/` does not exist, create it.
 
-2. **Pick the next number.** List `.spectomat/drafts/*.md` (and, if you want the ordering to stay
-   correct across the whole factory, also `.spectomat/specs/`, `.spectomat/plans/` and
-   `.spectomat/done/` for files matching `NNN-*`). Take the highest existing `NNN` prefix and add 1,
+2. **Pick the next number.** List `.spectomat/drafts/*.md` and the slug directories `.spectomat/*/`
+   matching `NNN-*` — every idea keeps its own directory for its whole life, finished or not, so
+   those two listings are the whole factory. Take the highest existing `NNN` prefix and add 1,
    zero-padded to 3 digits (`001`, `002`, …). Start at `001` if none exist.
 
 3. **Slug the name.** Derive a short kebab-case slug from the idea (2-5 words, lowercase,

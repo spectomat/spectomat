@@ -24,4 +24,14 @@ floor st3; draft 002-b; spec 001-a yes
 st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
 is "status lists a PLAN-phase slug" "$(printf '%s\n' "$st_out" | grep -c 'phase PLAN')" "1"
 
+# A blocked slug that nothing reports is a silently dropped idea, so the
+# blocked section names the file holding the reason.
+floor st4; draft 001-a; archived 002-b blocked; archived 003-c
+st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/status.sh" 2>/dev/null)
+is "status opens a blocked section"   "$(printf '%s\n' "$st_out" | grep -c '^--- blocked ---$')" "1"
+is "status names the blocked slug"    "$(printf '%s\n' "$st_out" | grep -c '^.spectomat/002-b/blocked.md$')" "1"
+is "status leaves a done slug out of blocked" "$(printf '%s\n' "$st_out" | grep -c '003-c/blocked.md')" "0"
+is "the floor line counts the finished slugs" "$(printf '%s\n' "$st_out" | grep -c 'done: 1   blocked: 1')" "1"
+is "the floor line counts the active slug"    "$(printf '%s\n' "$st_out" | grep -c 'active: 1')" "1"
+
 finish

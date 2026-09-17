@@ -21,7 +21,7 @@ print_iteration() {
 
 print_floor() {
   echo "--- floor: $FLOOR ---"
-  echo "drafts: $(count "$FLOOR/drafts")   specs: $(count "$FLOOR/specs")   plans: $(count "$FLOOR/plans")   done: $(count "$FLOOR/done")   memory: $(memory_entries) entries"
+  echo "drafts: $(count "$FLOOR/drafts")   active: $(slug_active_dirs | wc -l | tr -d ' ')   done: $(slugs_marked done.md | wc -l | tr -d ' ')   blocked: $(slugs_marked blocked.md | wc -l | tr -d ' ')   memory: $(memory_entries) entries"
 }
 
 # Entries in memory.md: list items, which is what the contract asks a memory to be.
@@ -45,12 +45,14 @@ print_plans() {
   ' "$STATE_FILE" 2>/dev/null | sort)
 }
 
+# One line per blocked slug, each naming the dir whose blocked.md holds the
+# reason. A blocked slug that nothing reports is a silently dropped idea.
 print_blocked() {
   local blocked
-  blocked=$(find "$FLOOR/done" -maxdepth 1 -name '*.blocked.md' -type f 2>/dev/null)
+  blocked=$(slugs_marked blocked.md)
   if [[ -n "$blocked" ]]; then
     echo "--- blocked ---"
-    echo "$blocked" | sed "s|^$FLOOR/done/||"
+    printf '%s\n' "$blocked" | sed "s|^|$FLOOR/|; s|\$|/blocked.md|"
   fi
 }
 

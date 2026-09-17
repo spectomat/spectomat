@@ -22,7 +22,7 @@ TEMPLATE=""
 # instead of re-running git init/config/commit per call.
 floor_template() {
   TEMPLATE="$TMP/floor-template"
-  mkdir -p "$TEMPLATE/.spectomat"/{drafts,specs,plans,snippets,done}
+  mkdir -p "$TEMPLATE/.spectomat/drafts"
   (
     cd "$TEMPLATE" || exit 1
     git init -q .
@@ -64,21 +64,29 @@ fixture_commit() {
   return 0
 }
 
-draft() { printf 'idea\n' > "$FIXTURE/.spectomat/drafts/$1.md"; state_slug "$1" SPECIFY; fixture_commit; }
+# The floor is slug-major: every fixture helper below writes into the slug's
+# own dir, .spectomat/<slug>/, which is where the real phases write too.
+draft() {
+  mkdir -p "$FIXTURE/.spectomat/$1"
+  printf 'idea\n' > "$FIXTURE/.spectomat/$1/draft.md"
+  state_slug "$1" SPECIFY
+  fixture_commit
+}
 
 spec() {
-  printf 'spec\n' > "$FIXTURE/.spectomat/specs/$1.md"
+  mkdir -p "$FIXTURE/.spectomat/$1"
+  printf 'spec\n' > "$FIXTURE/.spectomat/$1/spec.md"
   if [[ -n "${2:-}" ]]; then state_slug "$1" PLAN; else state_slug "$1" REVIEW-SPEC; fi
   fixture_commit
 }
 
 plan() {
   local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i f done_n
-  printf 'overview\n' > "$FIXTURE/.spectomat/plans/$slug.md"
-  mkdir -p "$FIXTURE/.spectomat/plans/$slug"
+  mkdir -p "$FIXTURE/.spectomat/$slug"
+  printf 'overview\n' > "$FIXTURE/.spectomat/$slug/plan.md"
   i=1
   while [[ $i -le $tasks ]]; do
-    printf -v f '%s/.spectomat/plans/%s/task-%02d-x.md' "$FIXTURE" "$slug" "$i"
+    printf -v f '%s/.spectomat/%s/task-%02d-x.md' "$FIXTURE" "$slug" "$i"
     printf 'step\n' > "$f"
     i=$((i + 1))
   done
@@ -93,7 +101,28 @@ plan() {
   fixture_commit
 }
 
-plan_bare() { printf 'overview\n' > "$FIXTURE/.spectomat/plans/$1.md"; state_slug "$1" PLAN; fixture_commit; }
+# plan_bare SLUG — an overview with no task files, the half-finished PLAN phase
+# (D7). Writes no spec, so used alone it is also the stranded-overview fixture.
+plan_bare() {
+  mkdir -p "$FIXTURE/.spectomat/$1"
+  printf 'overview\n' > "$FIXTURE/.spectomat/$1/plan.md"
+  state_slug "$1" PLAN
+  fixture_commit
+}
+
+# archived SLUG [blocked] — a finished slug, as archive.sh leaves it: the trail
+# stays put and one marker file says how it ended.
+archived() {
+  mkdir -p "$FIXTURE/.spectomat/$1"
+  printf 'spec\n' > "$FIXTURE/.spectomat/$1/spec.md"
+  printf 'plan\n' > "$FIXTURE/.spectomat/$1/plan.md"
+  if [[ -z "${2:-}" ]]; then
+    printf 'archived\n' > "$FIXTURE/.spectomat/$1/done.md"
+  else
+    printf 'blocked\n' > "$FIXTURE/.spectomat/$1/blocked.md"
+  fi
+  fixture_commit
+}
 
 # logline TEXT — append to the gitignored factory log; never committed.
 logline() { printf '%s\n' "$1" >> "$FIXTURE/.spectomat/log.md"; }

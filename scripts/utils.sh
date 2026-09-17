@@ -25,6 +25,50 @@ die() { echo "❌ $*" >&2; exit 1; }
 # quoted at the call site, not expanded by the shell.
 count() { find "$1" -maxdepth 1 -name "${2:-*.md}" -type f 2>/dev/null | wc -l | tr -d ' '; }
 
+# The floor is slug-major: everything of one idea lives in .spectomat/<slug>/,
+# named after the draft it came from. A directory directly under the floor is a
+# slug dir when it holds at least one of draft.md, spec.md or plan.md — which
+# drafts/ and work/ never do, so no reserved-name list is needed here.
+slug_dirs() {
+  local d
+  for d in "$FLOOR"/*/; do
+    [[ -d "$d" ]] || continue
+    d="${d%/}"
+    if [[ -f "$d/draft.md" || -f "$d/spec.md" || -f "$d/plan.md" ]]; then
+      printf '%s\n' "$(basename "$d")"
+    fi
+  done | sort
+}
+
+# True when a slug is finished: ARCHIVE wrote done.md, or a third strike wrote
+# blocked.md. Nothing moves when a slug finishes, so this marker is the only
+# thing that tells a finished slug dir from a working one. The two markers
+# never coexist.
+slug_finished() {
+  [[ -f "$FLOOR/$1/done.md" || -f "$FLOOR/$1/blocked.md" ]]
+}
+
+# The slugs still in the flow: every slug dir the markers do not claim. This is
+# what the picker walks, so a finished slug never re-enters a stage.
+slug_active_dirs() {
+  local s
+  while IFS= read -r s; do
+    [[ -n "$s" ]] || continue
+    slug_finished "$s" || printf '%s\n' "$s"
+  done < <(slug_dirs)
+}
+
+# Slugs whose dir carries MARKER ("done.md" or "blocked.md"), alphabetically.
+# The closing report and /spectomat:status both count finished slugs this way.
+slugs_marked() {
+  local s
+  while IFS= read -r s; do
+    [[ -n "$s" ]] || continue
+    [[ -f "$FLOOR/$s/$1" ]] && printf '%s\n' "$s"
+  done < <(slug_dirs)
+  return 0
+}
+
 # Value of one key in the state file; empty when absent or unreadable.
 # Reading several keys at once is one jq call, not several - see read_state
 # in stop-hook.sh, which is on the path of every iteration.
@@ -195,7 +239,8 @@ slug_add_tasks() {
     --arg s "$1" --arg n "$2"
 }
 
-# slug_delete SLUG — ARCHIVE finished (or blocked): drop the slug's entry.
+# slug_delete SLUG — the slug is finished (done.md or blocked.md written):
+# drop its entry, so the picker stops counting it as work in the flow.
 slug_delete() {
   state_apply 'del(.slugs[$s])' --arg s "$1"
 }

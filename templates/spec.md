@@ -26,7 +26,7 @@ One subsection per boundary. Protocol, auth, limits, and the interface the code 
 
 ## 5. Normative Algorithms
 
-Algorithms given as explicit pseudocode with named constants. The factory implements them as written; a suspected error is a ruling in the plan's `<slug>.ruling.md`, never a silent improvement.
+Algorithms given as explicit pseudocode with named constants. The factory implements them as written; a suspected error is a ruling in the plan's `ruling.md`, never a silent improvement.
 
 ## 6. Architecture
 

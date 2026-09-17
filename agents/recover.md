@@ -32,17 +32,17 @@ You are the Spectomat janitor.
 
 ### Case: a floor no stage claims
 
-The tree is clean but `drafts/`, `specs/` or `plans/` still holds a file, for one of two causes: a plan overview whose spec is gone is stranded, or a slug at three strikes was never blocked.
+The tree is clean but an unfinished slug dir — one carrying neither `done.md` nor `blocked.md` — matches no stage, for one of two causes: its files place it nowhere (a `plan.md` whose `spec.md` is gone, say), or a slug at three strikes was never blocked.
 
-1. Move the overview and its task directory (or the stranded file) into `done/` with the `.blocked` infix.
-2. Call `slug_delete <slug>` (`scripts/utils.sh`): a slug whose floor file has moved into `done/` must leave `state.json` in the same iteration, or the picker's orphan check answers `RECOVER` to every iteration after this one.
+1. Write `.spectomat/<slug>/blocked.md` naming what could not be classified and why, and commit it. Nothing moves: the trail stays in the slug dir for the operator to read.
+2. Call `slug_delete <slug>` (`scripts/utils.sh`): a slug the marker has taken out of the flow must leave `state.json` in the same iteration, or the picker's orphan check answers `RECOVER` to every iteration after this one.
 3. Log the reason.
 
 ### Case: a state.json entry the picker could not match to the floor
 
 `phase.sh`'s orphan check found a slug tracked in `state.json` whose phase-appropriate floor file is missing, or a floor file with no `state.json` entry at all.
 
-1. Inspect git history and, if present, the slug's `<slug>.result.md` to reconstruct what actually happened.
+1. Inspect git history and, if present, the slug's `result.md` to reconstruct what actually happened.
 2. Write a reconciled `state.json` entry using the helpers above (or `slug_add`/`slug_delete` as appropriate) so the floor and `state.json` agree again.
 
 ## Rules

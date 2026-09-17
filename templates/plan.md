@@ -14,7 +14,7 @@ the libraries and tools.
 
 **Spec:**
 
-`.spectomat/specs/{{SLUG}}.md`
+`.spectomat/{{SLUG}}/spec.md`
 
 > Code cites Spec by section and line (`§3.4 L316`).
 
@@ -32,7 +32,7 @@ the libraries and tools.
 
 Each task is an independent piece of work.
 
-One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`.
+One file per task, `task-NN-<name>.md`, beside this overview in `.spectomat/{{SLUG}}/`, from `templates/task.md`.
 The `IMPLEMENT` phase executes them one at a time, in this order, one task per iteration;
 the `REVIEW` phase may append further ones after the last.
 `Depends on` may name only lower-numbered tasks, and every file in the map has exactly one owning task.

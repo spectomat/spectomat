@@ -24,7 +24,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### What you may write
 
-- ❌ DO NOT Edit this contract, `.spectomat/gates.sh`, or anything under `drafts/` or `done/` — operator files. Drafts may be moved.
+- ❌ DO NOT Edit this contract, `.spectomat/gates.sh`, anything under `drafts/`, or a slug dir carrying `done.md` or `blocked.md` — operator files and finished work.
 - ❌ DO NOT Delete a draft, spec or plan.
 - ❌ DO NOT Weaken a gate to pass.
 - ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
@@ -54,7 +54,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 Every iteration, in order:
 
-1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/` files except to move them.
+1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
 2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task's `phase:` and `slug:` fields name it. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
 3. **Verify** with the gates, `./.spectomat/gates.sh` — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them. That script is the whole of the gates, and the only thing to edit when this project's checks change. No completion claim without fresh evidence: a gate that has not run this iteration has not passed, and a partial run does not stand for the whole.
 4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
@@ -75,15 +75,15 @@ Every iteration, in order:
 | `IMPLEMENT` | a task the plan lacked added | `slug_add_tasks <slug> 1` — raises `tasks_total` so the slug is not released early |
 | `REVIEW` | fix tasks added, rounds remain | `slug_add_tasks <slug> N` — back to `IMPLEMENT` with `tasks_total` raised by N |
 | `REVIEW` | nothing left to fix, or the rounds are spent | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` |
-| `ARCHIVE` | trail moved to `done/` | `slug_delete <slug>` — the archiver script does this itself |
+| `ARCHIVE` | `done.md` written | `slug_delete <slug>` — the archiver script does this itself |
 | any phase | the phase defeated you | `slug_strike <slug> <PHASE>`, and no phase change |
-| any phase | third strike, file moved to `done/` | `slug_delete <slug>` (see *Three strikes*) |
+| any phase | third strike, `blocked.md` written | `slug_delete <slug>` (see *Three strikes*) |
 
 Never set a phase by hand where a counter helper exists: `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW` in place of `slug_task_done` leaves `tasks_done` short, and every later reader of the counters is lied to.
 
 ### Three strikes
 
-If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike the slug is blocked: move the offending file to `done/` with the suffix `.blocked.md`, then drop the slug's entry from `state.json` with `scripts/utils.sh`'s `slug_delete <slug>`, log the reason, and continue. Both happen in the same iteration, the move first: an entry left in `state.json` with no floor file behind it makes the picker answer `RECOVER` to every iteration that follows, so a blocked slug that is not deleted blocks the whole flow. Never delete a draft, spec or plan.
+If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike the slug is blocked: write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then drop the slug's entry from `state.json` with `scripts/utils.sh`'s `slug_delete <slug>`, log the reason, and continue. Both happen in the same iteration, the marker first: an entry left in `state.json` for a slug the marker has taken out of the flow makes the picker answer `RECOVER` to every iteration that follows, so a blocked slug that is not deleted blocks the whole flow. Nothing moves and nothing is deleted — the trail stays in the slug dir for the operator to read.
 
 ## Memory
 
@@ -103,7 +103,7 @@ Append to `log.md`, never edit earlier lines. The timestamp is the output of `da
 - 2026-09-07T19:40Z · SPECIFY · <slug> · spec written, 3 assumptions
 - 2026-09-07T19:46Z · REVIEW-SPEC · <slug> · 2 issues fixed in §3.2, §9.1 · 1 decision added
 - 2026-09-07T19:52Z · IMPLEMENT · <slug> · Task 2/6 done · tests 41/41
-- 2026-09-07T20:10Z · ARCHIVE · <slug> · moved to done · tsc 0, tests 58/58, lint 0
+- 2026-09-07T20:10Z · ARCHIVE · <slug> · archived · tsc 0, tests 58/58, lint 0
 - 2026-09-07T20:11Z · PLAN · <slug> · plan: 6 tasks (strike 1: spec §4 contradicts §2)
 ```
 

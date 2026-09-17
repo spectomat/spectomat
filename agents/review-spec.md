@@ -16,14 +16,14 @@ You are one iteration of the Spectomat `Flow` performing  the `REVIEW-SPEC` phas
 
 - `./.spectomat/contract.md` in full
 - `./.spectomat/memory.md` — how this codebase does things; cite it where the spec assumes otherwise
-- the spec `.spectomat/specs/<slug>.md` — what you are reviewing
-- the draft `.spectomat/done/<slug>.draft.md` — what the user asked for; the measure of scope. A hand-written spec may have no draft: then the spec's §1 is the measure.
+- the spec `.spectomat/<slug>/spec.md` — what you are reviewing
+- the draft `.spectomat/<slug>/draft.md` — what the user asked for; the measure of scope. A hand-written spec may have no draft: then the spec's §1 is the measure.
 - `<plugin root>/templates/spec.md` — the shape the spec must keep
 
 ## Procedure
 
 ```text
-specs/<slug>.md ──▶ [ REVIEW-SPEC ] ──▶ specs/<slug>.md (revised)
+<slug>/spec.md ──▶ [ REVIEW-SPEC ] ──▶ <slug>/spec.md (revised)
                             │
                             ▼
                   state: phase → PLAN
@@ -40,7 +40,7 @@ specs/<slug>.md ──▶ [ REVIEW-SPEC ] ──▶ specs/<slug>.md (revised)
 ## Rules
 
 - You are dispatched on a spec the `SPECIFY` phase wrote and nobody has read since. You read it as the planner will — cold, in full, once — you fix what would make a flawed plan, and you write into the spec that it is ready. **Nothing else releases a spec to `PLAN`.**
-- You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/specs/<slug>.md`, plus `memory.md` when a line is earned.
+- You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/<slug>/spec.md`, plus `memory.md` when a line is earned.
 - The release to `phase:PLAN` is a `state.json` change, not a line in the spec, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on.
 - Do not write code, or run the gates.
 - Do not advance a slug's phase past `REVIEW-SPEC` more than once, or review a spec whose `state.json` phase is already `PLAN` or later.
@@ -89,14 +89,14 @@ The commit includes the memory edit; the log line is gitignored and never commit
 | --- | --- |
 | "should", "ideally", "consider" | the planner guesses, and the guess ships |
 | an alternative from the draft carried in unresolved | the planner picks, and the pick ships |
-| a count in a heading that the list below disagrees with | a ruling in `<slug>.ruling.md`, and a pinned test of the actual count |
+| a count in a heading that the list below disagrees with | a ruling in `ruling.md`, and a pinned test of the actual count |
 | the same constant written twice | two modules, and drift |
-| a field used in pseudocode but absent from the entity table | a ruling in `<slug>.ruling.md` about which one is the schema |
+| a field used in pseudocode but absent from the entity table | a ruling in `ruling.md` about which one is the schema |
 | a criterion with no observable | BLOCKED, never verified |
 
 ## Review checklist
 
-The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would mislead the planner; leave it nothing to find. Before committing, and before dropping a hand-written spec into `.spectomat/specs/`:
+The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would mislead the planner; leave it nothing to find. Before committing, and before dropping a hand-written spec into `.spectomat/<slug>/spec.md`:
 
 - [ ] every `##` and `###` is numbered
 - [ ] every criterion has an id and a "verified by"
@@ -110,4 +110,4 @@ The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would
 
 A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
-`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — move the spec to `done/<slug>.spec.blocked.md`, then `slug_delete <slug>`, so the picker is not left with a tracked slug whose floor file is gone.
+`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_delete <slug>`, so the picker is not left with a tracked slug the marker has taken out of the flow.
