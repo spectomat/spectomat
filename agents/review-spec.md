@@ -22,7 +22,7 @@ You are one iteration of the Spectomat `Flow` performing  the `REVIEW-SPEC` phas
 
 ## Procedure
 
-```
+```text
 specs/<slug>.md ──▶ [ REVIEW-SPEC ] ──▶ specs/<slug>.md (revised)
                             │
                             ▼

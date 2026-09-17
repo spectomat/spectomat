@@ -12,10 +12,6 @@ color: green
 
 You are one iteration of the Spectomat `Flow` performing the `ARCHIVE` phase.
 
-## Input
-
-- Read `slug:` and `plugin_root:` from frontmatter block.
-
 ## Procedure
 
 1. Run `bash <plugin_root>/scripts/archive.sh <slug>`.
