@@ -3,8 +3,10 @@
 #
 #   source "$(dirname "${BASH_SOURCE[0]}")/print.sh"
 #
-# Every print_* writes one "--- section ---" block to stdout and needs
-# FLOOR, STATE_FILE, MEMORY, count and state_field from utils.sh.
+# Every print_* writes one "--- section ---" block to stdout and needs FLOOR,
+# STATE_FILE, MEMORY, count, state_field, slugs_at_phase and slugs_unfinished
+# from utils.sh. Every count comes from state.json; the one floor read left is
+# drafts/, the intake inbox, which is not flow state.
 
 print_iteration() {
   echo "--- flow ---"
@@ -14,6 +16,9 @@ print_iteration() {
     else
       echo "cancelled: was at iteration $(state_field iteration) of $(state_field max_iterations) — /spectomat:run resumes it"
     fi
+    # The plugin copy that armed this flow. Scripts never read it — each runs
+    # from its own copy — but a floor-side reader has no other way to name it.
+    echo "plugin: $(state_field plugin_root)"
   else
     echo "not running"
   fi
@@ -21,7 +26,7 @@ print_iteration() {
 
 print_floor() {
   echo "--- floor: $FLOOR ---"
-  echo "drafts: $(count "$FLOOR/drafts")   active: $(slug_active_dirs | wc -l | tr -d ' ')   done: $(slugs_marked done.md | wc -l | tr -d ' ')   blocked: $(slugs_marked blocked.md | wc -l | tr -d ' ')   memory: $(memory_entries) entries"
+  echo "drafts: $(count "$FLOOR/drafts")   active: $(slugs_unfinished | wc -l | tr -d ' ')   done: $(slugs_at_phase DONE | wc -l | tr -d ' ')   blocked: $(slugs_at_phase BLOCKED | wc -l | tr -d ' ')   memory: $(memory_entries) entries"
 }
 
 # Entries in memory.md: list items, which is what the contract asks a memory to be.
@@ -31,6 +36,9 @@ memory_entries() {
   grep -c '^- ' "$MEMORY" | tr -d ' '
 }
 
+# One line per slug state.json tracks, finished ones included: a slug at DONE or
+# BLOCKED shows its final counters, which is the whole point of keeping its
+# entry. BLOCKED is 7 characters and fits the phase field.
 print_plans() {
   local slug phase tasks_total tasks_done next
   [[ -f "$STATE_FILE" ]] || return 0
@@ -46,10 +54,12 @@ print_plans() {
 }
 
 # One line per blocked slug, each naming the dir whose blocked.md holds the
-# reason. A blocked slug that nothing reports is a silently dropped idea.
+# reason. A blocked slug that nothing reports is a silently dropped idea. The
+# path is built from the slug name, never stat'd: archive.sh writes the marker
+# before it records BLOCKED, so a slug at that phase has its file.
 print_blocked() {
   local blocked
-  blocked=$(slugs_marked blocked.md)
+  blocked=$(slugs_at_phase BLOCKED)
   if [[ -n "$blocked" ]]; then
     echo "--- blocked ---"
     printf '%s\n' "$blocked" | sed "s|^|$FLOOR/|; s|\$|/blocked.md|"

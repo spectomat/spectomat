@@ -25,50 +25,6 @@ die() { echo "❌ $*" >&2; exit 1; }
 # quoted at the call site, not expanded by the shell.
 count() { find "$1" -maxdepth 1 -name "${2:-*.md}" -type f 2>/dev/null | wc -l | tr -d ' '; }
 
-# The floor is slug-major: everything of one idea lives in .spectomat/<slug>/,
-# named after the draft it came from. A directory directly under the floor is a
-# slug dir when it holds at least one of draft.md, spec.md or plan.md — which
-# drafts/ and work/ never do, so no reserved-name list is needed here.
-slug_dirs() {
-  local d
-  for d in "$FLOOR"/*/; do
-    [[ -d "$d" ]] || continue
-    d="${d%/}"
-    if [[ -f "$d/draft.md" || -f "$d/spec.md" || -f "$d/plan.md" ]]; then
-      printf '%s\n' "$(basename "$d")"
-    fi
-  done | sort
-}
-
-# True when a slug is finished: ARCHIVE wrote done.md, or a third strike wrote
-# blocked.md. Nothing moves when a slug finishes, so this marker is the only
-# thing that tells a finished slug dir from a working one. The two markers
-# never coexist.
-slug_finished() {
-  [[ -f "$FLOOR/$1/done.md" || -f "$FLOOR/$1/blocked.md" ]]
-}
-
-# The slugs still in the flow: every slug dir the markers do not claim. This is
-# what the picker walks, so a finished slug never re-enters a stage.
-slug_active_dirs() {
-  local s
-  while IFS= read -r s; do
-    [[ -n "$s" ]] || continue
-    slug_finished "$s" || printf '%s\n' "$s"
-  done < <(slug_dirs)
-}
-
-# Slugs whose dir carries MARKER ("done.md" or "blocked.md"), alphabetically.
-# The closing report and /spectomat:status both count finished slugs this way.
-slugs_marked() {
-  local s
-  while IFS= read -r s; do
-    [[ -n "$s" ]] || continue
-    [[ -f "$FLOOR/$s/$1" ]] && printf '%s\n' "$s"
-  done < <(slug_dirs)
-  return 0
-}
-
 # Value of one key in the state file; empty when absent or unreadable.
 # Reading several keys at once is one jq call, not several - see read_state
 # in stop-hook.sh, which is on the path of every iteration.
@@ -239,10 +195,38 @@ slug_add_tasks() {
     --arg s "$1" --arg n "$2"
 }
 
-# slug_delete SLUG — the slug is finished (done.md or blocked.md written):
-# drop its entry, so the picker stops counting it as work in the flow.
-slug_delete() {
-  state_apply 'del(.slugs[$s])' --arg s "$1"
+# slug_finish SLUG done|blocked [REASON] — the slug leaves the flow and keeps
+# its entry at a terminal phase. state.json is the whole record, so a finished
+# slug is recorded, not forgotten: the counters and strikes it ends with stay
+# readable, and /spectomat:status counts it from here rather than from the
+# done.md or blocked.md its dir carries.
+slug_finish() {
+  local phase=DONE
+  [[ "$2" != blocked ]] || phase=BLOCKED
+  state_apply '.slugs[$s].phase = $p | .slugs[$s].reason = $r | .slugs[$s].finished_at = $t' \
+    --arg s "$1" --arg p "$phase" --arg r "${3:-}" --arg t "$(date -u +%FT%RZ)"
+}
+
+# slugs_at_phase PHASE — slugs at PHASE, alphabetically. The picker's candidate
+# sets, the finished counts and the blocked list are all this one shape.
+#
+# The file check comes first and the jq failure is swallowed: prepare.sh's
+# report_floor calls this before arm_flow has written state.json, and a script
+# running set -e with pipefail would die on the failing jq inside the pipeline.
+slugs_at_phase() {
+  [[ -f "$STATE_FILE" ]] || return 0
+  jq -r --arg p "$1" '.slugs // {} | to_entries[] | select(.value.phase == $p) | .key' \
+    "$STATE_FILE" 2>/dev/null | sort || true
+}
+
+# The slugs still in the flow: every one whose phase is not terminal. Empty is
+# what FINISH means, and it is not the same as "no slugs" — a finished flow
+# keeps every slug it ever had, at DONE or BLOCKED.
+slugs_unfinished() {
+  [[ -f "$STATE_FILE" ]] || return 0
+  jq -r '.slugs // {} | to_entries[]
+    | select(.value.phase != "DONE" and .value.phase != "BLOCKED") | .key' \
+    "$STATE_FILE" 2>/dev/null | sort || true
 }
 
 # slug_strike SLUG PHASE — bump PHASE's strike count for SLUG and print the new

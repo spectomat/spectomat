@@ -17,7 +17,7 @@
   - `utils.sh` holds the shared paths and helpers the others source,
   - `prepare.sh` sets up the floor `.spectomat/`, renders `contract.md`, `memory.md` and `gates.sh`, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
   - `phase.sh` is the picker: one verdict block per iteration, naming the phase and the subagent/brief to dispatch it to,
-  - `archive.sh` is the `ARCHIVE` phase end to end: ticks, gates, writes the slug's `done.md` (or `blocked.md`) and commits,
+  - `archive.sh` is the `ARCHIVE` phase end to end: ticks, gates, writes the slug's `done.md` (or `blocked.md`), commits, and records the terminal phase in `state.json`,
   - `status.sh` summarises flow and floor; its sections live in `print.sh`,
   - `cancel.sh` disarms the flow and reports the iteration it was at,
   - `gates.sh` compiles the gate lines from `package.json` scripts; `run` renders them into the project's own `.spectomat/gates.sh`, which is what every phase runs.

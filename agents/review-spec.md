@@ -110,4 +110,4 @@ The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would
 
 A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
-`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_delete <slug>`, so the picker is not left with a tracked slug the marker has taken out of the flow.
+`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_finish <slug> blocked "<reason>"`, so the slug leaves the flow.

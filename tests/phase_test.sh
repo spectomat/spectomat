@@ -84,14 +84,22 @@ pk "the less-struck draft wins" "SPECIFY 002-b"
 
 floor p_blocked; draft 001-a
 strike 001-a SPECIFY 3
-pk "a leftover at the limit is RECOVER, not FINISH" "RECOVER"
+pk "every unfinished slug at the limit is RECOVER, not FINISH" "RECOVER"
 
-floor p_orphan; plan_bare 001-a
-pk "an orphan overview is RECOVER, not FINISH" "RECOVER"
-
+# state.json is the whole of the flow's state (D27): a slug dir the state does
+# not track is not in the flow, and a slug the state tracks is picked whatever
+# the floor holds. The picker never stats either one.
 floor p_untracked_file; draft 001-a
 jq 'del(.slugs["001-a"])' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
-pk "a floor file with no state.json entry is RECOVER" "RECOVER"
+pk "a slug dir with no state.json entry is not in the flow" "FINISH"
+
+# The regression the old "no slugs at all" test would cause: finished slugs
+# keep their entries now, so FINISH must mean "none left at a working phase".
+floor p_all_done; archived 001-a; archived 002-b blocked
+pk "a floor of only finished slugs is FINISH" "FINISH"
+
+floor p_terminal; draft 001-a; archived 002-b; archived 003-c blocked
+pk "a terminal slug is never picked" "SPECIFY 001-a"
 
 floor p_pure; spec 001-a; plan 001-a 2 1
 before=$(cd "$FIXTURE" && find .spectomat -type f -exec cksum {} \; | sort; cd "$FIXTURE" && git status --porcelain)
@@ -129,5 +137,12 @@ is "FINISH's slug field is empty"     "$(printf '%s\n' "$out" | grep '^slug:')" 
 is "FINISH names no subagent"         "$(printf '%s\n' "$out" | grep '^subagent:')"    "subagent:"
 is "FINISH names no brief"            "$(printf '%s\n' "$out" | grep '^brief:')"       "brief:"
 is "FINISH still names plugin_root"   "$(printf '%s\n' "$out" | grep '^plugin_root:')" "plugin_root:$plugin_root_expect"
+
+# state.json is the whole of the flow's state (D27), and the picker is where
+# that is easiest to undo: one stat of a slug dir brings back the two-authority
+# reconciliation this deleted, and no behavioural test would catch it. The
+# floor is named here only in the FLOOR/STATE_FILE constants it sources.
+is "the picker reads no floor path" \
+  "$(grep -c '\$FLOOR/' "$SCRIPTS/phase.sh")" "0"
 
 finish

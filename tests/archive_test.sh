@@ -10,10 +10,12 @@ SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "archive.sh"
-# ready NAME SLUG GATE — a floor with a finished plan and a one-line gate block
+# ready NAME SLUG GATE — a floor with a finished plan and a one-line gate block.
+# The slug is parked at ARCHIVE, which is what archive.sh now requires: a slug
+# at any other phase is refused before a gate runs.
 ready() {
   floor "arc-$1"; spec "$2"; plan "$2" 2 0; gates_block "$3"
-  printf '{"active": true, "iteration": 1, "max_iterations": 5, "session_id": "test", "started_at": "t", "slugs": {"%s": {}}}\n' "$2" > "$FIXTURE/.spectomat/state.json"
+  printf '{"active": true, "iteration": 1, "max_iterations": 5, "session_id": "test", "started_at": "t", "slugs": {"%s": {"phase": "ARCHIVE", "strikes": {}}}}\n' "$2" > "$FIXTURE/.spectomat/state.json"
   fixture_commit
 }
 arc()   { ( cd "$FIXTURE" && bash "$SCRIPTS/archive.sh" "$1" >/dev/null 2>&1 ); }
@@ -33,7 +35,8 @@ is "the log names the gate result" "$(grep -c 'gates passed' "$FIXTURE/.spectoma
 # ARCHIVE owns the floor: it must not stage a project file.
 is "the commit touches only the floor" \
   "$(cd "$FIXTURE" && git show --name-only --format= HEAD | grep -cv '^.spectomat/')" "0"
-is "archiving deletes the slug from state.json" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"] // "gone"' .spectomat/state.json)" "gone"
+is "archiving records the slug DONE" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"].phase' .spectomat/state.json)" "DONE"
+is "the DONE entry carries the gate result" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"].reason' .spectomat/state.json)" "gates passed"
 
 ready fail 001-a 'false'
 n0=$(commits); arc 001-a; is "a red gate exits 1" "$?" "1"
@@ -48,7 +51,8 @@ is "the third strike writes blocked.md" "$(there 001-a/blocked.md)" "yes"
 is "a blocked slug gets no done.md"     "$(there 001-a/done.md)"    "no"
 is "blocked.md names the reason" "$(grep -c 'gate failed' "$FIXTURE/.spectomat/001-a/blocked.md")" "1"
 is "the blocked trail stays on the floor" "$(there 001-a/spec.md)" "yes"
-is "blocking archive deletes the slug from state.json" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"] // "gone"' .spectomat/state.json)" "gone"
+is "blocking archive records the slug BLOCKED" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"].phase' .spectomat/state.json)" "BLOCKED"
+is "the BLOCKED entry names the gate" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"].reason' .spectomat/state.json | grep -c 'gate failed')" "1"
 
 ready dirt 001-a 'true'; dirty
 arc 001-a; is "a dirty tree is refused" "$?" "1"
@@ -57,9 +61,10 @@ is "nothing is marked on a dirty tree" "$(there 001-a/done.md)" "no"
 ready nosuch 001-a 'true'
 arc 002-b; is "an unknown slug is refused" "$?" "1"
 
-# A slug that already carries a marker is out of the flow: archiving it again
-# would write a second commit over finished work, and (for a blocked slug)
-# would silently promote it to shipped.
+# A slug at a terminal phase is out of the flow: archiving it again would write
+# a second commit over finished work, and (for a blocked slug) would silently
+# promote it to shipped. The refusal comes from the phase, not the marker — a
+# marker written by hand is a floor file the flow no longer reads.
 echo "archive.sh: a finished slug is refused"
 ready twice 001-a 'true'
 arc 001-a; n0=$(commits)
@@ -67,7 +72,7 @@ arc 001-a; is "archiving a done slug exits non-zero" "$?" "1"
 is "the second archive commits nothing" "$(( $(commits) - n0 ))" "0"
 
 ready blkdone 001-a 'true'
-printf 'blocked\n' > "$FIXTURE/.spectomat/001-a/blocked.md"; fixture_commit
+printf 'blocked\n' > "$FIXTURE/.spectomat/001-a/blocked.md"; state_slug 001-a BLOCKED; fixture_commit
 n0=$(commits); arc 001-a
 is "archiving a blocked slug exits non-zero" "$?" "1"
 is "a blocked slug is never promoted to done" "$(there 001-a/done.md)" "no"

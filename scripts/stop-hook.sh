@@ -43,17 +43,17 @@ ask_picker() {
   bash "$PLUGIN_ROOT/scripts/phase.sh" 2>/dev/null | sed -n 's/^phase://p'
 }
 
-# The lines the flow ends on, at most four. archive.sh writes exactly one
-# marker per finished slug — done.md or blocked.md, never both — inside that
-# slug's own dir, so counting the marked dirs counts slugs directly.
+# The lines the flow ends on, at most four. Every finished slug keeps its
+# state.json entry at DONE or BLOCKED, so the counts are one jq call each and
+# no marker file is read.
 closing_report() {
   local shipped blocked names
-  shipped=$(slugs_marked done.md | wc -l | tr -d ' ')
-  blocked=$(slugs_marked blocked.md | wc -l | tr -d ' ')
+  shipped=$(slugs_at_phase DONE | wc -l | tr -d ' ')
+  blocked=$(slugs_at_phase BLOCKED | wc -l | tr -d ' ')
   printf '✅ Spectomat flow complete: every slug is finished and the tree is clean.\n'
   printf '   Shipped %s · blocked %s · %s iterations.\n' "$shipped" "$blocked" "$ITERATION"
   if [[ "$blocked" -gt 0 ]]; then
-    names=$(slugs_marked blocked.md | tr '\n' ' ')
+    names=$(slugs_at_phase BLOCKED | tr '\n' ' ')
     printf '   Blocked after %s strikes: %s\n' "$STRIKE_LIMIT" "${names% }"
     printf '   Reasons are in %s/log.md; /spectomat:status lists them.\n' "$FLOOR"
   fi

@@ -1,6 +1,6 @@
 ---
 name: recover
-description: The Spectomat janitor - restores a clean tree after an iteration died mid-phase, or rules on a floor the picker could not classify. Dispatched by an armed flow's pointer. Never use it by hand.
+description: The Spectomat janitor - restores a clean tree after an iteration died mid-phase, or rules on the slugs that have run out of strikes. Dispatched by an armed flow's pointer. Never use it by hand.
 model: haiku
 tools: [Read, Write, Edit, Bash, Glob, Grep]
 disallowedTools: [Agent]
@@ -19,7 +19,7 @@ You are the Spectomat janitor.
 
 ## Procedure
 
-1. Find which of the three cases below you are in, and handle only that one.
+1. Find which of the two cases below you are in, and handle only that one.
 2. Commit, append one line to `log.md` in the contract's format, and report what you found, what you did, and the commit hash.
 
 ### Case: a dirty tree
@@ -30,20 +30,14 @@ You are the Spectomat janitor.
 2. If they are a phase all but finished, finish it and commit it under that phase's own message. Also apply that phase's `state.json` transition using whichever of `<plugin_root>/scripts/slug_set_phase.sh`, `slug_start_tasks`, `slug_task_done`, or `slug_add_tasks` (the latter three from `scripts/utils.sh`) matches the phase that crashed — the same helper that phase's own brief would have called.
 3. If they are partial or you cannot tell what they were for, discard them — `git checkout -- .` and `git clean -fd` the paths under `.spectomat/` and the paths the task files name.
 
-### Case: a floor no stage claims
+### Case: every unfinished slug is at the strike limit
 
-The tree is clean but an unfinished slug dir — one carrying neither `done.md` nor `blocked.md` — matches no stage, for one of two causes: its files place it nowhere (a `plan.md` whose `spec.md` is gone, say), or a slug at three strikes was never blocked.
+The tree is clean, so the picker reached the end of its ladder: every slug still at a working phase in `state.json` has three strikes at that phase, and no candidate is left to hand out. Read each one's strikes with `jq '.slugs' .spectomat/state.json` and its reasons in `log.md`.
 
-1. Write `.spectomat/<slug>/blocked.md` naming what could not be classified and why, and commit it. Nothing moves: the trail stays in the slug dir for the operator to read.
-2. Call `slug_delete <slug>` (`scripts/utils.sh`): a slug the marker has taken out of the flow must leave `state.json` in the same iteration, or the picker's orphan check answers `RECOVER` to every iteration after this one.
-3. Log the reason.
-
-### Case: a state.json entry the picker could not match to the floor
-
-`phase.sh`'s orphan check found a slug tracked in `state.json` whose phase-appropriate floor file is missing, or a floor file with no `state.json` entry at all.
-
-1. Inspect git history and, if present, the slug's `result.md` to reconstruct what actually happened.
-2. Write a reconciled `state.json` entry using the helpers above (or `slug_add`/`slug_delete` as appropriate) so the floor and `state.json` agree again.
+1. For each such slug, decide whether the phase can be rescued. If it can — the strikes came from something you can see and fix, and the fix is within this phase's own work — fix it, commit, and leave the slug at its phase for the next iteration.
+2. If it cannot, write `.spectomat/<slug>/blocked.md` naming the phase, the strikes and why, and commit it. Nothing moves: the trail stays in the slug dir for the operator to read.
+3. Call `slug_finish <slug> blocked "<reason>"` (`scripts/utils.sh`). The state call is what takes the slug out of the flow — a marker alone leaves it at its phase, and the picker answers `RECOVER` again next iteration.
+4. Log the reason.
 
 ## Rules
 

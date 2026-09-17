@@ -111,15 +111,18 @@ plan_bare() {
 }
 
 # archived SLUG [blocked] — a finished slug, as archive.sh leaves it: the trail
-# stays put and one marker file says how it ended.
+# stays put, one marker file says how it ended, and state.json carries the
+# terminal phase that actually takes it out of the flow.
 archived() {
   mkdir -p "$FIXTURE/.spectomat/$1"
   printf 'spec\n' > "$FIXTURE/.spectomat/$1/spec.md"
   printf 'plan\n' > "$FIXTURE/.spectomat/$1/plan.md"
   if [[ -z "${2:-}" ]]; then
     printf 'archived\n' > "$FIXTURE/.spectomat/$1/done.md"
+    state_slug "$1" DONE
   else
     printf 'blocked\n' > "$FIXTURE/.spectomat/$1/blocked.md"
+    state_slug "$1" BLOCKED
   fi
   fixture_commit
 }

@@ -75,15 +75,15 @@ Every iteration, in order:
 | `IMPLEMENT` | a task the plan lacked added | `slug_add_tasks <slug> 1` — raises `tasks_total` so the slug is not released early |
 | `REVIEW` | fix tasks added, rounds remain | `slug_add_tasks <slug> N` — back to `IMPLEMENT` with `tasks_total` raised by N |
 | `REVIEW` | nothing left to fix, or the rounds are spent | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` |
-| `ARCHIVE` | `done.md` written | `slug_delete <slug>` — the archiver script does this itself |
+| `ARCHIVE` | `done.md` written | `slug_finish <slug> done` — the archiver script does this itself |
 | any phase | the phase defeated you | `slug_strike <slug> <PHASE>`, and no phase change |
-| any phase | third strike, `blocked.md` written | `slug_delete <slug>` (see *Three strikes*) |
+| any phase | third strike, `blocked.md` written | `slug_finish <slug> blocked "<reason>"` (see *Three strikes*) |
 
 Never set a phase by hand where a counter helper exists: `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW` in place of `slug_task_done` leaves `tasks_done` short, and every later reader of the counters is lied to.
 
 ### Three strikes
 
-If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike the slug is blocked: write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then drop the slug's entry from `state.json` with `scripts/utils.sh`'s `slug_delete <slug>`, log the reason, and continue. Both happen in the same iteration, the marker first: an entry left in `state.json` for a slug the marker has taken out of the flow makes the picker answer `RECOVER` to every iteration that follows, so a blocked slug that is not deleted blocks the whole flow. Nothing moves and nothing is deleted — the trail stays in the slug dir for the operator to read.
+If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike the slug is blocked: write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then call `scripts/utils.sh`'s `slug_finish <slug> blocked "<reason>"`, log the reason, and continue. Both happen in the same iteration, in that order: the state call is what takes the slug out of the flow, so a marker written without it leaves the slug at its phase with three strikes against it — the picker skips it, finds no other candidate, and sends every remaining iteration to the janitor; and writing the marker first keeps any commit from describing a state change that did not happen. The marker is the committed record — `state.json` is gitignored, so `blocked.md` is the only trace of how the slug ended that survives in git. Nothing moves and nothing is deleted — the trail stays in the slug dir for the operator to read.
 
 ## Memory
 

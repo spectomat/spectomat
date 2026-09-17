@@ -95,7 +95,7 @@ The spec binds; the plan argues from it; your ruling settles what neither answer
 
 A task you cannot build is a strike, not a guess: a brief that contradicts itself, a dependency that does not exist, three failed fixes against the same gate. Write what defeated you to the plan's `ruling.md`, tagged with this task's number, revert the task's Files with `git checkout --` and delete the ones you created, bump the slug's `IMPLEMENT` strike count (`slug_strike`), append a log line ending `(strike N: <reason>)`, and stop.
 
-`slug_strike` prints the new count. Under three, the next iteration's picker skips this slug in favour of another candidate. At three the plan is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_delete <slug>`, so the picker is not left with a tracked slug the marker has taken out of the flow. The trail stays in the slug dir, and the operator sees the blocked slug in `/spectomat:status`.
+`slug_strike` prints the new count. Under three, the next iteration's picker skips this slug in favour of another candidate. At three the plan is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_finish <slug> blocked "<reason>"`, so the slug leaves the flow. The trail stays in the slug dir, and the operator sees the blocked slug in `/spectomat:status`.
 
 ## Gates
 

@@ -3,11 +3,12 @@
 #
 #   archive.sh <slug>
 #
-# Runs the contract's gates, marks the slug finished, makes one commit and
-# writes one log line. Nothing moves: the slug's trail stays in .spectomat/<slug>/
-# and ARCHIVE writes done.md beside it. A failing gate writes nothing and exits
-# 1, until the third strike: then blocked.md is written instead, carrying the
-# reason, so the floor can move on. Nothing outside the floor is touched.
+# Runs the contract's gates, marks the slug finished, makes one commit, records
+# the terminal phase in state.json and writes one log line. Nothing moves: the
+# slug's trail stays in .spectomat/<slug>/ and ARCHIVE writes done.md beside it.
+# A failing gate writes nothing and exits 1, until the third strike: then
+# blocked.md is written instead, carrying the reason, so the floor can move on.
+# Nothing outside the floor is touched.
 
 set -uo pipefail
 
@@ -21,12 +22,18 @@ GATE_RESULT="" # "passed" or "failed", for the log line and the marker
 now() { date -u +%FT%RZ; }
 log_line() { printf '%s\n' "$1" >> "$FLOOR/log.md"; }
 
+# One state check does the work of the three file checks it replaces, and is
+# stronger than all of them: a slug only reaches ARCHIVE through REVIEW, which
+# only happens after PLAN wrote a plan and IMPLEMENT closed every task. It also
+# refuses a second archive and refuses to promote a blocked slug to shipped,
+# since neither DONE nor BLOCKED is ARCHIVE.
 require_ready() {
+  local phase
   [[ -n "$SLUG" ]] || die "usage: archive.sh <slug>"
   [[ -z "$(git status --porcelain)" ]] || die "tree is dirty: the janitor runs before ARCHIVE"
-  [[ -f "$FLOOR/$SLUG/spec.md" ]] || die "no $FLOOR/$SLUG/spec.md"
-  [[ -f "$FLOOR/$SLUG/plan.md" ]] || die "no $FLOOR/$SLUG/plan.md"
-  slug_finished "$SLUG" && die "$SLUG is already finished: $FLOOR/$SLUG carries a marker"
+  phase="$(slug_phase "$SLUG")"
+  [[ -n "$phase" ]] || die "$SLUG is not tracked in $STATE_FILE"
+  [[ "$phase" == ARCHIVE ]] || die "$SLUG is at $phase, not ARCHIVE"
   return 0
 }
 
@@ -61,8 +68,10 @@ gate_or_strike() {
 
 # Mark the slug finished: one new file in its own dir, and nothing else on the
 # floor changes. done.md says it shipped; blocked.md says the third strike
-# landed and carries the reason, which is what /spectomat:status lists and the
-# closing report counts. The picker skips a slug dir carrying either.
+# landed and carries the reason. These are the committed human record — the
+# only trace of how a slug ended that survives in git, since state.json is
+# gitignored — and nothing reads them back: slug_finish below is what takes the
+# slug out of the flow.
 write_marker() {
   if [[ -n "$BLOCK" ]]; then
     printf '# %s — blocked\n\nBlocked after %s strikes on %s · gate failed: %s\n' \
@@ -96,12 +105,23 @@ log_result() {
   fi
 }
 
+# Record the terminal phase. This is what takes the slug out of the flow, and
+# it runs last on purpose: a failed commit exits above with a strike and no
+# terminal entry, so the picker hands ARCHIVE back next iteration.
+finish_slug() {
+  if [[ -n "$BLOCK" ]]; then
+    slug_finish "$SLUG" blocked "gate failed: ${GATE_FAILED:-$GATES_SH}"
+  else
+    slug_finish "$SLUG" done "gates $GATE_RESULT"
+  fi
+}
+
 main() {
   require_ready
   gate_or_strike
   write_marker
   commit_archive
-  slug_delete "$SLUG"
+  finish_slug
   log_result
   echo "ARCHIVE $SLUG · gates $GATE_RESULT${BLOCK:+ · BLOCKED}"
 }

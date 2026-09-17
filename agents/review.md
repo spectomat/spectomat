@@ -129,4 +129,4 @@ Then report: the round, the counts by severity, the tasks you added, and the pha
 
 A plan you cannot review is a strike, not a guess: a `result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, bump the slug's `REVIEW` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
-`slug_strike` prints the new count. If it is the third, this slug is blocked: follow the contract's *Three strikes*, which ends in `slug_delete <slug>` so no entry is left in `state.json` for the picker to trip over.
+`slug_strike` prints the new count. If it is the third, this slug is blocked: follow the contract's *Three strikes*, which ends in `slug_finish <slug> blocked "<reason>"` so the slug leaves the flow.

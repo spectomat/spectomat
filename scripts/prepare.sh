@@ -62,6 +62,25 @@ prepare_floor() {
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
 }
 
+# The floor is slug-major: everything of one idea lives in .spectomat/<slug>/,
+# named after the draft it came from. A directory directly under the floor is a
+# slug dir when it holds at least one of draft.md, spec.md or plan.md — which
+# drafts/ and work/ never do, so no reserved-name list is needed here.
+#
+# This is the flow's only directory scan (D27). It lives here rather than in
+# utils.sh because prepare.sh is the intake boundary: after arming, every
+# script reads state.json and nothing walks the floor again.
+slug_dirs() {
+  local d
+  for d in "$FLOOR"/*/; do
+    [[ -d "$d" ]] || continue
+    d="${d%/}"
+    if [[ -f "$d/draft.md" || -f "$d/spec.md" || -f "$d/plan.md" ]]; then
+      printf '%s\n' "$(basename "$d")"
+    fi
+  done | sort
+}
+
 # Move every draft the operator dropped into drafts/ to its own slug dir, as
 # <slug>/draft.md: the floor is slug-major, and drafts/ is a pure inbox that
 # arming empties. The slug is the draft's file name without .md, unchanged.
@@ -159,24 +178,32 @@ render_factory() {
   fi
 }
 
-# Print floor counts and a short git status; sets ACTIVE and DONE. Runs after
-# intake_drafts, so drafts/ is empty by now and every idea is a slug dir.
+# Print floor counts and a short git status; sets ACTIVE. Runs after
+# seed_state, so every slug dir has an entry and all three counts come from
+# state.json — the scan has already done its one job by then.
 report_floor() {
-  ACTIVE=$(slug_active_dirs | wc -l | tr -d ' ')
-  DONE=$(slugs_marked done.md | wc -l | tr -d ' ')
-  BLOCKED=$(slugs_marked blocked.md | wc -l | tr -d ' ')
+  ACTIVE=$(slugs_unfinished | wc -l | tr -d ' ')
+  DONE=$(slugs_at_phase DONE | wc -l | tr -d ' ')
+  BLOCKED=$(slugs_at_phase BLOCKED | wc -l | tr -d ' ')
   echo "--- floor ---"
   echo "active: $ACTIVE   done: $DONE   blocked: $BLOCKED"
   git status --porcelain | head -5
 }
 
-# Refuse to arm when a flow is already active or there is nothing to work on.
-require_startable() {
+# Refuse before seed_state touches anything: an active flow belongs to another
+# session, and this one must not write into its state.
+require_no_active_flow() {
   if [[ -f "$STATE_FILE" ]] && [[ "$(state_field active)" == "true" ]]; then
     echo
     echo "❌ Not starting: a flow is already active ($STATE_FILE). Run /spectomat:cancel first."
     exit 1
   fi
+}
+
+# Refuse to arm when there is nothing to work on or the tree is dirty. Both
+# refusals leave the seeded, unarmed state.json in place: it records only what
+# the floor holds, and the next run re-seeds it.
+require_startable() {
   if [[ "$ACTIVE" -eq 0 ]]; then
     echo
     echo "❌ Not starting: nothing to do. Drop a .md idea into $FLOOR/drafts/ and run /spectomat:run again."
@@ -197,50 +224,75 @@ require_startable() {
   fi
 }
 
-# Arm the flow: the state the Stop hook reads on every exit attempt. Resume a
-# cancelled (inactive) state if one exists, else create fresh. MAX_ITERATIONS
-# is unquoted in the JSON; parse_args has already required it to match
-# ^[0-9]+$.
-arm_flow() {
+# Read the floor into state.json: the flow's one and only directory scan (D27).
+# Runs before report_floor, so every count that follows comes from state.json
+# and the floor is never consulted about the flow again.
+#
+# Creates state.json when there is none. The flow is armed separately, by
+# arm_flow after require_startable has approved it — seeding is safe to do on a
+# floor that then refuses to arm, since it only records what the floor holds.
+seed_state() {
   local s
-  if [[ -f "$STATE_FILE" ]]; then
-    state_apply '
-      .active = true
-      | .iteration = 1
-      | .max_iterations = ($m | tonumber)
-      | .session_id = $sid
-      | .started_at = $now
-      | .slugs = (.slugs // {})
-    ' --arg m "$MAX_ITERATIONS" --arg sid "${CLAUDE_CODE_SESSION_ID:-}" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  else
-    cat > "$STATE_FILE" <<EOF
-{
-  "active": true,
-  "iteration": 1,
-  "max_iterations": $MAX_ITERATIONS,
-  "session_id": "${CLAUDE_CODE_SESSION_ID:-}",
-  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "slugs": {}
-}
-EOF
-  fi
+  [[ -f "$STATE_FILE" ]] || printf '{"slugs": {}}\n' > "$STATE_FILE"
 
-  # Every unfinished slug dir with no state entry enters the flow at the stage
-  # its files place it: a draft intake_drafts just moved in starts at SPECIFY,
-  # and a spec the operator wrote by hand starts at REVIEW-SPEC. A dir the
-  # files do not place — a plan with no spec, say — is left untracked on
-  # purpose: the picker's orphan check answers RECOVER and the janitor rules
-  # on it, which is the one path that can write to a floor it does not
-  # understand.
+  # Every slug dir with no state entry enters the flow at the stage its files
+  # place it: a draft intake_drafts just moved in starts at SPECIFY, and a spec
+  # the operator wrote by hand starts at REVIEW-SPEC.
+  #
+  # The phase check is what stops a finished slug being resurrected: a slug at
+  # DONE or BLOCKED has a phase, so it is skipped. Do not "simplify" it away.
+  #
+  # A dir already carrying a marker but absent from state.json is a floor armed
+  # before D27, when ARCHIVE deleted the entry instead of finishing it. Seeding
+  # its terminal phase here is the whole migration: it needs no version check,
+  # and the phase check above makes a second run a no-op. No reason or
+  # finished_at is invented — the reason is in the marker, the time is in git.
+  #
+  # A dir the files place nowhere — a plan with no spec, say — is blocked on
+  # the spot. Nothing derives state from the floor any more, so an unseeded dir
+  # would simply be invisible to the flow forever; a BLOCKED entry puts it in
+  # /spectomat:status where the operator can see it.
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue
     [[ -z "$(slug_phase "$s")" ]] || continue
-    if [[ -f "$FLOOR/$s/draft.md" && ! -f "$FLOOR/$s/spec.md" ]]; then
+    if [[ -f "$FLOOR/$s/done.md" ]]; then
+      slug_add "$s" DONE
+    elif [[ -f "$FLOOR/$s/blocked.md" ]]; then
+      slug_add "$s" BLOCKED
+    elif [[ -f "$FLOOR/$s/draft.md" && ! -f "$FLOOR/$s/spec.md" ]]; then
       slug_add "$s" SPECIFY
     elif [[ -f "$FLOOR/$s/spec.md" && ! -f "$FLOOR/$s/plan.md" ]]; then
       slug_add "$s" REVIEW-SPEC
+    else
+      printf '# %s — blocked\n\nArming could not classify this slug dir: its files match no phase.\n' \
+        "$s" > "$FLOOR/$s/blocked.md"
+      # commit_floor has already run, and arming must end on a clean tree or
+      # the picker answers RECOVER to every iteration. A failure here is fatal
+      # rather than skipped: require_startable would refuse on the dirt anyway,
+      # and an uncommitted marker with a BLOCKED entry is the one state the
+      # migration must never leave behind.
+      git add -A "$FLOOR/$s" || die "could not stage $FLOOR/$s"
+      git commit -q -m "chore($s): blocked, files match no phase" || die "could not commit $FLOOR/$s"
+      slug_add "$s" BLOCKED
+      echo "$FLOOR/$s: files match no phase, blocked"
     fi
-  done < <(slug_active_dirs)
+  done < <(slug_dirs)
+}
+
+# Arm the flow: the state the Stop hook reads on every exit attempt. seed_state
+# has already created the file and filled .slugs, so this only sets the flow's
+# own fields. MAX_ITERATIONS is passed through tonumber; parse_args has already
+# required it to match ^[0-9]+$.
+arm_flow() {
+  state_apply '
+    .active = true
+    | .iteration = 1
+    | .max_iterations = ($m | tonumber)
+    | .session_id = $sid
+    | .started_at = $now
+    | .plugin_root = $root
+  ' --arg m "$MAX_ITERATIONS" --arg sid "${CLAUDE_CODE_SESSION_ID:-}" \
+    --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg root "$PLUGIN_ROOT"
 }
 
 announce() {
@@ -265,6 +317,12 @@ main() {
   render_factory
   intake_drafts
   commit_floor
+  # seed_state before report_floor so every count comes from state.json, but
+  # after the active-flow check so a second session cannot write into a flow it
+  # does not own. A refusal after this point leaves an unarmed state.json,
+  # which require_no_active_flow tolerates and the next run re-seeds.
+  require_no_active_flow
+  seed_state
   report_floor
   require_startable
   arm_flow

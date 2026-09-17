@@ -81,7 +81,10 @@ out=$(cd "$DIRTY" && bash "$SCRIPTS/prepare.sh" 3 2>&1); rc=$?
 case "$out" in *"tree is dirty"*) got=yes ;; *) got=no ;; esac
 is "a dirty tree refuses to arm"      "$got" "yes"
 is "the refusal exits non-zero"       "$rc" "1"
-is "the refusal arms nothing"         "$([[ -e "$DIRTY/.spectomat/state.json" ]] && echo yes || echo no)" "no"
+# seed_state runs before the dirty-tree check, so a refusal may leave an
+# unarmed state.json behind. What must never happen is an armed one: the Stop
+# hook keys on .active, and anything else is a file the next run re-seeds.
+is "the refusal arms nothing" "$(cd "$DIRTY" && jq -r '.active // "unarmed"' .spectomat/state.json 2>/dev/null || echo unarmed)" "unarmed"
 
 # Drafts are taken in plain alphabetical order of the file name.
 ORDER="$TMP/order"
@@ -116,5 +119,29 @@ is "cancel marks the flow inactive" "$(cd "$ARM" && jq -r .active .spectomat/sta
 is "cancel keeps the floor"         "$([[ -d "$ARM/.spectomat/drafts" ]] && echo yes || echo no)" "yes"
 (cd "$ARM" && bash "$SCRIPTS/prepare.sh" 7) >/dev/null 2>&1
 is "resuming re-arms the flow" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "true"
+is "arming records the plugin copy" "$(cd "$ARM" && jq -r .plugin_root .spectomat/state.json)" "$(dirname "$SCRIPTS")"
+
+# A finished slug keeps its entry, so re-arming must neither resurrect it nor
+# count it as work. This also drives the migration branch: a floor armed before
+# D27 has marked dirs with no state entry, and arming seeds their terminal
+# phase once.
+echo "arming over finished slugs"
+RE="$TMP/rearm"
+mkdir -p "$RE"
+cp -R "$REPO_TEMPLATE/." "$RE"
+mkdir -p "$RE/.spectomat/001-old" "$RE/.spectomat/drafts"
+printf 'spec\n' > "$RE/.spectomat/001-old/spec.md"
+printf 'plan\n' > "$RE/.spectomat/001-old/plan.md"
+printf 'archived\n' > "$RE/.spectomat/001-old/done.md"
+printf 'idea\n' > "$RE/.spectomat/drafts/002-new.md"
+(cd "$RE" && git add -A && git commit -qm seed) >/dev/null 2>&1
+out=$( (cd "$RE" && bash "$SCRIPTS/prepare.sh" 7) 2>&1 )
+is "a pre-D27 finished slug is seeded DONE" "$(cd "$RE" && jq -r '.slugs["001-old"].phase' .spectomat/state.json)" "DONE"
+is "the finished slug is not counted as active" "$(printf '%s\n' "$out" | grep -c 'active: 1   done: 1')" "1"
+is "the new draft still arms" "$(cd "$RE" && jq -r '.slugs["002-new"].phase' .spectomat/state.json)" "SPECIFY"
+(cd "$RE" && bash "$SCRIPTS/cancel.sh") >/dev/null 2>&1
+(cd "$RE" && bash "$SCRIPTS/prepare.sh" 7) >/dev/null 2>&1
+is "a second arming leaves the finished slug alone" "$(cd "$RE" && jq -r '.slugs["001-old"].phase' .spectomat/state.json)" "DONE"
+is "re-arming leaves a clean tree" "$(cd "$RE" && git status --porcelain)" ""
 
 finish

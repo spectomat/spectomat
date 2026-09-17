@@ -49,4 +49,4 @@ A spec you cannot write is **a strike, not a guess**: a draft you cannot read, a
 
 Do not advance the slug's phase in `state.json`; instead bump its `SPECIFY` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
-`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_delete <slug>`, so the picker is not left with a tracked slug the marker has taken out of the flow.
+`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_finish <slug> blocked "<reason>"`, so the slug leaves the flow.
