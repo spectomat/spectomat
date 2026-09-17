@@ -44,7 +44,7 @@ Five categories, in this order. Read for one category at a time; a single pass f
 | Consistency | two sections that disagree, a constant written twice with two values, a count in a heading the list below contradicts, a build sequence that names a component §6 does not |
 | Clarity | a requirement a planner could read two ways, "should" / "ideally" / "consider", a criterion with no observable, an algorithm given in prose where §5 promises pseudocode |
 | Scope | anything the draft did not ask for, and anything it asked for that the spec dropped |
-| Shape | the `SPECIFY` checklist: every Part I heading numbered, every criterion with an id, every constant in one section, every external boundary named, a bottom-up build sequence, an empty §11 |
+| Shape | the `SPECIFY` checklist: every Part I heading numbered, every criterion with an id, every constant in one section, every external boundary named, a bottom-up build sequence |
 
 ### Calibration
 
@@ -58,7 +58,7 @@ Every material change is a row in §10 Decisions, numbered on from the last, dat
 
 A change of scope — a feature cut because the draft never asked for it, or restored because it did — is always material.
 
-Then fill the spec's `## 17. Review` section:
+Then fill the spec's `## 16. Review` section:
 
 ```text
 - Round 1 — N issues (completeness C, consistency S, clarity L, scope P, shape H) — fixed in §a, §b, …; D decisions added

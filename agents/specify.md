@@ -60,7 +60,7 @@ When in doubt between the two, take architectural. A draft that looks bounded an
 
 **Propose two or three approaches** to every doubt that is a design choice rather than a fact, with trade-offs, and pick one. Lead with the simplest that satisfies the draft; cut from every approach anything the draft did not ask for. The chosen approach goes into Part I; the rejected ones go into the Rejected column of its §10 row. An approach nobody recorded is a guess the planner cannot trace.
 
-**Design for isolation.** Break the system into units that each have one purpose and talk through named interfaces (§6, §14). For each unit you can answer: what it does, how it is used, what it depends on. A unit whose internals must be read to understand it has the wrong boundary.
+**Design for isolation.** Break the system into units that each have one purpose and talk through named interfaces (§6, §13). For each unit you can answer: what it does, how it is used, what it depends on. A unit whose internals must be read to understand it has the wrong boundary.
 
 **In an existing codebase**, read the structure before proposing, follow its patterns, and include a targeted improvement only where existing code blocks the draft. Nothing unrelated.
 
@@ -79,10 +79,9 @@ Start from `<plugin root>/templates/spec.md`; the `SPECIFY` phase follows it whe
 
 - **Number every section** (`## 3.`, `### 3.4`). Code cites `§3.4 L316`; a citation test keeps the line inside the section it names.
 - **Every acceptance criterion has an id** (`AC-3.2`, `E2E-5`). A test names the id; an audit test fails when a declared id has no test, and when a test names an undeclared id.
-- **Algorithms are pseudocode with named constants.** `THRESHOLD = 0.85`, not "a high similarity". The factory implements them as written; a suspected error is a reconciliation, not a silent improvement.
+- **Algorithms are pseudocode with named constants.** `THRESHOLD = 0.85`, not "a high similarity". The factory implements them as written; a suspected error is a ruling in the plan's `<slug>.ruling.md`, not a silent improvement.
 - **State what is normative and what is illustrative.** A diagram is illustrative unless the text says otherwise.
 - **Decisions are numbered and dated**, with the rejected alternative. When two sections disagree, the later explicitly resolved one wins — say so.
-- **Reconciliations get a section** (`§11` in the skeleton) that starts empty. The factory appends a numbered row per divergence.
 - **Name every external boundary** and its interface. Each becomes a port with an in-memory fake; a boundary the spec does not name becomes a test that touches the network.
 - **Give the build sequence, bottom-up.** Pure domain first, adapters next, wiring after, UI last. The factory derives its phases from this list.
 - **Say what cannot be verified locally** (deploy-gated criteria) and what residue to deliver instead: the harness, the file format, the alarm.
@@ -93,9 +92,9 @@ Start from `<plugin root>/templates/spec.md`; the `SPECIFY` phase follows it whe
 | --- | --- |
 | "should", "ideally", "consider" | the planner guesses, and the guess ships |
 | an alternative from the draft carried in unresolved | the planner picks, and the pick ships |
-| a count in a heading that the list below disagrees with | a reconciliation row, and a pinned test of the actual count |
+| a count in a heading that the list below disagrees with | a ruling in `<slug>.ruling.md`, and a pinned test of the actual count |
 | the same constant written twice | two modules, and drift |
-| a field used in pseudocode but absent from the entity table | a reconciliation row about which one is the schema |
+| a field used in pseudocode but absent from the entity table | a ruling in `<slug>.ruling.md` about which one is the schema |
 | a criterion with no observable | BLOCKED, never verified |
 
 ## Review checklist
@@ -107,8 +106,7 @@ The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would
 - [ ] every constant appears once, in the section that owns it
 - [ ] every external boundary is named
 - [ ] the build sequence exists and is bottom-up
-- [ ] the reconciliations section exists and is empty
-- [ ] the review section (§17) exists and is empty — the `REVIEW-SPEC` phase fills it
+- [ ] the review section (§16) exists and is empty — the `REVIEW-SPEC` phase fills it
 - [ ] no doubt from the draft survives: every hedge became a normative sentence and a §10 row
 
 Record memory, commit `<type>(<slug>): …`, advance `.spectomat/state.json`: set the slug's phase to `REVIEW-SPEC` (`scripts/utils.sh`'s `slug_set_phase`), log one line, report.

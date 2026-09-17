@@ -11,13 +11,20 @@ Drop ideas into `.spectomat/drafts/`, call one `/spectomat:run` command, and an 
 ### Install
 
 ```bash
-claude plugin marketplace add ~/Projects/spectomat
+claude plugin marketplace add spectomat/spectomat
 claude plugin install spectomat@spectomat
 ```
 
-### Run 
+### Run
 
-(inside a project with a draft on the floor.)
+in a chat:
+
+```text
+just refer the word `spectomat` in your message
+ or explicitly call `/spectomat:spectomat-run-new-draft
+```
+
+inside a project with a draft on the floor.
 
 ```bash
 claude -p "/spectomat:run 25" --plugin-dir <this repo>` 
@@ -37,9 +44,10 @@ claude plugin update spectomat@spectomat
 
 See [File structure](./docs/file-structure.md) for the plugin anatomy details.
 
-Verify
-
 ```bash
+claude plugin marketplace add ~/Projects/spectomat # from local mashine
+claude plugin install spectomat@spectomat
+claude plugin update spectomat@spectomat
 claude plugin validate .claude-plugin/plugin.json --strict
 claude plugin validate .claude-plugin/marketplace.json --strict
 ```

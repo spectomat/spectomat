@@ -6,7 +6,7 @@ Code cites this document by section and line (`§3.4 L316`).
 
 Part I is normative: the factory builds to it and never edits it. 
 
-A divergence found during the build is a **reconciliation**, recorded in §11 with a number and a reason.
+A divergence found during the build is recorded as a ruling in the plan's `<slug>.ruling.md`, not in this document.
 
 # Part I — Specification
 
@@ -36,7 +36,7 @@ One subsection per boundary. Protocol, auth, limits, and the interface the code 
 
 ## 5. Normative Algorithms
 
-Algorithms given as explicit pseudocode with named constants. The factory implements them as written; a suspected error is a reconciliation, never a silent improvement.
+Algorithms given as explicit pseudocode with named constants. The factory implements them as written; a suspected error is a ruling in the plan's `<slug>.ruling.md`, never a silent improvement.
 
 ## 6. Architecture
 
@@ -78,39 +78,32 @@ Numbered, dated, with the alternative rejected. The later, explicitly resolved s
 | --- | --- | --- | --- |
 | D1 | ... | ... | ... |
 
-## 11. Reconciliations
-
-Filled during the build. One row per divergence from Part I.
-
-| Id | Sections | Contradiction | Reading built to |
-| --- | --- | --- | --- |
-
 # Part II — Building it
 
-## 12. Toolchain and layout
+## 11. Toolchain and layout
 
-## 13. Configuration contract
+## 12. Configuration contract
 
-## 14. Boundaries: ports and fakes
+## 13. Boundaries: ports and fakes
 
 Every external boundary is an interface with an in-memory fake. List them.
 
-## 15. Verification
+## 14. Verification
 
-### 15.1 The gates
+### 14.1 The gates
 
 ```bash
 # every command that must pass before a commit
 ```
 
-### 15.2 What the gates do not cover
+### 14.2 What the gates do not cover
 
-### 15.3 The invariants that must be tests
+### 14.3 The invariants that must be tests
 
 | Invariant | Why a test and not a rule |
 | --- | --- |
 
-## 16. Build sequence
+## 15. Build sequence
 
 Bottom-up, numbered. Each step ends with all gates green. The factory derives its build phases from this list.
 
@@ -125,6 +118,6 @@ Bottom-up, numbered. Each step ends with all gates green. The factory derives it
 9. Operations
 10. Cross-cutting
 
-## 17. Review
+## 16. Review
 
 Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of counts. The release to `PLAN` is a `state.json` phase change, not a line in this section. Empty until then.
