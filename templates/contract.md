@@ -12,15 +12,12 @@ Repository: `{{REPO}}`
 
 The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor, Phases - it wins anything else.
 
-**This Flow is unattended. Nobody is watching. Never ask a question. Nobody answers questions.**
-
 ### Judgement
 
-- ❌ DO NOT Ask anyone anything — decide and record.
-- ❌ DO NOT Guess where an input is silent — decide, record the decision, continue. What you cannot decide is a strike.
-- ❌ DO NOT Overcomplicate — simplest thing that does the job.
-- ❌ DO NOT Invent work nobody asked for — no unasked feature, however obvious.
-- ❌ DO NOT Spawn a subagent — this phase is your fresh context; do the work yourself.
+- **This Flow is unattended. Nobody is watching. Nobody answers questions.** ❌ DO NOT Ask anyone anything — decide and record.
+- **Behave reasonably** ❌ DO NOT Guess where an input is silent — decide, record the decision, continue. What you cannot decide is a strike.
+- **Keep it easy** ❌ DO NOT Overcomplicate — simplest thing that does the job.
+- **Stay in the subject** ❌ DO NOT Invent work nobody asked for — no unasked feature.
 
 ### What you may write
 
@@ -43,26 +40,31 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### Where you work
 
+- ❌ DO NOT Spawn a subagent — this phase is your fresh context; do the work yourself.
 - ❌ DO NOT Create a branch or worktree — every phase works on the current branch.
 - ❌ DO NOT Touch any repository but the one under flow — `git stash`, commit or checkout elsewhere destroys work no phase owns. A script refusing over a dirty tree there is the correct outcome.
+
+### Before iteration
+
+**❌ Never start on a dirty tree**
+Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
+
+**❌ Never touch `drafts/`**:
+arming emptied it, and anything the operator drops there afterwards is for the next run.
+
+**Always check gate before**:
+`./.spectomat/gates.sh` is the whole of the gates, and the only thing to edit when this project's checks change.
+
+**❌ No completion claim without fresh evidence**
+a gate that has not run this iteration has not passed, and a partial run does not stand for the whole.
 
 ## The floor
 
 {{FLOOR_TEXT}}
 
-## The Iteration Contract
-
-Every iteration, in order:
-
-1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
-2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task's `phase:` and `slug:` fields name it. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
-3. **Verify** with the gates, `./.spectomat/gates.sh` — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them. That script is the whole of the gates, and the only thing to edit when this project's checks change. No completion claim without fresh evidence: a gate that has not run this iteration has not passed, and a partial run does not stand for the whole.
-4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
-5. **Log** one line via `log.sh` (see *Log Format*), then stop the iteration. The log is gitignored and never enters a commit; run it after the commit, once the phase is on record. In the `IMPLEMENT` phase the task's result entry is one `chore(<slug>): …` commit after the task commit.
-
-> Work in progress always wins: a started plan is finished and archived before the next spec is planned, every reviewed spec is planned before the next spec is reviewed, and every spec is reviewed before the next draft is read. New drafts wait until the floor ahead of them is clear.
-
 ### Phase boundaries
+
+Every iteration does the phase it was handed and nothing else — the picker chose it from the floor before you were launched, your task's `phase:` and `slug:` fields name it, and if it makes no sense for this floor, say so in your report and stop.
 
 `state.json` is a progress tracker on what moves work along: a phase that changes nothing there is handed to you again next iteration, on the same slug, forever. Every phase ends in exactly one of these changes, applied after its commit through `<plugin_root>/scripts/slug_set_phase.sh` or the other helpers in the plugin's `scripts/utils.sh` — never by editing the file.
 
@@ -89,9 +91,9 @@ If a phase defeats you, append `(strike N)` to its log line and skip it next tim
 
 `memory.md` is what you know about this codebase; this contract is what you know about the job. You arrive with neither, so both are files.
 
-**Read it in Orient, every iteration, before you touch anything else.** Trust it over your assumptions about the project, and over a habit from another repository.
+**Read it before you touch anything else** — each phase brief's own Orient step names this. Trust it over your assumptions about the project, and over a habit from another repository.
 
-**Add to it in step 4, before the commit**, so the entry rides inside the phase commit and the tree stays clean.
+**Add to it before the commit**, so the entry rides inside the phase commit and the tree stays clean — each phase brief's own Procedure names the step.
 
 Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only the phase agent handling this iteration writes the file: it applies the tests itself, so the file keeps one voice.
 

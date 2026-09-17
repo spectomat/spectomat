@@ -24,9 +24,13 @@
 
 - `docs/`
   - `specification.md` (the normative specification),
-  - `guide.md` (the user guide `/spectomat:help` prints),
-  - `floor.md` (the floor layout, rendered into the project's `contract.md`),
-  - `brainstorm.md` (the `REVIEW-SPEC` phase's brainstorming procedure).
+  - `guide.md` (the user guide `/spectomat:help` prints).
+
+- `references/`
+  - `brainstorm.md` (the `REVIEW-SPEC` phase's brainstorming procedure),
+  - `memorize.md` (the memory-writing procedure `IMPLEMENT` and `REVIEW-SPEC` each follow inline before their own commit),
+  - `file-structure.md` (this file),
+  - `floor.md` (the floor layout, rendered into the project's `contract.md`).
 
 - `templates/`
   - `contract.md` (the flow-level contract),

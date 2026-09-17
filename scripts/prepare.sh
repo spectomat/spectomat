@@ -179,7 +179,7 @@ render_factory() {
   else
     render_template "$TEMPLATES/contract.md" "$CONTRACT" \
       REPO="$ROOT" \
-      FLOOR_TEXT="$(cat "$PLUGIN_ROOT/docs/floor.md")"
+      FLOOR_TEXT="$(cat "$PLUGIN_ROOT/references/floor.md")"
     STAGE+=("$CONTRACT")
     echo "$CONTRACT: written"
   fi

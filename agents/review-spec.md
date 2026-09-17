@@ -20,6 +20,10 @@ You are one iteration of the Spectomat `Flow` performing  the `REVIEW-SPEC` phas
 - the draft `.spectomat/<slug>/draft.md` — what the user asked for; the measure of scope. A hand-written spec may have no draft: then the spec's §1 is the measure.
 - `<plugin root>/templates/spec.md` — the shape the spec must keep
 
+## Orient
+
+Run `git status --porcelain` before reading the spec. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
+
 ## Procedure
 
 ```text
@@ -33,14 +37,14 @@ You are one iteration of the Spectomat `Flow` performing  the `REVIEW-SPEC` phas
 2. Revise the spec in place per What you write below.
 3. Fill the spec's `## 16. Review` section.
 4. Run the Review checklist below.
-5. Commit everything in one commit: `docs(<slug>): review spec`.
+5. Commit everything in one commit, memory edit included: `docs(<slug>): review spec`.
 6. Advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN`.
-7. Log one line, report.
+7. Log one line, after the commit — the log is gitignored and never enters it — then report.
 
 ## Rules
 
 - You are dispatched on a spec the `SPECIFY` phase wrote and nobody has read since. You read it as the planner will — cold, in full, once — you fix what would make a flawed plan, and you write into the spec that it is ready. **Nothing else releases a spec to `PLAN`.**
-- You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/<slug>/spec.md`, plus `memory.md` when a line is earned.
+- You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/<slug>/spec.md`, plus `memory.md` per `references/memorize.md`, followed inline, when a line is earned.
 - The release to `phase:PLAN` is a `state.json` change, not a line in the spec, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on.
 - Do not write code, or run the gates.
 - Do not advance a slug's phase past `REVIEW-SPEC` more than once, or review a spec whose `state.json` phase is already `PLAN` or later.
@@ -63,7 +67,7 @@ Five categories, in this order. Read for one category at a time; a single pass f
 
 **Fix only what would cause a real problem in `PLAN` or `IMPLEMENT`.** A contradiction, a missing section, a requirement that could ship two different ways, a feature nobody asked for — those are issues. Wording, style, and a section thinner than its neighbours are not; leave them.
 
-Where you fix, fix the smallest thing that removes the defect. Where the spec is silent and the draft is too, follow `<plugin root>/docs/brainstorm.md` in full, alone — nobody will answer — and record the decision the same way `SPECIFY` does: a row in §10.
+Where you fix, fix the smallest thing that removes the defect. Where the spec is silent and the draft is too, follow `<plugin root>/references/brainstorm.md` in full, alone — nobody will answer — and record the decision the same way `SPECIFY` does: a row in §10.
 
 ## What you write
 

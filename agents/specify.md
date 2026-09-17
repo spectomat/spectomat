@@ -20,14 +20,18 @@ You are at the first iteration of the Spectomat `Flow` performing the `SPECIFY` 
 
 Also you may check if some thing useful and relevant found in `./docs/*.md` project folder: functional specifications, archtecture documents etc.
 
+## Orient
+
+Run `git status --porcelain` before writing anything. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
+
 ## Procedure
 
 1. Write `<slug>/spec.md` from `<plugin root>/templates/spec.md`. Where an input is silent or in doubt, decide, record the decisions, and continue.
 2. The draft's own words go into §1 verbatim where they are precise. The draft is consumed, but stays where it is: `<slug>/draft.md` is the record of what was asked for, and the `REVIEW-SPEC` phase reads it next iteration.
-3. Record memory where a line is earned.
+3. Record memory where a line is earned — the edit rides inside the commit below, never a commit of its own.
 4. Commit everything with `<type>(<slug>): …`.
 5. Advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC`.
-6. Run `bash <plugin_root>/scripts/log.sh SPECIFY <slug> <message>` (see the contract's *Log Format*).
+6. Run `bash <plugin_root>/scripts/log.sh SPECIFY <slug> <message>` (see the contract's *Log Format*), after the commit — the log is gitignored and never enters it.
 
 ## Rules
 

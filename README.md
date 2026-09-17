@@ -42,7 +42,7 @@ claude plugin update spectomat@spectomat
 
 ### Development
 
-See [File structure](./docs/file-structure.md) for the plugin anatomy details.
+See [File structure](./references/file-structure.md) for the plugin anatomy details.
 
 ```bash
 claude plugin marketplace add ~/Projects/spectomat # from local mashine

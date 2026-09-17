@@ -20,6 +20,10 @@ You are one iteration of the Spectomat `Flow` performing the `PLAN` phase.
 
 Also you may check if something useful and relevant found in `./docs/*.md` project folder: design documents, file structure etc.
 
+## Orient
+
+Run `git status --porcelain` before writing anything. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
+
 ## Procedure
 
 ```text
@@ -33,9 +37,9 @@ Also you may check if something useful and relevant found in `./docs/*.md` proje
 1. Write the overview `.spectomat/<slug>/plan.md` from `<plugin root>/templates/plan.md`, following Before the tasks below.
 2. Write one self-contained task file per task under `.spectomat/<slug>/`, from `<plugin root>/templates/task.md`, following Each task file below.
 3. Run the Self-review below and fix inline.
-4. Record memory, commit `<type>(<slug>): …`.
+4. Record memory, commit `<type>(<slug>): …` — the memory edit rides inside this commit, never a commit of its own.
 5. Advance `.spectomat/state.json`: call `slug_start_tasks <slug> <N>` with N the number of task files written.
-6. Log one line, report.
+6. Log one line, after the commit — the log is gitignored and never enters it — then report.
 
 ## Rules
 
@@ -51,6 +55,7 @@ Also you may check if something useful and relevant found in `./docs/*.md` proje
 ```
 
 - Do not ask which execution mode to use; the `IMPLEMENT` phase always runs one task per iteration.
+- Do not run the gates — `PLAN` writes no code.
 - Do not write: TBD, TODO, "implement later", "add error handling", "handle edge cases", "write tests for the above" without the test code, "similar to Task N" instead of the code, or a reference to a type or function no task defines. A code step names a snippet file, and that file holds the real code, not a placeholder.
 
 ## Before the tasks

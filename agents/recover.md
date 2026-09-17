@@ -44,3 +44,4 @@ The tree is clean, so the picker reached the end of its ladder: every slug still
 - The picker returned `RECOVER`, so this floor is not in a state any phase can start from.
 - Do no phase work. Your only job is to leave a floor the picker can classify.
 - Do not discard a change outside `.spectomat/` or the paths the task files name; report it instead and stop.
+- Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.

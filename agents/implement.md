@@ -19,6 +19,10 @@ You are one iteration of the Spectomat `Flow` performing the `IMPLEMENT` phase.
 - the plan overview `.spectomat/<slug>/plan.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has an entry in `result.md`
 - a scratch directory `.spectomat/work/<slug>/` (gitignored) for anything bulky you do not want in a commit
 
+## Orient
+
+Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
+
 ## Procedure
 
 ```
@@ -162,7 +166,7 @@ Every excuse for skipping the test, and what it is worth:
 
 The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range each task's entry in `result.md` records, so a task whose entry is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file you touched out of one.
 
-1. **Memory.** Ask what would have saved you time at the start of this task: where something lives, what a command costs, a convention to copy, a trap and its symptom. Apply the contract's three tests — durable, reusable, non-obvious — and add what survives to `.spectomat/memory.md`. A trap that cost you an hour this iteration is the entry most worth having; anything true only of this task never is.
+1. **Memory.** Follow `references/memorize.md` in full, inline, against this task.
 2. **Commit the close.** `result.md` and the memory edit together: `chore(<slug>): Task NN closed`. Then advance `.spectomat/state.json` with `slug_task_done <slug>` — it bumps `tasks_done`, and when that reaches `tasks_total` it moves the slug to `REVIEW`, which is the only thing that sends this plan on. Call it exactly once per task, after the commit and never before, and never call `slug_set_phase <slug> REVIEW` by hand: a hand-set phase leaves `tasks_done` short and the counters lie for the rest of the flow. Then run `bash <plugin_root>/scripts/log.sh IMPLEMENT <slug> <message>` (see the contract's *Log Format*); the log is gitignored and never committed. A ruling that affects other tasks is already in `ruling.md`, not a second place to write it.
 
 Then report: the task that closed, its commits, and the gate numbers from step 3 of `## Build the task`.
