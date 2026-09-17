@@ -46,17 +46,11 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### Before iteration
 
-**❌ Never start on a dirty tree**
-Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
+**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
 
-**❌ Never touch `drafts/`**:
-arming emptied it, and anything the operator drops there afterwards is for the next run.
+**❌ Never touch `drafts/`:** arming emptied it, and anything the operator drops there afterwards is for the next run.
 
-**Always check gate before**:
-`./.spectomat/gates.sh` is the whole of the gates, and the only thing to edit when this project's checks change.
-
-**❌ No completion claim without fresh evidence**
-a gate that has not run this iteration has not passed, and a partial run does not stand for the whole.
+**❌ No completion claim without fresh evidence:** `./.spectomat/gates.sh` is the whole of the gates, and the only thing to edit when this project's checks change.
 
 ## The floor
 

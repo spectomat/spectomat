@@ -20,10 +20,6 @@ You are at the first iteration of the Spectomat `Flow` performing the `SPECIFY` 
 
 Also you may check if some thing useful and relevant found in `./docs/*.md` project folder: functional specifications, archtecture documents etc.
 
-## Orient
-
-Run `git status --porcelain` before writing anything. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
-
 ## Procedure
 
 1. Write `<slug>/spec.md` from `<plugin root>/templates/spec.md`. Where an input is silent or in doubt, decide, record the decisions, and continue.

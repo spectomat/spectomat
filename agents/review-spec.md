@@ -20,10 +20,6 @@ You are one iteration of the Spectomat `Flow` performing  the `REVIEW-SPEC` phas
 - the draft `.spectomat/<slug>/draft.md` — what the user asked for; the measure of scope. A hand-written spec may have no draft: then the spec's §1 is the measure.
 - `<plugin root>/templates/spec.md` — the shape the spec must keep
 
-## Orient
-
-Run `git status --porcelain` before reading the spec. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
-
 ## Procedure
 
 ```text

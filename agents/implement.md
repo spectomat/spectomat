@@ -19,10 +19,6 @@ You are one iteration of the Spectomat `Flow` performing the `IMPLEMENT` phase.
 - the plan overview `.spectomat/<slug>/plan.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has an entry in `result.md`
 - a scratch directory `.spectomat/work/<slug>/` (gitignored) for anything bulky you do not want in a commit
 
-## Orient
-
-Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start on a dirty tree. Never touch `drafts/`: arming emptied it, and anything the operator drops there afterwards is for the next run.
-
 ## Procedure
 
 ```
