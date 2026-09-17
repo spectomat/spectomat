@@ -42,7 +42,7 @@ task-NN-*.md ──▶ [ IMPLEMENT ] ──┬──▶ commit (feat)
 
 1. **Record BASE** = `git rev-parse HEAD`. Confirm the tree is clean.
 2. **Build it.** Follow the task's Steps in order under Test-driven development below: the failing test first, watched failing for the right reason, then the minimal code, watched passing. Create or modify only the files the task lists under `Files`. If its tests need a file it does not list, add that file and record a ruling naming it.
-3. **Gates.** Run every Verification Gate in the contract once, whole, and read the output. Red is a debugging job, not a retry — see Gates below.
+3. **Gates.** Run `./.spectomat/gates.sh` once, whole, and read the output. That script is the gates — never substitute a single test file, a narrower npm script, or a command of your own. Red is a debugging job, not a retry — see Gates below.
 4. **Commit.** `git add` exactly this task's Files, plus any test fixture you created, and commit with the message its Step 5 gives; record the commit. Anything left unstaged belongs to nobody: inspect it, then discard it.
 5. **Record the result.** Leave the task file untouched — it carries no checkboxes, and `state.json` is the counter — and append this task's entry to the plan's `<slug>.result.md` (a sibling of the overview, creating it if it does not yet exist) with the commit range and the test count from the gate run in step 3 — that output, not a memory of an earlier one:
 
@@ -50,7 +50,7 @@ task-NN-*.md ──▶ [ IMPLEMENT ] ──┬──▶ commit (feat)
 ## Task NN
 - Commits: <base7>..<head7>
 - Tests: <n>/<n> (<files>)
-- Gates: <n>/<n> green
+- Gates: passed (<what the run reported>)
 ```
 
 ## Rules
@@ -63,9 +63,7 @@ task-NN-*.md ──▶ [ IMPLEMENT ] ──┬──▶ commit (feat)
 - The Test-driven development section below governs every step.
 - If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview, and raise the counter with `slug_add_tasks <slug> 1` so the slug is not sent to `REVIEW` with a task nobody built; do not absorb it.
 - Do not take a second task in one iteration, or a task whose dependencies are not all closed.
-- Do not commit before the gates have run whole and green.
-- Do not count a step done whose test you did not watch fail.
-- Do not close a task on gate output you did not read.
+- Do not commit before `./.spectomat/gates.sh` has run whole and exited 0.
 - Do not call `slug_task_done` more than once for one task, or for a task whose commits are not on record in `<slug>.result.md`.
 - Do not edit the spec, another task's file, or the plan's task table beyond adding a row.
 - Do not edit a plan overview's `## Review` section — that section belongs to the `REVIEW` phase.
@@ -101,7 +99,7 @@ A task you cannot build is a strike, not a guess: a brief that contradicts itsel
 
 ## Gates
 
-Run each gate whole, read the full output — exit code, failure count, warnings — and compare it to the claim you are about to make.
+Run `./.spectomat/gates.sh` whole, read the full output — exit code, failure count, warnings — and compare it to the claim you are about to make. The script's own `set -e` stops it at the first failing line, so a non-zero exit names where it stopped and everything after it is unrun.
 
 Mismatch: record the real status with the output. Match: claim it with the numbers. "Should pass", "probably", "seems to" mean run it again. Never weaken a gate to pass: no `.skip`, no `any`, no suppression.
 

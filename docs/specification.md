@@ -293,7 +293,7 @@ The log line reports the gate outcome, not test counts: a script has first-hand 
 
 ### 6.2 The contract
 
-`.spectomat/contract.md` is rendered from the template at the first `/spectomat:run` and never overwritten, so it is **the operator's only steering surface**. It holds the invariants that outlive the briefs: the floor, the Iteration Contract, three strikes, when to gate and the path of the gate script, how to read and write `memory.md`, the log format, and the constraints.
+`.spectomat/contract.md` is rendered from the template at the first `/spectomat:run` and never overwritten, so it is **the operator's only steering surface**. It holds the invariants that outlive the briefs: the floor, the Iteration Contract, three strikes, when to gate and the path of the gate script, how to read and write `memory.md`, and the log format. Its Constitution carries the rules binding every phase, grouped by what they govern: judgement, what may be written, honest reporting, ending a phase, and where work happens.
 
 It holds no phase sections (D3) and no craft prose (D11): text no operator would ever edit is not steering, and belongs in the brief that uses it. What earns a line in `memory.md` lives in that file's own header, not here (D10).
 

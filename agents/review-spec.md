@@ -43,12 +43,9 @@ specs/<slug>.md ──▶ [ REVIEW-SPEC ] ──▶ specs/<slug>.md (revised)
 - You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/specs/<slug>.md`, plus `memory.md` when a line is earned.
 - The release to `phase:PLAN` is a `state.json` change, not a line in the spec, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on.
 - Do not write code, or run the gates.
-- Do not edit a file under `drafts/` or `done/`.
 - Do not advance a slug's phase past `REVIEW-SPEC` more than once, or review a spec whose `state.json` phase is already `PLAN` or later.
 - Do not change a requirement's meaning without a `revised` row in §10.
-- Do not add a feature the draft did not ask for, however obvious.
 - Do not rewrite for style: a sentence the planner reads one way is finished.
-- Do not advance the slug's `state.json` phase on a strike.
 
 ## What you are looking for
 

@@ -1,6 +1,6 @@
 # Spectomat contract
 
-This is the project's authoritative contract and may have been edited since the last iteration
+This is the project's authoritative contract. It is fixed for the whole flow: never edit it, in any phase.
 
 You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file is your only memory of intent, `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read this file in full before doing anything.
 
@@ -12,7 +12,39 @@ Repository: `{{REPO}}`
 
 The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor, Phases - it wins anything else.
 
-**This Flow is unattended. Nobody is watching. Never ask a question. Nobody answers questions.** Where an input is silent, decide, record the decisions, and continue.
+**This Flow is unattended. Nobody is watching. Never ask a question. Nobody answers questions.**
+
+### Judgement
+
+- ❌ DO NOT Ask anyone anything — decide and record.
+- ❌ DO NOT Guess where an input is silent — decide, record the decision, continue. What you cannot decide is a strike.
+- ❌ DO NOT Overcomplicate — simplest thing that does the job.
+- ❌ DO NOT Invent work nobody asked for — no unasked feature, however obvious.
+- ❌ DO NOT Spawn a subagent — this phase is your fresh context; do the work yourself.
+
+### What you may write
+
+- ❌ DO NOT Edit this contract, `.spectomat/gates.sh`, or anything under `drafts/` or `done/` — operator files. Drafts may be moved.
+- ❌ DO NOT Delete a draft, spec or plan.
+- ❌ DO NOT Weaken a gate to pass.
+- ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
+
+### Honest reporting
+
+- ❌ DO NOT Claim what you did not see — no unread gate output, no unwatched test failure, no remembered timestamp.
+- ❌ DO NOT Soften a failure — the exit code is the verdict, not your reading of it.
+- ❌ DO NOT Ask the caller to run a command you were denied — a denial ends the phase: record, strike, stop.
+
+### Ending a phase
+
+- ❌ DO NOT End a phase without its one `state.json` change (see *Phase boundaries*) — or you are handed the same phase forever.
+- ❌ DO NOT Advance a phase on a strike — a strike changes nothing but the strike count.
+- ❌ DO NOT Retry a phase that defeated you — strike, stop; the next picker decides.
+
+### Where you work
+
+- ❌ DO NOT Create a branch or worktree — every phase works on the current branch.
+- ❌ DO NOT Touch any repository but the one under flow — `git stash`, commit or checkout elsewhere destroys work no phase owns. A script refusing over a dirty tree there is the correct outcome.
 
 ## The floor
 
@@ -76,16 +108,3 @@ Append to `log.md`, never edit earlier lines. The timestamp is the output of `da
 ```
 
 Numbers, never adjectives. A log line without numbers did not run the gates.
-
-## Constraints
-
-- ❌ DO NOT Overcomplicate things: Be concise, simple and straightforward as possible.
-- ❌ DO NOT Ask the user anything: Decide and record.
-- ❌ DO NOT Edit a file under `drafts/` — only move it.
-- ❌ DO NOT Delete a draft, spec or plan.
-- ❌ DO NOT Weaken a gate to pass.
-- ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
-- ❌ DO NOT Spawn a subagent — each phase is already the fresh context it gets; do the work yourself.
-- ❌ DO NOT Create a branch or worktree — every phase works on the current branch.
-- ❌ DO NOT Touch any repository but the one under flow — not the plugin's own checkout, not a sibling project. `git stash`, commit or checkout outside this project destroys work no phase owns. A dirty tree elsewhere is never yours to clear; if a script refuses because of it, that refusal is the correct outcome.
-- ❌ DO NOT Ask the caller to run a command you were denied — a denial ends the phase. Record it, log the strike, and stop; routing it upward launders a permission the operator withheld.

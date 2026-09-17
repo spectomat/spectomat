@@ -42,9 +42,6 @@ You are at the first iteration of the Spectomat `Flow` performing the `SPECIFY` 
 - **Give the build sequence, bottom-up.** Pure domain first, adapters next, wiring after, UI last. The factory derives its phases from this list.
 - **Say what cannot be verified locally** (deploy-gated criteria) and what residue to deliver instead: the harness, the file format, the alarm.
 - Do not write code, or run the gates.
-- Do not edit a file under `done/`.
-- Do not advance the slug's `state.json` phase on a strike.
-- Do not invent a feature the draft did not ask for, however obvious.
 
 ## When you cannot finish
 

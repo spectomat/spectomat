@@ -48,7 +48,6 @@ plan + tasks + result.md ──▶ [ REVIEW ] ──┬──▶ critical/import
 - **Change no source file and no test.** You do not fix what you find: you write the fix as a task, and the `IMPLEMENT` phase builds it under TDD in a later iteration. The only files you write are the plan overview and the task files you add, both under `.spectomat/`.
 - Do not fix a finding yourself, however small.
 - Do not move the slug's phase to `ARCHIVE` in a round where you added fix tasks — at cap you add none and move to `ARCHIVE` anyway.
-- Do not end a round without one of the three `state.json` changes in What you write.
 - Do not turn a Minor finding into a task.
 - Do not raise a style nit the gates do not enforce and `memory.md` does not record.
 - Do not review a plan whose `state.json` phase is not `REVIEW`.
