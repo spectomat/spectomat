@@ -45,7 +45,7 @@ You are one iteration of the Spectomat `Flow` performing the `PLAN` phase.
 ```text
 .spectomat/<slug>/plan.md               overview
 .spectomat/<slug>/task-01-<name>.md     one per task, zero-padded, in execution order
-.spectomat/<slug>/task-01-step1.<ext>   the code for that task's code-bearing steps
+.spectomat/<slug>/snippets/task-01-step1.<ext>   the code for that task's code-bearing steps
 ```
 
 - Do not ask which execution mode to use; the `IMPLEMENT` phase always runs one task per iteration.
@@ -65,7 +65,7 @@ Follow `<plugin root>/templates/task.md` exactly. A task file is read by an agen
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths; **Interfaces** with exact names and signatures consumed from earlier tasks and produced for later ones.
 - **Covers** — the criterion ids this task's tests name.
-- **Steps** — five numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/<slug>/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. Number the steps 1–5; `state.json`'s `tasks_total`/`tasks_done` (not the task files) are what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
+- **Steps** — five numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/<slug>/snippets/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. Number the steps 1–5; `state.json`'s `tasks_total`/`tasks_done` (not the task files) are what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
 - **Rulings and Result** are not sections of the task file: the `IMPLEMENT` phase records them later, one entry per task, in the plan's `ruling.md` and `result.md`. Write neither file yourself.
 
 ## Self-review
@@ -77,4 +77,4 @@ After writing every file, check them against the spec yourself:
 3. **Consistency** — a name, signature or type consumed in a later task is produced, spelled the same, by a task it depends on.
 4. **Ownership** — no file appears in the Files of two tasks unless the later one depends on the earlier, and no `Depends on` names a higher number.
 5. **Self-containment** — read one task file alone: could it be executed without the plan? If not, copy in what is missing.
-6. **Snippets exist** — every snippet path a task file names under `.spectomat/<slug>/` is a file you actually wrote.
+6. **Snippets exist** — every snippet path a task file names under `.spectomat/<slug>/snippets/` is a file you actually wrote.

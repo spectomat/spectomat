@@ -41,6 +41,13 @@ require_git_repo() {
   [[ -d .git ]] || die "Not a git repository. The factory commits every phase; run 'git init' first."
 }
 
+# Refuse to arm on a repo whose own gates are red. Only checks a gates.sh
+# already rendered by a prior run — a floor with none yet has nothing to
+# check here, and render_factory will compile one after this passes.
+require_gates_passed() {
+  run_gates || die "$GATE_FAILED failed. Fix the gates, then run /spectomat:run again."
+}
+
 # Add a line to .gitignore unless it is already present verbatim.
 ensure_gitignored() {
   local entry="$1"
@@ -315,6 +322,7 @@ main() {
   require_git_repo
   prepare_floor
   render_factory
+  require_gates_passed
   intake_drafts
   commit_floor
   # seed_state before report_floor so every count comes from state.json, but

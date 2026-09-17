@@ -40,7 +40,5 @@ progress or cancel (that's `spectomat:status` / `spectomat:cancel`).
 ## Notes
 
 - Never edit or delete existing files under `drafts/` — only add new ones.
-- If `.spectomat/` doesn't exist at all in this repo, tell the user this project hasn't been
-  initialized for Spectomat and stop — don't scaffold the rest of the floor yourself.
 - If the user's message is too vague to write a brief from, ask one clarifying question before
   creating the file — a bad draft costs a whole SPECIFY phase to fix.
