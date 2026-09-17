@@ -81,7 +81,7 @@ Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of
 
 `N` may be 0; the line is written either way. There is one round, because you fix rather than send back.
 
-The commit includes the memory edit; the log line is gitignored and never committed. Report: the issue count by category, the sections you changed, and the decisions you added.
+The commit includes the memory edit. Then run `bash <plugin_root>/scripts/log.sh REVIEW-SPEC <slug> <message>` (see the contract's *Log Format*); the log is gitignored and never committed. Report: the issue count by category, the sections you changed, and the decisions you added.
 
 ## Smells
 
@@ -108,6 +108,6 @@ The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would
 
 ## When you cannot finish
 
-A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
+A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, run `log.sh REVIEW-SPEC <slug> <reason> (strike N)` with N from `slug_strike`'s own output, and stop.
 
 `slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_finish <slug> blocked "<reason>"`, so the slug leaves the flow.

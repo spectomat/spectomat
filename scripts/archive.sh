@@ -20,7 +20,7 @@ BLOCK=""       # non-empty once the third strike lands: blocked.md, not done.md
 GATE_RESULT="" # "passed" or "failed", for the log line and the marker
 
 now() { date -u +%FT%RZ; }
-log_line() { printf '%s\n' "$1" >> "$FLOOR/log.md"; }
+log_line() { bash "$PLUGIN_ROOT/scripts/log.sh" ARCHIVE "$SLUG" "$1"; }
 
 # One state check does the work of the three file checks it replaces, and is
 # stronger than all of them: a slug only reaches ARCHIVE through REVIEW, which
@@ -45,7 +45,7 @@ require_ready() {
 strike() {
   local reason="$1" n
   n=$(slug_strike "$SLUG" ARCHIVE)
-  log_line "- $(now) · ARCHIVE · $SLUG · $reason (strike $n)"
+  log_line "$reason (strike $n)"
   printf '%s\n' "$n"
 }
 
@@ -99,9 +99,9 @@ commit_archive() {
 
 log_result() {
   if [[ -n "$BLOCK" ]]; then
-    log_line "- $(now) · ARCHIVE · $SLUG · blocked after $STRIKE_LIMIT strikes · gates $GATE_RESULT"
+    log_line "blocked after $STRIKE_LIMIT strikes · gates $GATE_RESULT"
   else
-    log_line "- $(now) · ARCHIVE · $SLUG · archived · gates $GATE_RESULT"
+    log_line "archived · gates $GATE_RESULT"
   fi
 }
 

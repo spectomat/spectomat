@@ -58,7 +58,7 @@ Every iteration, in order:
 2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task's `phase:` and `slug:` fields name it. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
 3. **Verify** with the gates, `./.spectomat/gates.sh` — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them. That script is the whole of the gates, and the only thing to edit when this project's checks change. No completion claim without fresh evidence: a gate that has not run this iteration has not passed, and a partial run does not stand for the whole.
 4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
-5. **Log** one line to `log.md`, then stop the iteration. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In the `IMPLEMENT` phase the task's result entry is one `chore(<slug>): …` commit after the task commit.
+5. **Log** one line via `log.sh` (see *Log Format*), then stop the iteration. The log is gitignored and never enters a commit; run it after the commit, once the phase is on record. In the `IMPLEMENT` phase the task's result entry is one `chore(<slug>): …` commit after the task commit.
 
 > Work in progress always wins: a started plan is finished and archived before the next spec is planned, every reviewed spec is planned before the next spec is reviewed, and every spec is reviewed before the next draft is read. New drafts wait until the floor ahead of them is clear.
 
@@ -97,14 +97,14 @@ Its own header carries the rules for what earns a line — the three tests, the 
 
 ## Log Format
 
-Append to `log.md`, never edit earlier lines. The timestamp is the output of `date -u +%FT%RZ`, run in this iteration — never a time typed from memory. No commit SHA: `git log` is the ledger of commits, this file the ledger of phases.
+`log.md` is append-only; never edit an earlier line. Its format is not yours to
+compose: run `bash <plugin_root>/scripts/log.sh <PHASE> <slug> <message>` and it
+writes the line — timestamp, `·` separators and all — deterministically. Never
+`printf`, `echo >>` or otherwise hand-write a line into `log.md`; `log.sh` is
+the only writer. No commit SHA in the message: `git log` is the ledger of
+commits, this file the ledger of phases.
 
-```text
-- 2026-09-07T19:40Z · SPECIFY · <slug> · spec written, 3 assumptions
-- 2026-09-07T19:46Z · REVIEW-SPEC · <slug> · 2 issues fixed in §3.2, §9.1 · 1 decision added
-- 2026-09-07T19:52Z · IMPLEMENT · <slug> · Task 2/6 done · tests 41/41
-- 2026-09-07T20:10Z · ARCHIVE · <slug> · archived · tsc 0, tests 58/58, lint 0
-- 2026-09-07T20:11Z · PLAN · <slug> · plan: 6 tasks (strike 1: spec §4 contradicts §2)
-```
-
-Numbers, never adjectives. A log line without numbers did not run the gates.
+The message is numbers, never adjectives — `Task 2/6 done · tests 41/41`, not
+"tests mostly passing". A log line without numbers did not run the gates. A
+strike ends the message `(strike N: <reason>)`, N from `slug_strike`'s own
+output, not counted by hand.

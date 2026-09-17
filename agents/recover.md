@@ -20,24 +20,24 @@ You are the Spectomat janitor.
 ## Procedure
 
 1. Find which of the two cases below you are in, and handle only that one.
-2. Commit, append one line to `log.md` in the contract's format, and report what you found, what you did, and the commit hash.
+2. Commit and log as that case's own steps say (`log.sh` per the contract's *Log Format*), then report what you found, what you did, and the commit hash.
 
 ### Case: a dirty tree
 
 `git status --porcelain` is not silent, so a previous iteration died mid-phase.
 
 1. Inspect the changes.
-2. If they are a phase all but finished, finish it and commit it under that phase's own message. Also apply that phase's `state.json` transition using whichever of `<plugin_root>/scripts/slug_set_phase.sh`, `slug_start_tasks`, `slug_task_done`, or `slug_add_tasks` (the latter three from `scripts/utils.sh`) matches the phase that crashed — the same helper that phase's own brief would have called.
-3. If they are partial or you cannot tell what they were for, discard them — `git checkout -- .` and `git clean -fd` the paths under `.spectomat/` and the paths the task files name.
+2. If they are a phase all but finished, finish it and commit it under that phase's own message. Also apply that phase's `state.json` transition using whichever of `<plugin_root>/scripts/slug_set_phase.sh`, `slug_start_tasks`, `slug_task_done`, or `slug_add_tasks` (the latter three from `scripts/utils.sh`) matches the phase that crashed — the same helper that phase's own brief would have called. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> finished <phase> left mid-iteration`.
+3. If they are partial or you cannot tell what they were for, discard them — `git checkout -- .` and `git clean -fd` the paths under `.spectomat/` and the paths the task files name. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> discarded a partial <phase>` (`floor` in place of `<slug>` if you cannot tell which slug it belonged to).
 
 ### Case: every unfinished slug is at the strike limit
 
 The tree is clean, so the picker reached the end of its ladder: every slug still at a working phase in `state.json` has three strikes at that phase, and no candidate is left to hand out. Read each one's strikes with `jq '.slugs' .spectomat/state.json` and its reasons in `log.md`.
 
-1. For each such slug, decide whether the phase can be rescued. If it can — the strikes came from something you can see and fix, and the fix is within this phase's own work — fix it, commit, and leave the slug at its phase for the next iteration.
+1. For each such slug, decide whether the phase can be rescued. If it can — the strikes came from something you can see and fix, and the fix is within this phase's own work — fix it, commit, run `bash <plugin_root>/scripts/log.sh RECOVER <slug> rescued <phase>`, and leave the slug at its phase for the next iteration.
 2. If it cannot, write `.spectomat/<slug>/blocked.md` naming the phase, the strikes and why, and commit it. Nothing moves: the trail stays in the slug dir for the operator to read.
 3. Call `slug_finish <slug> blocked "<reason>"` (`scripts/utils.sh`). The state call is what takes the slug out of the flow — a marker alone leaves it at its phase, and the picker answers `RECOVER` again next iteration.
-4. Log the reason.
+4. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> <reason>`, once per slug blocked this way.
 
 ## Rules
 
