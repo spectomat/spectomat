@@ -18,6 +18,8 @@ You are one iteration of the Spectomat `Flow` performing the `PLAN` phase.
 - `./.spectomat/memory.md`
 - the spec `<slug>/spec.md` in full — its build sequence orders the tasks
 
+Also you may check if something useful and relevant found in `./docs/*.md` project folder: design documents, file structure etc.
+
 ## Procedure
 
 ```text
@@ -45,7 +47,7 @@ You are one iteration of the Spectomat `Flow` performing the `PLAN` phase.
 ```text
 .spectomat/<slug>/plan.md               overview
 .spectomat/<slug>/task-01-<name>.md     one per task, zero-padded, in execution order
-.spectomat/<slug>/snippets/task-01-step1.<ext>   the code for that task's code-bearing steps
+.spectomat/<slug>/snippets/task-01-step1.<ext>.snippet   the code for that task's code-bearing steps
 ```
 
 - Do not ask which execution mode to use; the `IMPLEMENT` phase always runs one task per iteration.
@@ -65,7 +67,7 @@ Follow `<plugin root>/templates/task.md` exactly. A task file is read by an agen
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths; **Interfaces** with exact names and signatures consumed from earlier tasks and produced for later ones.
 - **Covers** — the criterion ids this task's tests name.
-- **Steps** — five numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/<slug>/snippets/task-NN-stepM.<ext>` (extension matching the target file's), that holds exactly what that step writes. Number the steps 1–5; `state.json`'s `tasks_total`/`tasks_done` (not the task files) are what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
+- **Steps** — five numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass, commit. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to a snippet file, `.spectomat/<slug>/snippets/task-NN-stepM.<ext>.snippet` (`<ext>` matching the target file's, plus a `.snippet` suffix so gates don't format or lint it), that holds exactly what that step writes. Number the steps 1–5; `state.json`'s `tasks_total`/`tasks_done` (not the task files) are what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
 - **Rulings and Result** are not sections of the task file: the `IMPLEMENT` phase records them later, one entry per task, in the plan's `ruling.md` and `result.md`. Write neither file yourself.
 
 ## Self-review

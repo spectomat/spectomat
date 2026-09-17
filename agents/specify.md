@@ -18,6 +18,8 @@ You are at the first iteration of the Spectomat `Flow` performing the `SPECIFY` 
 - the Memory `./.spectomat/memory.md` in full
 - the Draft `<slug>/draft.md` in full
 
+Also you may check if some thing useful and relevant found in `./docs/*.md` project folder: functional specifications, archtecture documents etc.
+
 ## Procedure
 
 1. Write `<slug>/spec.md` from `<plugin root>/templates/spec.md`. Where an input is silent or in doubt, decide, record the decisions, and continue.
