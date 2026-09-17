@@ -80,8 +80,9 @@ Every external boundary is an interface with an in-memory fake. List them.
 
 ### 14.1 The gates
 
+Every command that must pass before a commit. These belong in `.spectomat/gates.sh`, which is what every phase runs; list here only what this spec adds to or changes about it.
+
 ```bash
-# every command that must pass before a commit
 ```
 
 ### 14.2 What the gates do not cover

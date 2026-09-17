@@ -30,7 +30,12 @@ the libraries and tools.
 
 ## Tasks
 
-One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`. The `IMPLEMENT` phase executes them one at a time, in this order, one task per iteration; the `REVIEW` phase may append further ones after the last. Each task is an independent piece of work; `Depends on` may name only lower-numbered tasks, and every file in the map has exactly one owning task.
+Each task is an independent piece of work.
+
+One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`.
+The `IMPLEMENT` phase executes them one at a time, in this order, one task per iteration;
+the `REVIEW` phase may append further ones after the last.
+`Depends on` may name only lower-numbered tasks, and every file in the map has exactly one owning task.
 
 | # | File | Component | Covers | Depends on |
 | --- | --- | --- | --- | --- |
@@ -39,16 +44,8 @@ One file per task under `.spectomat/plans/{{SLUG}}/`, from `templates/task.md`. 
 
 ## Coverage
 
-Every criterion id in the spec, and the task that covers it. A criterion with no task is a plan defect.
+Every criterion id in the spec, and the task that covers it.
 
 | Criterion | Task |
 | --- | --- |
 | AC-1.1 | 1 |
-
-Rulings and Result are not sections of this file: the `IMPLEMENT` phase and the `REVIEW` phase record them in `{{SLUG}}.ruling.md` and `{{SLUG}}.result.md`, siblings of this overview, one entry per task.
-
-## Review
-
-written by the `REVIEW` phase once every task is closed, one line per round. The release to `ARCHIVE` (or back to `IMPLEMENT` for another round) is a `state.json` phase change, not a line in this file.
-
-`- Round R — N findings (C critical, I important, M minor) — tasks NN–MM added`

@@ -10,6 +10,7 @@ FLOOR=".spectomat"
 STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
 CONTRACT="$FLOOR/contract.md"
 MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; committed
+GATES_SH="$FLOOR/gates.sh"   # the project's single gate command; committed, operator-editable
 
 # Move to the git root (or stay put outside a repo); sets ROOT.
 cd_root() {
@@ -107,36 +108,18 @@ EOF
 # Failed attempts at one phase for one slug before that slug is blocked.
 STRIKE_LIMIT=3
 
-# The contract's gate commands, one per line: everything inside the first fenced
-# block after the Verification Gates heading, minus comment and blank lines. A
-# later fenced block in the file is not part of the gates.
-gate_block() {
-  [[ -f "$CONTRACT" ]] || return 0
-  awk '
-    /^## Verification Gates/ { seen = 1; next }
-    seen && !finished && /^```/ {
-      if (open) { open = 0; finished = 1 } else { open = 1 }
-      next
-    }
-    open { print }
-  ' "$CONTRACT" | grep -vE '^[[:space:]]*(#|$)'
-  return 0
-}
-
-# Run every gate line in order, stopping at the first failure; sets GATE_FAILED
-# to the command that failed. The lines are operator-authored shell from a file
-# committed in their own repository, at the same trust level as a package.json
-# script: eval is the interface, not a shortcut.
+# Run the project's gates: .spectomat/gates.sh, always, and nothing else. The
+# script is operator-authored shell committed in their own repository, at the
+# same trust level as a package.json script. Its own `set -e` chains its lines,
+# so one exit code answers for the whole run. Sets GATE_FAILED on failure. A
+# floor with no gates.sh has nothing to verify and passes.
 run_gates() {
-  local cmd
   GATE_FAILED=""
-  while IFS= read -r cmd; do
-    [[ -n "$cmd" ]] || continue
-    if ! eval "$cmd"; then
-      GATE_FAILED="$cmd"
-      return 1
-    fi
-  done < <(gate_block)
+  [[ -f "$GATES_SH" ]] || return 0
+  if ! bash "$GATES_SH"; then
+    GATE_FAILED="$GATES_SH"
+    return 1
+  fi
   return 0
 }
 

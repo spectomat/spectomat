@@ -20,7 +20,7 @@
   - `archive.sh` is the `ARCHIVE` phase end to end: ticks, gates, moves the trail to `done/` and commits,
   - `status.sh` summarises flow and floor; its sections live in `print.sh`,
   - `cancel.sh` disarms the flow and reports the iteration it was at,
-  - `gates.sh` compiles the gate command from `package.json` scripts; `run` renders it into the contract's Verification Gates block.
+  - `gates.sh` compiles the gate lines from `package.json` scripts; `run` renders them into the project's own `.spectomat/gates.sh`, which is what every phase runs.
 
 - `docs/`
   - `specification.md` (the normative specification),

@@ -27,7 +27,8 @@ claude plugin install spectomat@spectomat
   plans/      PLAN writes an overview per spec plus <slug>/task-NN-<name>.md per task, each a self-contained brief
   done/       spec + plan moved here by ARCHIVE once REVIEW has passed the plan and the gates are green
   log.md      one line per phase, gitignored
-  contract.md the rules and gates, re-read every iteration
+  contract.md the rules, re-read every iteration
+  gates.sh    the project's single gate command — generated once, yours to edit
   memory.md   durable valuable facts about the codebase, accumulated all along the time
   state.json  the flow's state: iteration counter, cap, session — gitignored
   work/       per-task briefs, reports and diffs, gitignored
@@ -56,7 +57,7 @@ drafts/*.md ──SPECIFY──▶ specs/*.md ──REVIEW-SPEC──▶ reviewe
 
 Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` outrank `IMPLEMENT`, which outranks `PLAN`, which outranks `REVIEW-SPEC`, which outranks a fresh `SPECIFY`. Drafts are read in alphabetical order of the file name, so the name is how you fix the order they are worked in.
 
-`contract.md` and `memory.md` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the Flow believes about the codebase. Each is checked on its own, so a floor armed before `memory.md` existed gets it on the next `run`.
+`contract.md`, `memory.md` and `gates.sh` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the Flow believes about the codebase. Each is checked on its own, so a floor armed before `gates.sh` existed gets it on the next `run`.
 
 > It is dark! Nobody is asked anything. Every open choice becomes an `assumed` row in the spec's Decisions table. Three failed attempts at a phase move the file to `done/<slug>.blocked.md` with the reason.
 
@@ -65,7 +66,7 @@ Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` 
 - **Feed it.** Drop a `.md` idea into `.spectomat/drafts/`. `run` commits whatever it finds there. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `specs/`; the Flow then starts at reviewing it.
 - **Steer it.** Edit a spec or a plan between iterations. Edit `contract.md` to change the rules, `memory.md` to correct what the Flow believes about the codebase.
 - **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every iteration reads before working and adds to before committing. Seed it by hand before the first run and the Flow starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
-- **Gate it.** The gates run once per task in the `IMPLEMENT` phase, before its commit, and once in the `ARCHIVE` phase before archiving. `run` compiles the gate command from `package.json` scripts: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `test`, `lint` and `build` script found, chained with `&&` in that order. The command is the first line of the block under Verification Gates in `contract.md`, rendered once at the first `run`; edit it there when `package.json` changes. Gates that are not npm scripts go into the same block, one command per line; every line must exit 0. An iteration may never weaken a gate to pass.
+- **Gate it.** The gates are always `./.spectomat/gates.sh`, run once per task in the `IMPLEMENT` phase, before its commit, and once in the `ARCHIVE` phase before archiving. The first `run` writes that script from your `package.json`: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `lint` and `test` script found, one line each in that order. Nothing was detected? You get the script anyway, with commented examples and an honest no-op. Edit the script — it is the one place gates are defined, and gates that are not npm scripts are just more lines in it. `set -e` stops at the first failure, so its exit code is the whole run's. An iteration may never weaken a gate to pass.
 - **Resume it.** After a cancel or the iteration cap, run `/spectomat:run` again. The filesystem is the ledger, so nothing is re-planned.
 - **Start clean.** `run` refuses to arm while anything outside the floor is uncommitted: the picker answers `RECOVER` to any dirt, so a flow armed over work in progress would send every iteration to the janitor. Commit or stash first.
 
@@ -88,7 +89,7 @@ Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` 
 - **Strike** is one failed attempt at a phase for a slug, counted per phase in `state.json`. Three strikes move the file to `done/<slug>.blocked.md` with the reason and drop the slug from `state.json`, so the flow moves on.
 - **Slug** is a draft's file name without `.md`. Spec, plan and done entries keep it.
 - **Floor** is `.spectomat/`: the directories and files the Flow creates and works with in the user's project.
-- **Contract** is `.spectomat/contract.md`: the rules, the gates and the steps every iteration re-reads.
+- **Contract** is `.spectomat/contract.md`: the rules and the steps every iteration re-reads. The gates it names are `.spectomat/gates.sh`.
 - **Memory** is `.spectomat/memory.md`: durable facts about the codebase — map, commands, patterns, traps — read by every iteration, added to inside the phase commit. The contract is what the Flow knows about the job, the memory what it knows about the project.
-- **Verification Gate** is one command in the Verification Gates block of the contract that must exit 0 once per task in the `IMPLEMENT` phase and once in the `ARCHIVE` phase.
+- **Verification Gate** is one command in `.spectomat/gates.sh`, the script that must exit 0 once per task in the `IMPLEMENT` phase and once in the `ARCHIVE` phase.
 - **code development flow** is a production line that runs *unattended*, lights off. Here: a flow that turns ideas into committed code without asking anyone.

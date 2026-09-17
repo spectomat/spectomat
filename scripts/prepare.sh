@@ -85,11 +85,11 @@ commit_floor() {
   echo "committed: $(git log --oneline -1)"
 }
 
-# Render contract.md and memory.md from the templates once; never overwrite what
-# the project has edited. The gate command compiled from package.json is rendered
-# into the contract's Verification Gates block, so a later package.json change is
-# edited into the contract by hand. Each file is checked on its own, so a floor
-# armed before memory.md existed picks it up on the next run.
+# Render contract.md, memory.md and gates.sh from the templates once; never
+# overwrite what the project has edited. The gate commands compiled from
+# package.json are rendered into gates.sh, so a later package.json change is
+# edited into that script by hand. Each file is checked on its own, so a floor
+# armed before memory.md or gates.sh existed picks it up on the next run.
 render_factory() {
   if [[ -f "$MEMORY" ]]; then
     echo "$MEMORY: exists, kept"
@@ -99,16 +99,30 @@ render_factory() {
     echo "$MEMORY: written"
   fi
 
+  if [[ -f "$GATES_SH" ]]; then
+    echo "$GATES_SH: exists, kept"
+  else
+    detect_gates
+    if [[ -n "$GATES" ]]; then
+      echo "gates:"
+      printf '%s\n' "$GATES" | sed 's/^/  /'
+    else
+      echo "gates: none detected"
+    fi
+    render_template "$TEMPLATES/gates.sh" "$GATES_SH" \
+      REPO="$ROOT" \
+      GATES="${GATES:-$GATES_NONE}"
+    chmod +x "$GATES_SH"
+    STAGE+=("$GATES_SH")
+    echo "$GATES_SH: written"
+  fi
+
   if [[ -f "$CONTRACT" ]]; then
     echo "$CONTRACT: exists, kept"
   else
-    detect_gates
-    echo "gates: ${GATES:-none detected}"
     render_template "$TEMPLATES/contract.md" "$CONTRACT" \
       REPO="$ROOT" \
-      GATES="${GATES:-echo \"ok: no gates yet — add real ones here once this repo has them\"}" \
       FLOOR_TEXT="$(cat "$PLUGIN_ROOT/docs/floor.md")"
-
     STAGE+=("$CONTRACT")
     echo "$CONTRACT: written"
   fi

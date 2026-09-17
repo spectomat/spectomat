@@ -29,7 +29,7 @@ is "the task dir moved" "$(there done/001-a)"        "yes"
 is "specs/ is empty"   "$(there specs/001-a.md)"     "no"
 is "exactly one commit" "$(( $(commits) - n0 ))"     "1"
 is "the tree is clean" "$(cd "$FIXTURE" && git status --porcelain)" ""
-is "the log names the gate count" "$(grep -c 'gates 1/1' "$FIXTURE/.spectomat/log.md")" "1"
+is "the log names the gate result" "$(grep -c 'gates passed' "$FIXTURE/.spectomat/log.md")" "1"
 # ARCHIVE owns the floor: it must not stage a project file.
 is "the commit touches only the floor" \
   "$(cd "$FIXTURE" && git show --name-only --format= HEAD | grep -cv '^.spectomat/')" "0"

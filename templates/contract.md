@@ -24,7 +24,7 @@ Every iteration, in order:
 
 1. **Orient.** Read this file, then `memory.md`. Run `git status --porcelain`. If the tree is dirty, the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. Check `state.json`, `log.md` and `work/` are gitignored and never count as dirt. Never start a phase on a dirty tree. Never touch `drafts/` files except to move them.
 2. **Do the phase you were handed.** The picker chose it from the floor before you were launched; your task's `phase:` and `slug:` fields name it. Never do a second phase, and never substitute a different one — if the phase makes no sense for this floor, say so in your report and stop.
-3. **Verify** with the gates — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them,
+3. **Verify** with the gates, `./.spectomat/gates.sh` — once per task in the `IMPLEMENT` phase, once before the commit in the `ARCHIVE` phase; the `SPECIFY`, `REVIEW-SPEC`, `PLAN` and `REVIEW` phases write no code and skip them. That script is the whole of the gates, and the only thing to edit when this project's checks change. No completion claim without fresh evidence: a gate that has not run this iteration has not passed, and a partial run does not stand for the whole.
 4. **Record and commit** — add what you learned to `memory.md` (see *Memory*), then one commit per phase, `<type>(<slug>): <what changed>`, with the memory edit inside it.
 5. **Log** one line to `log.md`, then stop the iteration. The log is gitignored and never enters a commit; write it after the commit, once the phase is on record. In the `IMPLEMENT` phase the task's result entry is one `chore(<slug>): …` commit after the task commit.
 
@@ -52,17 +52,6 @@ Never set a phase by hand where a counter helper exists: `bash <plugin_root>/scr
 ### Three strikes
 
 If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike the slug is blocked: move the offending file to `done/` with the suffix `.blocked.md`, then drop the slug's entry from `state.json` with `scripts/utils.sh`'s `slug_delete <slug>`, log the reason, and continue. Both happen in the same iteration, the move first: an entry left in `state.json` with no floor file behind it makes the picker answer `RECOVER` to every iteration that follows, so a blocked slug that is not deleted blocks the whole flow. Never delete a draft, spec or plan.
-
-## Verification Gates
-
-Run every command in the block below from the repository root: once per task in the `IMPLEMENT` phase, before that task's commit, and once in the `ARCHIVE` phase before archiving. Every line must exit 0.
-
-```bash
-# project-specific gates, one command per line, You may change it
-{{GATES}}
-```
-
-No completion claim without fresh evidence. A gate that has not run this iteration has not passed; a partial run does not stand for the whole.
 
 ## Memory
 

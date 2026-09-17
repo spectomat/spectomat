@@ -11,6 +11,7 @@ Floor is the directories and files the Flow creates and works with in the user's
   done/        <slug>.draft.md, <slug>.spec.md, <slug>.plan.md, <slug>.ruling.md and <slug>.result.md if they exist, <slug>/ task files and <slug>/ snippets, moved here when a plan completes
   log.md       append-only, one line per phase of work — gitignored, never committed
   contract.md  this file
+  gates.sh     the project's single gate command — generated once from package.json, committed, yours to edit
   memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit
   state.json   the flow's state: gitignored, changed only through the Flow
 ```

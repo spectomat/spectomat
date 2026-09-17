@@ -67,17 +67,18 @@ A `state.json` field: `.slugs[SLUG].strikes[PHASE]`, holding the strike count fo
 | `slug` | string | the slug it was defeated on |
 | `count` | integer 0..`STRIKE_LIMIT` | how many times |
 
-Identity: `(phase, slug)`. Written by: any phase agent, and `archive.sh`, by calling `slug_strike` (§5.2). Read by: the picker (§5.2) and `archive.sh` (§5.5).
+Identity: `(phase, slug)`. Written by: any phase agent, and `archive.sh`, by calling `slug_strike` (§5.2). Read by: the picker (§5.2) and `archive.sh` (§5.6).
 
-### 2.3 `gate block`
+### 2.3 `gates`
 
-The fenced `bash` block under `## Verification Gates` in `contract.md`. A script reads it, so its shape is normative.
+`.spectomat/gates.sh`: one executable script holding every check this project must pass. It is run, never parsed, so only its interface is normative.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `lines` | list of shell commands | every non-empty, non-comment line inside the first fenced `bash` block after the `## Verification Gates` heading |
+| path | `.spectomat/gates.sh` | fixed; the contract names it and no phase may substitute another command |
+| exit code | integer | 0 means every gate passed; anything else is a failure |
 
-Identity: one per floor. Written by: `prepare.sh` at first render, and the operator by hand thereafter — never rewritten by the factory (D9). Read by: the `IMPLEMENT` agent and `archive.sh`.
+Identity: one per floor. Written by: `prepare.sh` at first render, from `package.json` (§5.5), and the operator by hand thereafter — never rewritten by the factory (D9). Read by: nobody; run by the `IMPLEMENT` agent and `archive.sh` through `run_gates` (§5.4).
 
 ## 3. Behaviour
 
@@ -124,7 +125,7 @@ Each is an interface the design depends on and does not own.
 | `log.md` | append-only text, written by phase agents and `archive.sh` for audit trail | a fabricated log file (§10.3) |
 | `state.json` | JSON; written by every phase's brief/`archive.sh` after their commit; read by `phase.sh`, `print.sh`, `stop-hook.sh`; the flow's authoritative progress and strike ledger | a fabricated state file (§10.3) |
 | Claude Code agent runtime | plugin agent types `spectomat:<name>` from `agents/*.md` frontmatter | none; verified out-of-band per §10.5 |
-| the operator's gate commands | lines of the gate block, executed with `eval` | fabricated gate blocks, including `false` (§10.3) |
+| the operator's gate commands | `.spectomat/gates.sh`, run as a script | fabricated `gates.sh` scripts, including a failing one (§10.3) |
 
 ## 5. Normative Algorithms
 
@@ -199,24 +200,33 @@ strike_count(phase, slug):
 
 Returns 0 when the slug has no `strikes` entry for that phase, or when the slug is absent from `state.json`.
 
-### 5.4 `gate_block` and `run_gates` — `scripts/utils.sh`
+### 5.4 `run_gates` — `scripts/utils.sh`
 
 ```text
-gate_block():
-  emit every line that is inside the first fenced bash block following the
-  line '## Verification Gates' in CONTRACT, excluding lines that are
-  empty or whose first non-space character is '#'
-
 run_gates():
-  for cmd in gate_block():
-      eval cmd
-      if exit status != 0:  return that status
+  if not exists(.spectomat/gates.sh):  return 0
+  bash .spectomat/gates.sh
+  if exit status != 0:
+      GATE_FAILED = '.spectomat/gates.sh'
+      return that status
   return 0
 ```
 
-`eval` is deliberate: the gate block is operator-authored content in a committed file of their own repository, at the same trust level as a `package.json` script (D6). `run_gates` stops at the first failure and reports which command failed.
+The gates are always `./.spectomat/gates.sh` and nothing else (D6). The script is generated once by `prepare.sh` from the repository's `package.json` (§5.5), committed, and is the operator's editable surface for what gets verified — the contract only names it. Running it as a script rather than parsing commands out of the contract is deliberate: it is operator-authored shell in a committed file of their own repository, at the same trust level as a `package.json` script, and its own `set -e` chains its lines, so one exit code answers for the whole run. A floor with no `gates.sh` has nothing to verify and passes.
 
-### 5.5 `archive` — `scripts/archive.sh`
+### 5.5 `detect_gates` — `scripts/gates.sh`
+
+```text
+detect_gates():
+  if package.json defines a 'gates' script:  GATES = 'npm run gates'
+  else: GATES = one line per script of typecheck, lint, test that
+        package.json defines, in that order
+        ('npm test' for test, 'npm run <s>' otherwise)
+```
+
+`prepare.sh` renders `GATES` into `templates/gates.sh` at the one and only render, or, when nothing was detected, `GATES_NONE`: commented example lines and an `echo "ok: …"` that exits 0. A repo with no gates yet has not failed anything, so the generated script must never exit non-zero to signal its own emptiness (D25). `gates.sh` run directly prints what it would render for the repository it is run in.
+
+### 5.6 `archive` — `scripts/archive.sh`
 
 Invoked by the `spectomat:archive` subagent (`agents/archive.md`), which relays its stdout/stderr and exit code unchanged and performs no mutation of its own (D21).
 
@@ -226,7 +236,6 @@ archive(slug):
   require `git status --porcelain` silent                       else exit 1
   require exists(specs/<slug>.md) and exists(plans/<slug>.md)   else exit 1
 
-  total = count(gate_block())
   if run_gates() != 0:
       n = slug_strike(slug, 'ARCHIVE')
       log '- <ts> · ARCHIVE · <slug> · gate failed: <cmd> (strike ' + n + ')'
@@ -234,6 +243,7 @@ archive(slug):
       else:                  exit 1
   else:
       block = ''
+      gate_result = 'passed'
 
   git mv specs/<slug>.md  done/<slug>.spec<block>.md  or strike_and_exit
   git mv plans/<slug>.md  done/<slug>.plan<block>.md  or strike_and_exit
@@ -245,14 +255,14 @@ archive(slug):
       or strike_and_exit
 
   slug_delete(slug)     # remove slug from state.json, after the commit lands
-  log '- <ts> · ARCHIVE · <slug> · archived · gates <total>/<total>'
+  log '- <ts> · ARCHIVE · <slug> · archived · gates passed'
 ```
 
 **Every mutation is checked.** The script runs under `set -uo pipefail` with no `-e`, so a failed command does not abort, and an unchecked failure here is the one defect this design cannot survive: a partial move that still commits leaves a CLEAN tree, so the picker never answers `RECOVER`, the janitor never runs, and a spec whose plan was already archived reads as a fresh `PLAN` phase. `strike_and_exit` records a strike in `state.json` — so the slug blocks after three — then exits 1 leaving the tree exactly as it landed: dirty for the janitor if a move partially applied, unchanged and safe to retry if none did. Exiting without a strike would wedge the flow, because the picker answers `ARCHIVE` again next iteration and the same move fails again until the cap.
 
 The third strike takes the `.blocked` infix rather than a separate code path, so the moves are written once. `print_blocked` matches `*.blocked.md`.
 
-The log line's numbers are the gate count, not test counts: a script has first-hand knowledge of how many gate commands ran and that every one exited 0, and no knowledge of what any of them printed (D4).
+The log line reports the gate outcome, not test counts: a script has first-hand knowledge that `gates.sh` exited 0, and no knowledge of what it printed (D4).
 
 ## 6. Architecture
 
@@ -265,7 +275,8 @@ The log line's numbers are the gate count, not test counts: a script has first-h
 | `scripts/archive.sh` | the archiver, the `ARCHIVE` phase (§5.5) |
 | `scripts/utils.sh` | shared helpers (§5.2–§5.4), paths, `cd_root`, `state_field`, `render_template`; sourced by every script |
 | `scripts/stop-hook.sh` | runs the picker, ends the flow on `FINISH`, composes the closing report, blocks the session exit on other verdicts, bumps the iteration counter, feeds back the pointer |
-| `scripts/status.sh`, `print.sh`, `cancel.sh`, `gates.sh` | operator surface (§7) and gate-command detection |
+| `scripts/status.sh`, `print.sh`, `cancel.sh` | operator surface (§7) |
+| `scripts/gates.sh` | gate detection (§5.5); sourced by `prepare.sh`, and runnable to preview what a repo would get |
 | `scripts/selftest.sh` | runs every `tests/*_test.sh` file and reports the combined tally |
 | `tests/*.sh` | the suite (§10), one file per section, each independently runnable |
 | `agents/specify.md` | draft → spec — `spectomat:specify` |
@@ -282,7 +293,7 @@ The log line's numbers are the gate count, not test counts: a script has first-h
 
 ### 6.2 The contract
 
-`.spectomat/contract.md` is rendered from the template at the first `/spectomat:run` and never overwritten, so it is **the operator's only steering surface**. It holds the invariants that outlive the briefs: the floor, the Iteration Contract, three strikes, when to gate plus the project's own gate block, how to read and write `memory.md`, the log format, and the constraints.
+`.spectomat/contract.md` is rendered from the template at the first `/spectomat:run` and never overwritten, so it is **the operator's only steering surface**. It holds the invariants that outlive the briefs: the floor, the Iteration Contract, three strikes, when to gate and the path of the gate script, how to read and write `memory.md`, the log format, and the constraints.
 
 It holds no phase sections (D3) and no craft prose (D11): text no operator would ever edit is not steering, and belongs in the brief that uses it. What earns a line in `memory.md` lives in that file's own header, not here (D10).
 
@@ -336,9 +347,9 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D1 | A bash picker (`phase.sh`) decides the phase | a thin foreman agent; the session deciding from the contract | deterministic, testable, costs no tokens, and makes a false completion promise structurally impossible |
 | D2 | Five phase agents (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`); the `ARCHIVE` phase is `archive.sh` | six agents; two agents (author / builder) | `ARCHIVE` is mechanical — gates, three moves, one commit; a script that exits non-zero on a failing gate is stronger evidence than an agent claiming the gate passed. Superseded in dispatch shape by D21: the reliability guarantee stated here still holds, since `archive.sh` still does the work and still owns the exit code |
 | D3 | The contract keeps no phase sections at all | per-phase stubs with a "Project overrides" list | one source per phase; an override mechanism is complexity bought before anyone has needed it |
-| D4 | The `ARCHIVE` phase's log line carries the gate count | parsing test counts out of gate output | a script knows how many gates ran and that each exited 0; it cannot know what they printed, and guessing would be the adjective the Log Format forbids |
+| D4 | The `ARCHIVE` phase's log line carries the gate outcome (`gates passed`) | parsing test counts out of gate output | a script knows that `gates.sh` exited 0; it cannot know what the script printed, and guessing would be the adjective the Log Format forbids. Since D25 made the gates one script, a count of gate lines is no longer the script's to know either |
 | D5 | A phase agent performs its own third-strike block-move | the picker detecting the third strike and a `block.sh` doing the move | the agent knows why it failed and must write the reason; the picker stays free of mutation |
-| D6 | `run_gates` executes gate lines with `eval` | a restricted parser, or `npm run` only | the gate block is operator-authored content in their own committed repository, at the same trust level as a `package.json` script the factory already runs |
+| D6 | `run_gates` runs `.spectomat/gates.sh` as a script | a restricted parser, or `npm run` only | the script is operator-authored shell in their own committed repository, at the same trust level as a `package.json` script the factory already runs. Superseded in shape by D25, which replaced the parsed contract fence with the script; the trust argument stated here is what carried over |
 | D7 | `PLAN` also claims a plan overview with no task files | leaving it stranded | otherwise a half-finished `PLAN` phase matches no stage and the plan is unreachable for the life of the floor |
 | D8 | The `IMPLEMENT` phase executes exactly one task per iteration, in dependency order | packing file-disjoint ready tasks into one iteration as a "wave" | a wave is the only place where the unit of dispatch differs from the unit of work, and it pays for that with file-disjointness analysis in the `IMPLEMENT` phase, packability planning in the `PLAN` phase, shared-tree race rules, ordered commits and concurrent fix loops. One task per iteration deletes all of it: the picker is unaffected, an iteration stays one commit and one log line, and a task's blast radius is one revert. The cost is iterations, which are cheap and unattended |
 | D9 | `prepare.sh` renders `contract.md` once and never rewrites it | a migration that regenerates an old contract from the template, carrying the gate lines across | a migration path can only overwrite the file the operator is told to edit, and one that has never migrated anything is untested weight on the script every run executes |
@@ -357,6 +368,7 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | D22 | `phase.sh` computes `subagent` and `brief` itself and emits them in its frontmatter block (§2.1, §3.3), so the uniform row shape D21 fixed lives in one script instead of also being restated as a table in the pointer prompt | keeping a dispatch table in the pointer prompt, matching each verdict to a `subagent_type` and brief path by hand | the mapping is a pure function of `phase` (lowercase it, prefix `spectomat:`, join with `PLUGIN_ROOT`) that `phase.sh` already has every input for; a table restating it in the pointer was a second place the same seven rows could drift out of step with `agents/*.md`'s actual file names, with no test catching the mismatch until a dispatch failed. The picker still only prints and mutates nothing (§5.1 note 6) |
 | D23 | The pointer prompt is generated by `pointer_prompt()` in `scripts/utils.sh` — a fixed heredoc with `PLUGIN_ROOT` substituted at call time — and never written to disk | `templates/pointer.md`, rendered into `.spectomat/pointer.md` at arm time and re-rendered on every resume | the text never varies except for `PLUGIN_ROOT`, which every script that sources `utils.sh` already holds as a shell variable; rendering it to a gitignored file bought nothing but a second path for `disarm()` to clean up, a resume step that had to re-render it, and a file that could hold a stale `PLUGIN_ROOT` if the plugin was reinstalled at a new cache path between arms. Generating it fresh in `continue_iteration()` and in `prepare.sh`'s arm preview removes all three at once, and it is exercised directly in `pointer_prompt_test.sh` (§10) rather than through a rendered file's contents |
 | D24 | The Stop hook runs `phase.sh` itself and ends the flow on `FINISH`, composing the closing report in bash; `FINISH` dispatches no agent and the `<promise>FACTORY EMPTY</promise>` string is retired | keeping the promise as the signal; keeping `agents/finish.md` and latching the finished iteration in `state.json` | the promise put the verdict's authority in the model's hands: `check_promise` never consulted the picker, so any text carrying the string ended a flow, a tool-call-final turn stranded one, and a dirty tree at finish time ended the flow instead of reaching the janitor. D1 claimed a false completion promise was structurally impossible; this makes that true. Supersedes D21 for `FINISH` only — `ARCHIVE`'s wrapper is untouched, and D2's and D14's argument that mechanical work stays mechanical is what `FINISH` returns to. A `state.json` latch was rejected because `FINISH` is a stable predicate and an actuator inside the process that evaluates it fires exactly once with no memory |
+| D25 | The gates are always `./.spectomat/gates.sh`, generated once by `prepare.sh` from `package.json` and edited there by the operator | the gate commands living as lines inside `contract.md`'s Verification Gates fence, parsed out by `gate_block` | the fence made the contract both prose and executable data, and paid for it twice: an awk fence parser plus a comment/blank filter in `utils.sh`, with its own test file, and an operator whose gates were shell but whose editing surface was Markdown — one stray fence in the file above and the gates silently changed. A script is the honest shape for a list of commands: `set -e` chains them, `bash gates.sh` is the whole of `run_gates`, and the exit code is the script's own rather than something the factory assembles. It is also directly runnable by hand, which the fence never was. The operator keeps one editable file per concern — `contract.md` for the rules, `gates.sh` for the checks — and the contract's Verification Gates section disappears entirely: with the path fixed and `run_gates` hardcoding it, step 3 of the Iteration Contract names the script in passing and that is the whole of it (D11). The cost is a fourth rendered file on the floor, checked on its own like the others, so an older floor picks it up on the next `run` |
 
 ## 9. Acceptance Criteria
 
@@ -376,8 +388,8 @@ The plugin runs from a cache copy under `~/.claude/plugins/cache/spectomat/`, so
 | AC-1.8 | A candidate at `STRIKE_LIMIT` is skipped; if all are, the next stage is used | selftest |
 | AC-1.9 | `phase.sh` leaves the floor and the git index byte-identical | selftest |
 | AC-1.10 | The block's `subagent` and `brief` fields are `spectomat:<phase lowercased>` and `{{PLUGIN_ROOT}}/agents/<phase lowercased>.md`, for a hyphenated phase too | selftest |
-| AC-2.1 | `gate_block` returns the operator's edited lines, dropping comments and blanks | selftest |
-| AC-2.2 | `run_gates` returns non-zero on the first failing line and names it | selftest |
+| AC-2.1 | `prepare.sh` renders an executable `.spectomat/gates.sh` once, from `package.json`, and never overwrites an existing one | selftest |
+| AC-2.2 | `run_gates` returns non-zero when `gates.sh` exits non-zero, and names it; a floor without `gates.sh` passes | selftest |
 | AC-2.3 | `strike_count` returns 0 when the slug has no `strikes` entry for that phase | selftest |
 | AC-3.1 | `archive.sh` with a failing gate moves nothing and exits non-zero | selftest |
 | AC-3.2 | `archive.sh` logs `(strike N)` with N one higher than the log showed | selftest |
@@ -427,7 +439,7 @@ bash 3.2, `jq`, no build, no package manager, no network. `scripts/utils.sh` is 
 | --- | --- | --- |
 | `{{PLUGIN_ROOT}}` | `pointer_prompt()` in `scripts/utils.sh` (in memory, never a file) | absolute plugin path; locates `scripts/phase.sh`, `scripts/archive.sh` and `agents/*.md` |
 | `{{REPO}}` | `contract.md`, `memory.md` | the repository root, substituted at the one and only render |
-| `{{GATES}}` | `contract.md` | the gate command compiled by `gates.sh`, substituted at the one and only render |
+| `{{GATES}}` | `.spectomat/gates.sh` | the gate lines compiled by `detect_gates` (§5.5), or `GATES_NONE` when none were detected, substituted at the one and only render |
 
 A new placeholder requires a matching value in the `render_template` call in `prepare.sh`. `state.json` has no template: `arm_flow` writes its six fields inline (`active`, `iteration`, `max_iterations`, `session_id`, `started_at`, `slugs`), with `max_iterations` and `iteration` unquoted, `slugs` starting as `{}`, so `parse_args` must keep requiring `^[0-9]+$` for the iteration cap.
 
@@ -442,7 +454,7 @@ floor(dir, spec):   under a fresh `mktemp -d`, `git init`, then create the
                     task counters in state.json carry the progress),
                     a state.json with given slugs, phases, task counters, and
                     strikes, a log.md with given strike lines for audit trail,
-                    and a contract.md with a given gate block
+                    and a gates.sh running given commands
 ```
 
 State is built programmatically via jq to create the `.slugs` object:
@@ -466,7 +478,7 @@ Cases are then a verdict assertion (`pk NAME want`) or an effect assertion over 
 ### 10.4 The gates
 
 ```bash
-bash -n scripts/*.sh tests/*.sh
+bash -n scripts/*.sh tests/*.sh templates/gates.sh
 scripts/selftest.sh
 claude plugin validate .claude-plugin/plugin.json --strict
 claude plugin validate .claude-plugin/marketplace.json --strict

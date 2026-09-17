@@ -101,18 +101,14 @@ logline() { printf '%s\n' "$1" >> "$FIXTURE/.spectomat/log.md"; }
 # dirty — leave an untracked file so `git status --porcelain` is not silent.
 dirty() { printf 'x\n' > "$FIXTURE/untracked.txt"; }
 
-# gates_block LINE... — a contract.md whose Verification Gates block holds LINE...
+# gates_block LINE... — a .spectomat/gates.sh running LINE..., the way prepare.sh
+# renders it: `set -e` chains the lines, so the exit code is the whole run's.
 gates_block() {
   {
-    printf '# Contract\n\n## Verification Gates\n\nProse the parser must skip.\n\n'
-    printf '```bash\n'
-    printf '# project-specific gates, one command per line, You may change it\n'
+    printf '#!/bin/bash\nset -e\ncd "$(dirname "${BASH_SOURCE[0]}")/.."\n\n'
     printf '%s\n' "$@"
-    printf '```\n\n## Memory\n\n'
-    printf '```bash\n'
-    printf 'echo a later fence that must be ignored\n'
-    printf '```\n'
-  } > "$FIXTURE/.spectomat/contract.md"
+  } > "$FIXTURE/.spectomat/gates.sh"
+  chmod +x "$FIXTURE/.spectomat/gates.sh"
   fixture_commit
 }
 

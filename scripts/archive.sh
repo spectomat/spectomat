@@ -42,10 +42,9 @@ strike() {
 # Run the gates. A failure logs a strike and stops, unless it is the third:
 # then the trail is archived blocked instead of stranding the floor.
 gate_or_strike() {
-  local total n
-  total=$(gate_block | wc -l | tr -d ' ')
+  local n
   if run_gates; then
-    GATE_RESULT="$total/$total"
+    GATE_RESULT="passed"
     return 0
   fi
   n=$(strike "gate failed: $GATE_FAILED")
