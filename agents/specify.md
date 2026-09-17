@@ -14,14 +14,14 @@ You are at the first iteration of the Spectomat `Flow` performing the `SPECIFY` 
 
 ## Input
 
-1. Read the Contract from `./.spectomat/contract.md` in full.
-2. Read the Memory from `./.spectomat/memory.md` in full.
-3. Read the Draft from `drafts/<slug>.md` in full.
+- the Contract `./.spectomat/contract.md` in full
+- the Memory `./.spectomat/memory.md` in full
+- the Draft `drafts/<slug>.md` in full
 
 ## Procedure
 
 1. Write `specs/<slug>.md` from `<plugin root>/templates/spec.md`. Where an input is silent or in doubt, decide, record the decisions, and continue.
-2. Write The draft's own words go into §1 verbatim where they are precise. The draft is consumed. Delete `drafts/<slug>.md`.
+2. Write The draft's own words go into §1 verbatim where they are precise. The draft is consumed. Then `git mv drafts/<slug>.md done/<slug>.draft.md`.
 3. Record memory where a line is earned.
 4. Commit everything with `<type>(<slug>): …`.
 5. Advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC`.
@@ -41,16 +41,15 @@ You are at the first iteration of the Spectomat `Flow` performing the `SPECIFY` 
 - **Name every external boundary** and its interface. Each becomes a port with an in-memory fake; a boundary the spec does not name becomes a test that touches the network.
 - **Give the build sequence, bottom-up.** Pure domain first, adapters next, wiring after, UI last. The factory derives its phases from this list.
 - **Say what cannot be verified locally** (deploy-gated criteria) and what residue to deliver instead: the harness, the file format, the alarm.
+- Do not write code, or run the gates.
+- Do not edit a file under `done/`.
+- Do not advance the slug's `state.json` phase on a strike.
+- Do not invent a feature the draft did not ask for, however obvious.
 
 ## When you cannot finish
 
-A spec you cannot write is a strike, not a guess: a draft you cannot read, a draft that asks for two independent systems that cannot share one spec, a draft so thin that a whole section has nothing to fill it from and no reasonable assumption fills the gap. Do not advance the slug's phase in `state.json`; instead bump its `SPECIFY` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
+A spec you cannot write is **a strike, not a guess**: a draft you cannot read, a draft that asks for two independent systems that cannot share one spec, a draft so thin that a whole section has nothing to fill it from and no reasonable assumption fills the gap.
+
+Do not advance the slug's phase in `state.json`; instead bump its `SPECIFY` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
 `slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — move the draft to `done/<slug>.draft.blocked.md`, then `slug_delete <slug>`, so the picker is not left with a tracked slug whose floor file is gone.
-
-## Never
-
-- Write code, or run the gates.
-- Edit a file under `done/`.
-- Advance the slug's `state.json` phase on a strike.
-- Invent a feature the draft did not ask for, however obvious.

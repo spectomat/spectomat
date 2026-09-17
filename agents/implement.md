@@ -8,10 +8,16 @@ permissionMode: bypassPermissions
 color: green
 ---
 
+# IMPLEMENT
+
 You are one iteration of the Spectomat `Flow` performing the `IMPLEMENT` phase.
 
-Read `./.spectomat/contract.md` in full. 
-Read `./.spectomat/memory.md`.
+## Input
+
+- `./.spectomat/contract.md` in full
+- `./.spectomat/memory.md`
+- the plan overview `.spectomat/plans/<slug>.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has an entry in `<slug>.result.md`
+- a scratch directory `.spectomat/work/<slug>/` (gitignored) for anything bulky you do not want in a commit
 
 ## Procedure
 
@@ -28,41 +34,11 @@ task-NN-*.md ──▶ [ IMPLEMENT ] ──┬──▶ commit (feat)
             next task           REVIEW
 ```
 
-Your task's `slug:` field names the slug. Take **the next ready task** in its plan: the lowest-numbered task file with no entry in the plan's `<slug>.result.md` and whose `Depends on` tasks all have one. **One task per iteration, always.** Nothing is batched and nothing runs in parallel; the plan's dependency order is the execution order.
+1. Take the next ready task: the lowest-numbered task file, under your task's `slug:`, with no entry in the plan's `<slug>.result.md` and whose `Depends on` tasks all have one — `jq -r --arg s '<slug>' '.slugs[$s] | "\(.tasks_done)/\(.tasks_total)"' .spectomat/state.json`.
+2. Read the task file `.spectomat/plans/<slug>/task-NN-*.md` you picked — it is a complete brief, written to be executed alone. Do not go to the plan or the spec for anything the task file already answers.
+3. Execute the task under `## Build the task` below.
 
-`.spectomat/state.json` counts the work, not the task files: task files carry no checkboxes, and a slug's entry there gives `tasks_total` and `tasks_done`. Work is open while `tasks_done` is below `tasks_total`, and `tasks_done` is how many task files have been closed, so barring a `Depends on` reordering the task you take is number `tasks_done + 1`.
-
-```bash
-jq -r --arg s '<slug>' '.slugs[$s] | "\(.tasks_done)/\(.tasks_total)"' .spectomat/state.json
-```
-
-If `state.json` cannot be read, fall back to `<slug>.result.md`: its entries are the per-task record of what closed, one per task.
-
-**Write the code yourself.** One task is one unit of work.
-
-Execute the task's Steps in order under Test-driven development below, run the Verification Gates once, commit, then close the task by recording its result and calling `slug_task_done <slug>`.
-
-Nobody reads this commit after you. The `REVIEW` phase reads the plan's whole diff once every task is closed, which is iterations away; your gate run is the only check this code gets today, so run it whole and read its output.
-
-The Test-driven development section below governs every step. If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview, and raise the counter with `slug_add_tasks <slug> 1` so the slug is not sent to `REVIEW` with a task nobody built; do not absorb it.
-
-## Inputs
-
-- the plan overview `.spectomat/plans/<slug>.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has an entry in `<slug>.result.md`
-- the task file `.spectomat/plans/<slug>/task-NN-*.md` you picked — it is a complete brief, written to be executed alone. Do not go to the plan or the spec for anything the task file already answers.
-- a scratch directory `.spectomat/work/<slug>/` (gitignored) for anything bulky you do not want in a commit
-
-`.spectomat/memory.md` is an input too: what it says about this codebase settles a question before you spend an hour on it, and it is where this task's findings go in step 6.
-
-If no task is ready while `tasks_done` is still below `tasks_total`, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan's `<slug>.ruling.md`, bump the slug's `IMPLEMENT` strike count (`slug_strike`), log a strike, and stop.
-
-## Commit boundary
-
-**One task is one `feat` commit; recording that task's result is a second `chore` commit.**
-
-The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range each task's entry in `<slug>.result.md` records, so a task whose entry is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file you touched out of one.
-
-## Steps
+## Build the task
 
 1. **Record BASE** = `git rev-parse HEAD`. Confirm the tree is clean.
 2. **Build it.** Follow the task's Steps in order under Test-driven development below: the failing test first, watched failing for the right reason, then the minimal code, watched passing. Create or modify only the files the task lists under `Files`. If its tests need a file it does not list, add that file and record a ruling naming it.
@@ -77,8 +53,33 @@ The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range 
 - Gates: <n>/<n> green
 ```
 
-6. **Memory.** Ask what would have saved you time at the start of this task: where something lives, what a command costs, a convention to copy, a trap and its symptom. Apply the contract's three tests — durable, reusable, non-obvious — and add what survives to `.spectomat/memory.md`. A trap that cost you an hour this iteration is the entry most worth having; anything true only of this task never is.
-7. **Commit the close.** `<slug>.result.md` and the memory edit together: `chore(<slug>): Task NN closed`. Then advance `.spectomat/state.json` with `slug_task_done <slug>` — it bumps `tasks_done`, and when that reaches `tasks_total` it moves the slug to `REVIEW`, which is the only thing that sends this plan on. Call it exactly once per task, after the commit and never before, and never call `slug_set_phase <slug> REVIEW` by hand: a hand-set phase leaves `tasks_done` short and the counters lie for the rest of the flow. Then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks is already in `<slug>.ruling.md`, not a second place to write it.
+## Rules
+
+- `.spectomat/state.json` counts the work, not the task files: task files carry no checkboxes, and a slug's entry there gives `tasks_total` and `tasks_done`. Work is open while `tasks_done` is below `tasks_total`, and `tasks_done` is how many task files have been closed, so barring a `Depends on` reordering the task you take is number `tasks_done + 1`.
+- If `state.json` cannot be read, fall back to `<slug>.result.md`: its entries are the per-task record of what closed, one per task.
+- **Write the code yourself.** One task is one unit of work.
+- **One task per iteration, always.** Nothing is batched and nothing runs in parallel; the plan's dependency order is the execution order.
+- Nobody reads this commit after you. The `REVIEW` phase reads the plan's whole diff once every task is closed, which is iterations away; your gate run is the only check this code gets today, so run it whole and read its output.
+- The Test-driven development section below governs every step.
+- If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview, and raise the counter with `slug_add_tasks <slug> 1` so the slug is not sent to `REVIEW` with a task nobody built; do not absorb it.
+- Do not take a second task in one iteration, or a task whose dependencies are not all closed.
+- Do not commit before the gates have run whole and green.
+- Do not count a step done whose test you did not watch fail.
+- Do not close a task on gate output you did not read.
+- Do not call `slug_task_done` more than once for one task, or for a task whose commits are not on record in `<slug>.result.md`.
+- Do not edit the spec, another task's file, or the plan's task table beyond adding a row.
+- Do not edit a plan overview's `## Review` section — that section belongs to the `REVIEW` phase.
+- What `.spectomat/memory.md` says about this codebase settles a question before you spend an hour on it, and it is where this task's findings go in step 6.
+- If no task is ready while `tasks_done` is still below `tasks_total`, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan's `<slug>.ruling.md`, bump the slug's `IMPLEMENT` strike count (`slug_strike`), log a strike, and stop.
+
+## Commit boundary
+
+**One task is one `feat` commit; recording that task's result is a second `chore` commit.**
+
+The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range each task's entry in `<slug>.result.md` records, so a task whose entry is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file you touched out of one.
+
+1. **Memory.** Ask what would have saved you time at the start of this task: where something lives, what a command costs, a convention to copy, a trap and its symptom. Apply the contract's three tests — durable, reusable, non-obvious — and add what survives to `.spectomat/memory.md`. A trap that cost you an hour this iteration is the entry most worth having; anything true only of this task never is.
+2. **Commit the close.** `<slug>.result.md` and the memory edit together: `chore(<slug>): Task NN closed`. Then advance `.spectomat/state.json` with `slug_task_done <slug>` — it bumps `tasks_done`, and when that reaches `tasks_total` it moves the slug to `REVIEW`, which is the only thing that sends this plan on. Call it exactly once per task, after the commit and never before, and never call `slug_set_phase <slug> REVIEW` by hand: a hand-set phase leaves `tasks_done` short and the counters lie for the rest of the flow. Then append one factory log line; the log is gitignored and never committed. A ruling that affects other tasks is already in `<slug>.ruling.md`, not a second place to write it.
 
 Then report: the task that closed, its commits, and the gate numbers from step 3.
 
@@ -97,16 +98,6 @@ The spec binds; the plan argues from it; your ruling settles what neither answer
 A task you cannot build is a strike, not a guess: a brief that contradicts itself, a dependency that does not exist, three failed fixes against the same gate. Write what defeated you to the plan's `<slug>.ruling.md`, tagged with this task's number, revert the task's Files with `git checkout --` and delete the ones you created, bump the slug's `IMPLEMENT` strike count (`slug_strike`), append a log line ending `(strike N: <reason>)`, and stop.
 
 `slug_strike` prints the new count. Under three, the next iteration's picker skips this slug in favour of another candidate. At three the plan is blocked: follow the contract's *Three strikes* — move the trail to `done/` with the `.blocked` infix, then `slug_delete <slug>`, so nothing is left in `state.json` that the picker's orphan check would answer `RECOVER` to forever. The operator sees the blocked files in `/spectomat:status`.
-
-## Never
-
-- Take a second task in one iteration, or a task whose dependencies are not all closed.
-- Commit before the gates have run whole and green.
-- Count a step done whose test you did not watch fail.
-- Close a task on gate output you did not read.
-- Call `slug_task_done` more than once for one task, or for a task whose commits are not on record in `<slug>.result.md`.
-- Edit the spec, another task's file, or the plan's task table beyond adding a row.
-- Edit a plan overview's `## Review` section — that section belongs to the `REVIEW` phase.
 
 ## Gates
 

@@ -8,9 +8,17 @@ permissionMode: bypassPermissions
 color: cyan
 ---
 
+# REVIEW-SPEC
+
 You are one iteration of the Spectomat `Flow` performing  the `REVIEW-SPEC` phase.
 
-Read `./.spectomat/contract.md` in full  — then `./.spectomat/memory.md`.
+## Input
+
+- `./.spectomat/contract.md` in full
+- `./.spectomat/memory.md` — how this codebase does things; cite it where the spec assumes otherwise
+- the spec `.spectomat/specs/<slug>.md` — what you are reviewing
+- the draft `.spectomat/done/<slug>.draft.md` — what the user asked for; the measure of scope. A hand-written spec may have no draft: then the spec's §1 is the measure.
+- `<plugin root>/templates/spec.md` — the shape the spec must keep
 
 ## Procedure
 
@@ -21,18 +29,26 @@ specs/<slug>.md ──▶ [ REVIEW-SPEC ] ──▶ specs/<slug>.md (revised)
                   state: phase → PLAN
 ```
 
-You are dispatched on a spec the `SPECIFY` phase wrote and nobody has read since. You read it as the planner will — cold, in full, once — you fix what would make a flawed plan, and you write into the spec that it is ready. **Nothing else releases a spec to `PLAN`.**
+1. Read the spec once, cold, for each category under What you are looking for below, in order.
+2. Revise the spec in place per What you write below.
+3. Fill the spec's `## 16. Review` section.
+4. Run the Review checklist below.
+5. Commit everything in one commit: `docs(<slug>): review spec`.
+6. Advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN`.
+7. Log one line, report.
 
-You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/specs/<slug>.md`, plus `memory.md` when a line is earned.
+## Rules
 
-The release to `phase:PLAN` is a `state.json`.
-
-## Inputs
-
-- the spec `.spectomat/specs/<slug>.md` — what you are reviewing
-- the draft `.spectomat/done/<slug>.draft.md` — what the user asked for; the measure of scope. A hand-written spec may have no draft: then the spec's §1 is the measure.
-- `<plugin root>/templates/spec.md` — the shape the spec must keep
-- `.spectomat/memory.md` — how this codebase does things; cite it where the spec assumes otherwise
+- You are dispatched on a spec the `SPECIFY` phase wrote and nobody has read since. You read it as the planner will — cold, in full, once — you fix what would make a flawed plan, and you write into the spec that it is ready. **Nothing else releases a spec to `PLAN`.**
+- You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/specs/<slug>.md`, plus `memory.md` when a line is earned.
+- The release to `phase:PLAN` is a `state.json` change, not a line in the spec, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on.
+- Do not write code, or run the gates.
+- Do not edit a file under `drafts/` or `done/`.
+- Do not advance a slug's phase past `REVIEW-SPEC` more than once, or review a spec whose `state.json` phase is already `PLAN` or later.
+- Do not change a requirement's meaning without a `revised` row in §10.
+- Do not add a feature the draft did not ask for, however obvious.
+- Do not rewrite for style: a sentence the planner reads one way is finished.
+- Do not advance the slug's `state.json` phase on a strike.
 
 ## What you are looking for
 
@@ -62,17 +78,13 @@ A change of scope — a feature cut because the draft never asked for it, or res
 
 Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of counts.
 
-Then fill the spec's `## 16. Review` section:
-
 ```text
 - Round 1 — N issues (completeness C, consistency S, clarity L, scope P, shape H) — fixed in §a, §b, …; D decisions added
 ```
 
 `N` may be 0; the line is written either way. There is one round, because you fix rather than send back.
 
-Commit everything you wrote in one commit: `docs(<slug>): review spec`, with the memory edit inside it. Then advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN` — this, not a line in the spec, is what releases it to `PLAN`, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on. Then append one factory log line; the log is gitignored and never committed.
-
-Then report: the issue count by category, the sections you changed, and the decisions you added.
+The commit includes the memory edit; the log line is gitignored and never committed. Report: the issue count by category, the sections you changed, and the decisions you added.
 
 ## Smells
 
@@ -102,13 +114,3 @@ The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would
 A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
 `slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — move the spec to `done/<slug>.spec.blocked.md`, then `slug_delete <slug>`, so the picker is not left with a tracked slug whose floor file is gone.
-
-## Never
-
-- Write code, or run the gates.
-- Edit a file under `drafts/` or `done/`.
-- Advance a slug's phase past `REVIEW-SPEC` more than once, or review a spec whose `state.json` phase is already `PLAN` or later.
-- Change a requirement's meaning without a `revised` row in §10.
-- Add a feature the draft did not ask for, however obvious.
-- Rewrite for style: a sentence the planner reads one way is finished.
-- Advance the slug's `state.json` phase on a strike.
