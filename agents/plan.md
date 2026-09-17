@@ -8,6 +8,8 @@ permissionMode: bypassPermissions
 color: purple
 ---
 
+# PLAN
+
 You are one iteration of the Spectomat `Flow` performing the `PLAN` phase.
 
 ## Input
