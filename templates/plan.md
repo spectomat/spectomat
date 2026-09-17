@@ -1,6 +1,22 @@
 # {{SLUG}} — Implementation Plan
 
-**Goal:** one sentence. **Architecture:** two or three sentences. **Tech stack:** the libraries and tools. **Spec:** .spectomat/specs/{{SLUG}}.md
+**Goal:**
+
+one sentence.
+
+**Architecture:**
+
+two or three sentences.
+
+**Tech stack:**
+
+the libraries and tools.
+
+**Spec:**
+
+`.spectomat/specs/{{SLUG}}.md`
+
+> Code cites Spec by section and line (`§3.4 L316`).
 
 ## Global Constraints
 

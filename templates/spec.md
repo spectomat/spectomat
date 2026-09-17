@@ -1,13 +1,5 @@
 # {{PROJECT}}
 
-One paragraph: what the system is, who uses it, and the one design idea that organises everything below.
-
-Code cites this document by section and line (`§3.4 L316`). 
-
-Part I is normative: the factory builds to it and never edits it. 
-
-A divergence found during the build is recorded as a ruling in the plan's `<slug>.ruling.md`, not in this document.
-
 # Part I — Specification
 
 ## 1. System Overview
@@ -117,7 +109,3 @@ Bottom-up, numbered. Each step ends with all gates green. The factory derives it
 8. UI
 9. Operations
 10. Cross-cutting
-
-## 16. Review
-
-Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of counts. The release to `PLAN` is a `state.json` phase change, not a line in this section. Empty until then.

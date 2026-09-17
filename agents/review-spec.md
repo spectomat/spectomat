@@ -27,6 +27,8 @@ You are dispatched on a spec the `SPECIFY` phase wrote and nobody has read since
 
 You revise the spec in place: unlike the `REVIEW` phase you do not write tasks for someone else, because the fix for a spec is a sentence, and you are the last writer before the spec becomes normative. The only file you write is `.spectomat/specs/<slug>.md`, plus `memory.md` when a line is earned.
 
+The release to `phase:PLAN` is a `state.json`.
+
 ## Inputs
 
 - the spec `.spectomat/specs/<slug>.md` — what you are reviewing
@@ -58,6 +60,10 @@ Every material change is a row in §10 Decisions, numbered on from the last, dat
 
 A change of scope — a feature cut because the draft never asked for it, or restored because it did — is always material.
 
+## 16. Review
+
+Written by the `REVIEW-SPEC` phase once, before the spec is planned: one line of counts.
+
 Then fill the spec's `## 16. Review` section:
 
 ```text
@@ -69,6 +75,29 @@ Then fill the spec's `## 16. Review` section:
 Commit everything you wrote in one commit: `docs(<slug>): review spec`, with the memory edit inside it. Then advance `.spectomat/state.json`: set the slug's phase to `PLAN` (`scripts/utils.sh`'s `slug_set_phase`) — this, not a line in the spec, is what releases it to `PLAN`, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on. Then append one factory log line; the log is gitignored and never committed.
 
 Then report: the issue count by category, the sections you changed, and the decisions you added.
+
+## Smells
+
+| Smell | Consequence downstream |
+| --- | --- |
+| "should", "ideally", "consider" | the planner guesses, and the guess ships |
+| an alternative from the draft carried in unresolved | the planner picks, and the pick ships |
+| a count in a heading that the list below disagrees with | a ruling in `<slug>.ruling.md`, and a pinned test of the actual count |
+| the same constant written twice | two modules, and drift |
+| a field used in pseudocode but absent from the entity table | a ruling in `<slug>.ruling.md` about which one is the schema |
+| a criterion with no observable | BLOCKED, never verified |
+
+## Review checklist
+
+The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would mislead the planner; leave it nothing to find. Before committing, and before dropping a hand-written spec into `.spectomat/specs/`:
+
+- [ ] every `##` and `###` in Part I is numbered
+- [ ] every criterion has an id and a "verified by"
+- [ ] every constant appears once, in the section that owns it
+- [ ] every external boundary is named
+- [ ] the build sequence exists and is bottom-up
+- [ ] the review section (§16) exists and is empty — the `REVIEW-SPEC` phase fills it
+- [ ] no doubt from the draft survives: every hedge became a normative sentence and a §10 row
 
 ## When you cannot finish
 
