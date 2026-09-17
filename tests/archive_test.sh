@@ -17,6 +17,9 @@ ready() {
   floor "arc-$1"; spec "$2"; plan "$2" 2 0; gates_block "$3"
   printf '{"active": true, "iteration": 1, "max_iterations": 5, "session_id": "test", "started_at": "t", "slugs": {"%s": {"phase": "ARCHIVE", "strikes": {}}}}\n' "$2" > "$FIXTURE/.spectomat/state.json"
   fixture_commit
+  # Arming cuts one branch per slug and ARCHIVE commits on it, so the fixture
+  # has to stand where a real floor stands: on feat/<slug>.
+  ( cd "$FIXTURE" && git checkout -q -B "feat/$2" )
 }
 arc()   { ( cd "$FIXTURE" && bash "$SCRIPTS/archive.sh" "$1" >/dev/null 2>&1 ); }
 there() { [[ -e "$FIXTURE/.spectomat/$1" ]] && echo yes || echo no; }

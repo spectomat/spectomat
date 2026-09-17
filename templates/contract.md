@@ -41,7 +41,10 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 ### Where you work
 
 - ❌ DO NOT Spawn a subagent — this phase is your fresh context; do the work yourself.
-- ❌ DO NOT Create a branch or worktree — every phase works on the current branch.
+- ✅ DO Work on your slug's own branch, `feat/<slug>`, created by arming: `git checkout feat/<slug>` before you touch anything, and commit every phase of that slug there. Committing to another branch is a strike.
+- ❌ DO NOT Create, rename or delete a branch — arming created yours. A missing `feat/<slug>` is a strike, not something to fix by branching.
+- ❌ DO NOT Merge, rebase or cherry-pick between branches — the operator merges finished work by hand. `ARCHIVE` commits `done.md` on the slug's branch and leaves it there.
+- ❌ DO NOT Create a worktree — that checkout is the whole mechanism.
 - ❌ DO NOT Touch any repository but the one under flow — `git stash`, commit or checkout elsewhere destroys work no phase owns. A script refusing over a dirty tree there is the correct outcome.
 
 ### Before iteration
@@ -87,7 +90,7 @@ If a phase defeats you, append `(strike N)` to its log line and skip it next tim
 
 **Read it before you touch anything else** — each phase brief's own Orient step names this. Trust it over your assumptions about the project, and over a habit from another repository.
 
-**Add to it before the commit**, so the entry rides inside the phase commit and the tree stays clean — each phase brief's own Procedure names the step.
+**Add to it before the commit** — each phase brief's own Procedure names the step. It is gitignored, like `state.json` and `log.md`, so the entry enters no commit and never counts as dirt. That is what keeps one memory across every `feat/<slug>` branch: a lesson learned on one slug is there for the next, and no branch carries a copy of its own.
 
 Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only the phase agent handling this iteration writes the file: it applies the tests itself, so the file keeps one voice.
 

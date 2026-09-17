@@ -118,6 +118,13 @@ finish_slug() {
 
 main() {
   require_ready
+  # Before the gates: they must run against the slug's own work, and done.md
+  # must land on its branch. A missing branch is a strike, never a new branch.
+  if ! slug_checkout "$SLUG"; then
+    strike "branch $(slug_branch "$SLUG") missing" >/dev/null
+    echo "❌ cannot check out $(slug_branch "$SLUG")" >&2
+    exit 1
+  fi
   gate_or_strike
   write_marker
   commit_archive

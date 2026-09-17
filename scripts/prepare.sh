@@ -66,6 +66,11 @@ prepare_floor() {
   ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
   ensure_gitignored "$FLOOR/work/"
   ensure_gitignored "$FLOOR/log.md"
+  # Gitignored on purpose: each slug works on its own feat/<slug> branch, and a
+  # committed memory.md would fork into one copy per branch, so a lesson learned
+  # on one slug would be invisible to the next. Ignored, it is one local file
+  # every branch shares.
+  ensure_gitignored "$MEMORY"
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
 }
 
@@ -152,7 +157,8 @@ render_factory() {
     echo "$MEMORY: exists, kept"
   else
     render_template "$TEMPLATES/memory.md" "$MEMORY" REPO="$ROOT"
-    STAGE+=("$MEMORY")
+    # Not staged: prepare_floor gitignored it, so it stays a local file shared
+    # by every feat/<slug> branch rather than a per-branch copy.
     echo "$MEMORY: written"
   fi
 
@@ -286,6 +292,31 @@ seed_state() {
   done < <(slug_dirs)
 }
 
+# One branch per unfinished slug, feat/<slug>, cut from the armed commit. This
+# is the only place a branch is created: the phase agents check theirs out and
+# never branch, and the operator merges finished work by hand.
+#
+# Runs after commit_floor and seed_state, so every branch carries the floor and
+# every slug has a state entry to be judged unfinished by. Idempotent — a slug
+# already branched by an earlier arming keeps its branch and whatever work is on
+# it, so re-arming a floor mid-flight never rewinds a slug.
+#
+# Leaves HEAD where it was: the first iteration checks out the branch its picker
+# names, and the operator's own branch is what the flow was armed from.
+branch_slugs() {
+  local s b
+  while IFS= read -r s; do
+    [[ -n "$s" ]] || continue
+    b="$(slug_branch "$s")"
+    if git rev-parse --verify --quiet "refs/heads/$b" >/dev/null; then
+      echo "branch $b: exists, kept"
+    else
+      git branch "$b" || die "could not create branch $b"
+      echo "branch $b: created"
+    fi
+  done < <(slugs_unfinished)
+}
+
 # Arm the flow: the state the Stop hook reads on every exit attempt. seed_state
 # has already created the file and filled .slugs, so this only sets the flow's
 # own fields. MAX_ITERATIONS is passed through tonumber; parse_args has already
@@ -333,6 +364,8 @@ main() {
   seed_state
   report_floor
   require_startable
+  # After require_startable: a floor that refuses to arm leaves no branches behind.
+  branch_slugs
   arm_flow
   announce
   pointer_prompt

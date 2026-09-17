@@ -9,7 +9,8 @@ PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
 STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
 CONTRACT="$FLOOR/contract.md"
-MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; committed
+MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; gitignored, so one
+                            # memory is shared by every feat/<slug> branch instead of forking per branch
 GATES_SH="$FLOOR/gates.sh"   # the project's single gate command; committed, operator-editable
 
 # Move to the git root (or stay put outside a repo); sets ROOT.
@@ -103,6 +104,25 @@ A `FINISH` block means the flow has already ended and the Stop hook has reported
 EOF
 )
   printf '%s\n' "${body//\{\{PLUGIN_ROOT\}\}/$PLUGIN_ROOT}"
+}
+
+# slug_branch SLUG — the branch every phase of SLUG works on. One name, one
+# place: prepare.sh creates it, the phase agents check it out, and nothing else
+# composes "feat/$slug" by hand.
+slug_branch() { printf 'feat/%s\n' "$1"; }
+
+# slug_checkout SLUG — put the slug's branch in the working tree. Used by the
+# phase scripts and by any agent following the contract's "Where you work".
+#
+# Refuses rather than creates: arming is the only thing that cuts a branch, so
+# a missing one is a broken floor, not something to paper over mid-flow. The
+# caller turns that non-zero into a strike.
+slug_checkout() {
+  local b; b="$(slug_branch "$1")"
+  git rev-parse --verify --quiet "refs/heads/$b" >/dev/null \
+    || { echo "❌ branch $b does not exist; re-arm the flow" >&2; return 1; }
+  [[ "$(git rev-parse --abbrev-ref HEAD)" == "$b" ]] && return 0
+  git checkout -q "$b"
 }
 
 # Failed attempts at one phase for one slug before that slug is blocked.
