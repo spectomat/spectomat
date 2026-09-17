@@ -106,7 +106,7 @@ render_factory() {
     echo "gates: ${GATES:-none detected}"
     render_template "$TEMPLATES/contract.md" "$CONTRACT" \
       REPO="$ROOT" \
-      GATES="${GATES:-echo \"❌ no gates: package.json defines no gates, typecheck, test, lint or build script\"}" \
+      GATES="${GATES:-echo \"ok: no gates yet — add real ones here once this repo has them\"}" \
       FLOOR_TEXT="$(cat "$PLUGIN_ROOT/docs/floor.md")"
 
     STAGE+=("$CONTRACT")

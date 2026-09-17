@@ -33,6 +33,7 @@ Each command in `commands/` runs a script in its `!` block, then tells Claude wh
 
 - Markdown paragraphs and list items are one line each, no hard wraps. Fenced blocks, tables and frontmatter are the only multi-line structures.
 - Placeholders in templates are `{{KEY}}`, substituted literally by `render_template`; a new placeholder needs a value in the matching `render_template` call in `prepare.sh`.
+- Whatever `{{GATES}}` renders into the contract lands inside a runnable `bash` block, so it must be a real command whose exit code means what it says. A repo with no gates detected gets an honest no-op (`echo "ok: …"`), never an `echo "❌ …"` that prints failure and exits 0. The `#`-comment form belongs only to `gates.sh`'s own stdout, which is read by people and never executed.
 - Third-party material and its licence go in `NOTICE.md`; changes to derived files are listed there.
 - Verdicts are upper case (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`, `ARCHIVE`, `RECOVER`, `FINISH`); the agent types and brief files that serve them are lower case (`spectomat:review-spec`, `agents/review-spec.md`), and the pointer lowercases the verdict's first word to bridge the two.
 - A change to the verdict grammar must keep `phase.sh`, `pointer_prompt` in `utils.sh`, `print.sh` and `archive.sh` in step; a change to what a phase does belongs in its brief, not in the contract or the pointer.

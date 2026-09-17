@@ -1,7 +1,7 @@
 {
   "name": "spectomat",
   "description": "Spec-driven code development flow: drop ideas into .spectomat/drafts/, run one command, and an unattended flow turns each into a spec, a plan, and tested committed code.",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "author": {
     "name": "alex"
   },
