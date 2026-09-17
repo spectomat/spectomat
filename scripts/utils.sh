@@ -61,7 +61,7 @@ render_template() {
 pointer_prompt() {
   local body
   body=$(cat <<'EOF'
-# Spectomat iteration pointer
+# Spectomat pointer
 
 Fresh context each iteration. Do no factory work here.
 

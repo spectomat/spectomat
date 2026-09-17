@@ -101,9 +101,9 @@ Then advance `.spectomat/state.json` — every round ends in exactly one of thes
 
 | Situation | `state.json` change |
 | --- | --- |
-| No Critical and no Important finding this round | `slug_set_phase <slug> ARCHIVE` |
+| No Critical and no Important finding this round | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` |
 | Fix tasks added and R < `MAX_REVIEW_ROUNDS` | `slug_add_tasks <slug> <n>`, n the fix tasks just added — it moves the slug back to `IMPLEMENT` and raises `tasks_total` by n |
-| R = `MAX_REVIEW_ROUNDS` and findings remain | `slug_set_phase <slug> ARCHIVE` — the rounds are spent, so the plan ships with every open finding ruled on in `<slug>.ruling.md`, and a reader knows what shipped and why |
+| R = `MAX_REVIEW_ROUNDS` and findings remain | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` — the rounds are spent, so the plan ships with every open finding ruled on in `<slug>.ruling.md`, and a reader knows what shipped and why |
 
 `slug_add_tasks` is the only change that sends a plan back, and `ARCHIVE` is irreversible: a slug moved to `ARCHIVE` is never reviewed again.
 

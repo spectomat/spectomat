@@ -186,8 +186,8 @@ EOF
 
 announce() {
   cat <<EOF
-
-🏭 Spectomat factory armed in this session.
+  
+🏭 Spectomat code development flow is armed in this session.
 
 Iteration: 1 of $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo "$MAX_ITERATIONS"; else echo "unlimited"; fi)
 State: $STATE_FILE
@@ -197,7 +197,6 @@ When you try to exit, the Stop hook feeds the prompt below back to you.
 Each iteration asks scripts/phase.sh which phase applies and dispatches it.
 The flow ends when the picker answers FINISH, or at the iteration cap.
 EOF
-  pointer_prompt
 }
 
 main() {
@@ -210,6 +209,7 @@ main() {
   require_startable
   arm_flow
   announce
+  pointer_prompt
 }
 
 main "$@"

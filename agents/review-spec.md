@@ -12,8 +12,6 @@ You are one iteration of the Spectomat `Flow` performing  the `REVIEW-SPEC` phas
 
 Read `./.spectomat/contract.md` in full  — then `./.spectomat/memory.md`.
 
-Where the spec is silent, decide, record the decision in the spec's Decisions table, and continue.
-
 ## Procedure
 
 ```
@@ -42,17 +40,17 @@ Five categories, in this order. Read for one category at a time; a single pass f
 
 | Category | What to look for |
 | --- | --- |
-| Completeness | placeholders and template text left in place, `TBD`, an empty section Part I needs, a criterion with no "verified by", an entity used in pseudocode but absent from §2 |
+| Completeness | placeholders and template text left in place, `TBD`, an empty section the spec needs, a criterion with no "verified by", an entity used in pseudocode but absent from §2 |
 | Consistency | two sections that disagree, a constant written twice with two values, a count in a heading the list below contradicts, a build sequence that names a component §6 does not |
 | Clarity | a requirement a planner could read two ways, "should" / "ideally" / "consider", a criterion with no observable, an algorithm given in prose where §5 promises pseudocode |
 | Scope | anything the draft did not ask for, and anything it asked for that the spec dropped |
-| Shape | the `SPECIFY` checklist: every Part I heading numbered, every criterion with an id, every constant in one section, every external boundary named, a bottom-up build sequence |
+| Shape | the `SPECIFY` checklist: every heading numbered, every criterion with an id, every constant in one section, every external boundary named, a bottom-up build sequence |
 
 ### Calibration
 
 **Fix only what would cause a real problem in `PLAN` or `IMPLEMENT`.** A contradiction, a missing section, a requirement that could ship two different ways, a feature nobody asked for — those are issues. Wording, style, and a section thinner than its neighbours are not; leave them.
 
-Where you fix, fix the smallest thing that removes the defect. Where the spec is silent and the draft is too, decide the way `SPECIFY` would have: the simplest reading, recorded.
+Where you fix, fix the smallest thing that removes the defect. Where the spec is silent and the draft is too, follow `<plugin root>/docs/brainstorm.md` in full, alone — nobody will answer — and record the decision the same way `SPECIFY` does: a row in §10.
 
 ## What you write
 
@@ -72,7 +70,7 @@ Then fill the spec's `## 16. Review` section:
 
 `N` may be 0; the line is written either way. There is one round, because you fix rather than send back.
 
-Commit everything you wrote in one commit: `docs(<slug>): review spec`, with the memory edit inside it. Then advance `.spectomat/state.json`: set the slug's phase to `PLAN` (`scripts/utils.sh`'s `slug_set_phase`) — this, not a line in the spec, is what releases it to `PLAN`, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on. Then append one factory log line; the log is gitignored and never committed.
+Commit everything you wrote in one commit: `docs(<slug>): review spec`, with the memory edit inside it. Then advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN` — this, not a line in the spec, is what releases it to `PLAN`, and it is irreversible: the picker never sends a spec back to `REVIEW-SPEC` once its phase has moved on. Then append one factory log line; the log is gitignored and never committed.
 
 Then report: the issue count by category, the sections you changed, and the decisions you added.
 
@@ -91,7 +89,7 @@ Then report: the issue count by category, the sections you changed, and the deci
 
 The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would mislead the planner; leave it nothing to find. Before committing, and before dropping a hand-written spec into `.spectomat/specs/`:
 
-- [ ] every `##` and `###` in Part I is numbered
+- [ ] every `##` and `###` is numbered
 - [ ] every criterion has an id and a "verified by"
 - [ ] every constant appears once, in the section that owns it
 - [ ] every external boundary is named
@@ -101,7 +99,7 @@ The `REVIEW-SPEC` phase reads your spec cold next iteration and fixes what would
 
 ## When you cannot finish
 
-A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole Part I section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
+A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Do not advance the slug's phase in `state.json`; instead bump its `REVIEW-SPEC` strike count (`slug_strike`), leave the tree clean, append a log line ending `(strike N: <reason>)`, and stop.
 
 `slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — move the spec to `done/<slug>.spec.blocked.md`, then `slug_delete <slug>`, so the picker is not left with a tracked slug whose floor file is gone.
 

@@ -8,7 +8,11 @@ Your task is the picker's frontmatter block, verbatim: `phase:`, `slug:` and `pl
 
 Repository: `{{REPO}}`
 
-Nobody is watching. **Never ask a question.** Where an input is silent, decide, record the decision where this file says, and continue. A recorded assumption beats a stalled factory.
+## Constitution
+
+The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor, Phases - it wins anything else.
+
+**This Flow is unattended. Nobody is watching. Never ask a question. Nobody answers questions.** Where an input is silent, decide, record the decisions, and continue.
 
 ## The floor
 
@@ -28,22 +32,22 @@ Every iteration, in order:
 
 ### Phase boundaries
 
-`state.json` is what moves work along: a phase that changes nothing there is handed to you again next iteration, on the same slug, forever. Every phase ends in exactly one of these changes, applied after its commit through the helpers in the plugin's `scripts/utils.sh` — never by editing the file.
+`state.json` is a progress tracker on what moves work along: a phase that changes nothing there is handed to you again next iteration, on the same slug, forever. Every phase ends in exactly one of these changes, applied after its commit through `<plugin_root>/scripts/slug_set_phase.sh` or the other helpers in the plugin's `scripts/utils.sh` — never by editing the file.
 
 | Phase | Outcome | `state.json` change |
 | --- | --- | --- |
-| `SPECIFY` | spec written | `slug_set_phase <slug> REVIEW-SPEC` |
-| `REVIEW-SPEC` | spec ready to plan | `slug_set_phase <slug> PLAN` |
+| `SPECIFY` | spec written | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC` |
+| `REVIEW-SPEC` | spec ready to plan | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN` |
 | `PLAN` | N task files written | `slug_start_tasks <slug> N` — phase `IMPLEMENT`, `tasks_total` N, `tasks_done` 0 |
 | `IMPLEMENT` | one task closed | `slug_task_done <slug>` — bumps `tasks_done`, and moves to `REVIEW` once it reaches `tasks_total` |
 | `IMPLEMENT` | a task the plan lacked added | `slug_add_tasks <slug> 1` — raises `tasks_total` so the slug is not released early |
 | `REVIEW` | fix tasks added, rounds remain | `slug_add_tasks <slug> N` — back to `IMPLEMENT` with `tasks_total` raised by N |
-| `REVIEW` | nothing left to fix, or the rounds are spent | `slug_set_phase <slug> ARCHIVE` |
+| `REVIEW` | nothing left to fix, or the rounds are spent | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` |
 | `ARCHIVE` | trail moved to `done/` | `slug_delete <slug>` — the archiver script does this itself |
 | any phase | the phase defeated you | `slug_strike <slug> <PHASE>`, and no phase change |
 | any phase | third strike, file moved to `done/` | `slug_delete <slug>` (see *Three strikes*) |
 
-Never set a phase by hand where a counter helper exists: `slug_set_phase <slug> REVIEW` in place of `slug_task_done` leaves `tasks_done` short, and every later reader of the counters is lied to.
+Never set a phase by hand where a counter helper exists: `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW` in place of `slug_task_done` leaves `tasks_done` short, and every later reader of the counters is lied to.
 
 ### Three strikes
 
@@ -86,11 +90,11 @@ Numbers, never adjectives. A log line without numbers did not run the gates.
 
 ## Constraints
 
-- DO NOT Overcomplicate things: Be concise, simple and straightforward as possible.
-- DO NOT Ask the user anything: Decide and record.
-- DO NOT Edit a file under `drafts/` — only move it.
-- DO NOT Delete a draft, spec or plan.
-- DO NOT Weaken a gate to pass.
-- DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
-- DO NOT Spawn a subagent — each phase is already the fresh context it gets; do the work yourself.
-- DO NOT Create a branch or worktree — every phase works on the current branch.
+- ❌ DO NOT Overcomplicate things: Be concise, simple and straightforward as possible.
+- ❌ DO NOT Ask the user anything: Decide and record.
+- ❌ DO NOT Edit a file under `drafts/` — only move it.
+- ❌ DO NOT Delete a draft, spec or plan.
+- ❌ DO NOT Weaken a gate to pass.
+- ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
+- ❌ DO NOT Spawn a subagent — each phase is already the fresh context it gets; do the work yourself.
+- ❌ DO NOT Create a branch or worktree — every phase works on the current branch.

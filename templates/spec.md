@@ -1,7 +1,5 @@
 # {{PROJECT}}
 
-# Part I — Specification
-
 ## 1. System Overview
 
 ### 1.1 Purpose
@@ -69,8 +67,6 @@ Numbered, dated, with the alternative rejected. The later, explicitly resolved s
 | Id | Decision | Rejected | Why |
 | --- | --- | --- | --- |
 | D1 | ... | ... | ... |
-
-# Part II — Building it
 
 ## 11. Toolchain and layout
 

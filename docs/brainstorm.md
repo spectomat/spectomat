@@ -11,7 +11,7 @@ When in doubt between the two, take architectural. A draft that looks bounded an
 
 **Ask the clarifying questions yourself**, one per doubt, in this order: purpose (what must be true after), constraints (what must not change), success criteria (what an observer would see). Answer each from, in order: another sentence of the draft, the codebase, `memory.md`, the simplest reading. Every answer the draft did not give is an `assumed` row in §10, with the alternative you rejected and why.
 
-**Propose two or three approaches** to every doubt that is a design choice rather than a fact, with trade-offs, and pick one. Lead with the simplest that satisfies the draft; cut from every approach anything the draft did not ask for. The chosen approach goes into Part I; the rejected ones go into the Rejected column of its §10 row. An approach nobody recorded is a guess the planner cannot trace.
+**Propose two or three approaches** to every doubt that is a design choice rather than a fact, with trade-offs, and pick one. Lead with the simplest that satisfies the draft; cut from every approach anything the draft did not ask for. The chosen approach goes into spec; the rejected ones go into the Rejected column of its §10 row. An approach nobody recorded is a guess the planner cannot trace.
 
 **Design for isolation.** Break the system into units that each have one purpose and talk through named interfaces (§6, §13). For each unit you can answer: what it does, how it is used, what it depends on. A unit whose internals must be read to understand it has the wrong boundary.
 
