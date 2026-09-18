@@ -26,7 +26,7 @@ is "implement.md allows the Agent tool" "$(grep -q '^tools:.*Agent' "$AGENTS/imp
 is "implement.md does not disallow the Agent tool" "$(grep -q '^disallowedTools:.*Agent' "$AGENTS/implement.md" && echo yes || echo no)" "no"
 is "task.md disallows the Agent tool" "$(grep -q '^disallowedTools:.*Agent' "$AGENTS/task.md" && echo yes || echo no)" "yes"
 is "task.md never advances state.json" \
-  "$(grep -q -E 'slug_set_phase|slug_strike|slug_finish|tasks\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
+  "$(grep -q -E 'slug_set_phase|slug_strike|slug_done|block_slug\.sh|tasks\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
 is "task.md never logs" "$(grep -q 'log\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
 TASK_TEMPLATE="$(dirname "$SCRIPTS")/templates/task.md"
 for h in "### Purpose" "### Spec, verbatim" "### Codebase"; do
@@ -52,15 +52,15 @@ is "no brief still names result.md" "$(grep -l 'result\.md' "$AGENTS"/*.md | wc 
 # or the slug stays at its phase with its strikes spent, and the picker sends
 # every remaining iteration to the janitor instead.
 for a in specify review-spec implement review recover; do
-  is "agents/$a.md finishes a blocked slug" "$(grep -q 'slug_finish' "$AGENTS/$a.md" && echo yes || echo no)" "yes"
+  is "agents/$a.md finishes a blocked slug" "$(grep -q 'block_slug\.sh' "$AGENTS/$a.md" && echo yes || echo no)" "yes"
 done
 is "contract.md's three strikes finishes the slug" \
-  "$(grep -q 'slug_finish' "$(dirname "$SCRIPTS")/templates/contract.md" && echo yes || echo no)" "yes"
+  "$(grep -q 'block_slug\.sh' "$(dirname "$SCRIPTS")/templates/contract.md" && echo yes || echo no)" "yes"
 # archive.md is a thin wrapper (D21): the mutation stays in agent-archive.sh.
 # FINISH has no brief at all (D24) — the Stop hook ends the flow and composes
 # the report, so no agent can claim the floor is empty.
 is "archive.md invokes agent-archive.sh" "$(grep -q 'agent-archive.sh' "$AGENTS/archive.md" && echo yes || echo no)" "yes"
-is "archive.md never calls slug_finish itself" "$(grep -q 'slug_finish' "$AGENTS/archive.md" && echo yes || echo no)" "no"
+is "archive.md never calls block_slug.sh itself" "$(grep -q 'block_slug\.sh' "$AGENTS/archive.md" && echo yes || echo no)" "no"
 is "there is no finish brief" "$([[ -e "$AGENTS/finish.md" ]] && echo yes || echo no)" "no"
 is "no brief mentions the retired promise" "$(grep -l 'FACTORY EMPTY' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 

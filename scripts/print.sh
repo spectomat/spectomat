@@ -4,8 +4,9 @@
 #   source "$(dirname "${BASH_SOURCE[0]}")/print.sh"
 #
 # Every print_* writes one "--- section ---" block to stdout and needs FLOOR,
-# STATE_FILE, MEMORY, count, state_field, slugs_at_phase, slugs_unfinished and
-# the tasks_* ledger helpers from utils.sh. Phase counts come from state.json
+# STATE_FILE, MEMORY, count, state_field, slugs_at_phase, slugs_unfinished (the
+# latter two from slug_utils.sh, sourced by utils.sh) and the tasks_* ledger
+# helpers from utils.sh. Phase counts come from state.json
 # and task counts from each slug's tasks.json; the one directory read left is
 # .wishlist/, the intake inbox, which is not flow state.
 

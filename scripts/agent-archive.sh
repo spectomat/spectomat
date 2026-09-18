@@ -70,7 +70,7 @@ gate_or_strike() {
 # floor changes. done.md says it shipped; blocked.md says the third strike
 # landed and carries the reason. These are the committed human record — the
 # only trace of how a slug ended that survives in git, since state.json is
-# gitignored — and nothing reads them back: slug_finish below is what takes the
+# gitignored — and nothing reads them back: finish_slug below is what takes the
 # slug out of the flow.
 write_marker() {
   if [[ -n "$BLOCK" ]]; then
@@ -110,9 +110,9 @@ log_result() {
 # terminal entry, so the picker hands ARCHIVE back next iteration.
 finish_slug() {
   if [[ -n "$BLOCK" ]]; then
-    slug_finish "$SLUG" blocked "gate failed: ${GATE_FAILED:-$GATES_SH}"
+    bash "$PLUGIN_ROOT/scripts/block_slug.sh" "$SLUG" "gate failed: ${GATE_FAILED:-$GATES_SH}"
   else
-    slug_finish "$SLUG" done "gates $GATE_RESULT"
+    slug_done "$SLUG" "gates $GATE_RESULT"
   fi
 }
 

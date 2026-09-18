@@ -127,4 +127,4 @@ Then report: the round, the counts by severity, the tasks you added, and the pha
 
 ## When you cannot finish
 
-A plan you cannot review is a strike, not a guess: a ledger entry with no `commits` range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, then follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `slug_finish <slug> blocked "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+A plan you cannot review is a strike, not a guess: a ledger entry with no `commits` range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, then follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.

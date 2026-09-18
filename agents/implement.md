@@ -52,14 +52,23 @@ tasks.json ──▶ [ IMPLEMENT ] ──▶ Agent(spectomat:task) ──▶ com
    gates_log: .spectomat/work/<slug>/task-NN.gates.log
    ```
 
-4. **Read the report.** It is `## Task NN — DONE` or `## Task NN — FAILED`, with `Commit`, `Tests`, `Gates`, `Rulings` and `Memory` lines. `FAILED`, or anything that is neither, goes to `## When you cannot finish`.
-5. **Verify the evidence, not the claim.** Every one of these must hold, or the task failed and you go to `## When you cannot finish`:
+4. **Read the report.**
+
+It is
+
+either `## Task NN — DONE` with `Commit`, `Tests`, `Gates`, `Rulings` and `Memory` lines -> next task.
+
+either `## Task NN — FAILED` with  `Rulings` lines, -> goes to `## When you cannot finish`.
+
+1. **Verify the evidence, not the claim.** Every one of these must hold, or the task failed and you go to `## When you cannot finish`:
    - `git status --porcelain` is silent
    - `git rev-list --count <BASE>..HEAD` prints `1`, and that commit's message is the task's Step 5 message
    - `git show --stat --format= HEAD` names only the task's `Files` plus the fixtures the report's `Rulings` name
    - the gates log exists, its last line is `exit: 0`, and it is the run that backs the numbers you record: read the test count off the log, not off the report
-6. **Record the rulings.** Leave the task file untouched — it carries no checkboxes, and the ledger is the record. Append every line under the report's `Rulings:` to the plan's `ruling.md` (a sibling of the overview, creating it if it does not yet exist) in the shape `## Rulings` gives, tagged `Task NN`. The task's own result goes to the ledger in `## Commit boundary`, not here and not to a file you write.
-7. **Close the task.** Follow `## Commit boundary`.
+
+2. **Record the rulings.** Leave the task file untouched — it carries no checkboxes, and the ledger is the record. Append every line under the report's `Rulings:` to the plan's `ruling.md` (a sibling of the overview, creating it if it does not yet exist) in the shape `## Rulings` gives, tagged `Task NN`. The task's own result goes to the ledger in `## Commit boundary`, not here and not to a file you write.
+
+3. **Close the task.** Follow `## Commit boundary`.
 
 ## Commit boundary
 
@@ -83,7 +92,7 @@ Then report: the task that closed, its commits, and the gate numbers from the lo
 
 ## Rulings
 
-A ruling is a decision the spec, plan or task did not make: an ambiguity, a defect in the brief, a choice the task left open. The task agent reports the ones it made; you append them, and your own, to the plan's `ruling.md` (a sibling of the overview, creating it if it does not yet exist):
+A ruling is a decision the spec, plan or task did not make: an ambiguity, a defect in the brief, a choice the task left open. The task agent reports the ones it made; you append them, and your own, to the plan's `.spectomat/<slug>/ruling.md` (creating it if it does not yet exist):
 
 ```text
 - Task NN · <what was decided> — <why> — <what it costs if wrong>
@@ -97,7 +106,7 @@ A task that did not close is a strike, not a retry: a `FAILED` report, a report 
 
 1. Write what defeated the task to the plan's `ruling.md`, tagged with this task's number, along with every ruling the report carried.
 2. Restore BASE: `git reset --hard <BASE>` if a commit landed, then `git checkout -- .` and `git clean -fd` the task's `Files` and anything else the worker left, so `git status --porcelain` is silent. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
-3. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `slug_finish <slug> blocked "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+3. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
 
 ## Rules
 

@@ -79,9 +79,9 @@ Every phase ends in exactly one of these changes, applied after its commit — e
 | `IMPLEMENT` | a task the plan lacked added | `tasks.sh add <slug> '[…]'` — appends it pending, so the slug is not released early |
 | `REVIEW` | fix tasks added, rounds remain | `tasks.sh add <slug> '[…]'` — back to `IMPLEMENT` with the fix tasks pending |
 | `REVIEW` | nothing left to fix, or the rounds are spent | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` |
-| `ARCHIVE` | `done.md` written | `slug_finish <slug> done` — the archiver script does this itself |
+| `ARCHIVE` | `done.md` written | `slug_done <slug> "<reason>"` — the archiver script does this itself |
 | any phase | the phase defeated you | `slug_strike <slug> <PHASE>`, and no phase change |
-| any phase | third strike, `blocked.md` written | `slug_finish <slug> blocked "<reason>"` (see *Three strikes*) |
+| any phase | third strike, `blocked.md` written | `bash <plugin_root>/scripts/block_slug.sh <slug> "<reason>"` (see *Three strikes*) |
 
 Never set a phase by hand where a ledger helper exists: `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW` in place of `tasks.sh close` leaves tasks pending in the ledger, and every later reader is lied to.
 

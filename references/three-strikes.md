@@ -28,7 +28,7 @@ in the same iteration, in this order:
 
 1. Write `.spectomat/<slug>/blocked.md` naming the phase and the reason, and
    commit it.
-2. Call `scripts/utils.sh`'s `slug_finish <slug> blocked "<reason>"`, then log
+2. Run `bash <plugin_root>/scripts/block_slug.sh <slug> "<reason>"`, then log
    the reason.
 
 **The order is load-bearing.** The state call is what takes the slug out of the

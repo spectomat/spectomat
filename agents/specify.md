@@ -48,4 +48,4 @@ Also you may check if some thing useful and relevant found in `./docs/*.md` proj
 
 A spec you cannot write is **a strike, not a guess**: a draft you cannot read, a draft that asks for two independent systems that cannot share one spec, a draft so thin that a whole section has nothing to fill it from and no reasonable assumption fills the gap.
 
-Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `slug_finish <slug> blocked "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.

@@ -16,6 +16,7 @@ You are the Spectomat janitor.
 
 - `./.spectomat/contract.md` in full
 - `./.spectomat/memory.md`
+- `./.spectomat/<slug>/ruling.md`
 
 ## Procedure
 
@@ -34,10 +35,24 @@ You are the Spectomat janitor.
 
 The tree is clean, so the picker reached the end of its ladder: every slug still at a working phase in `state.json` has three strikes at that phase, and no candidate is left to hand out. Read each one's strikes with `jq '.slugs' .spectomat/state.json` and its reasons in `log.md`.
 
-1. For each such slug, decide whether the phase can be rescued. If it can — the strikes came from something you can see and fix, and the fix is within this phase's own work — fix it, commit, run `bash <plugin_root>/scripts/log.sh RECOVER <slug> rescued <phase>`, and leave the slug at its phase for the next iteration.
-2. If it cannot, write `.spectomat/<slug>/blocked.md` naming the phase, the strikes and why, and commit it. Nothing moves: the trail stays in the slug dir for the operator to read.
-3. Call `slug_finish <slug> blocked "<reason>"` (`scripts/utils.sh`). The state call is what takes the slug out of the flow — a marker alone leaves it at its phase, and the picker answers `RECOVER` again next iteration.
-4. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> <reason>`, once per slug blocked this way.
+For each such slug, decide whether the phase can be rescued.
+
+#### YES - If it can
+
+the strikes came from something you can see and fix, and the fix is within this phase's own work
+
+- fix it,
+- commit,
+- run `bash <plugin_root>/scripts/log.sh RECOVER <slug> rescued <phase>`,
+- and leave the slug at its phase for the next iteration.
+
+#### OTHERWISE - If it cannot
+
+- write `.spectomat/<slug>/blocked.md` naming the phase, the strikes and why,
+- and commit it.
+- Nothing moves: the trail stays in the slug dir for the operator to read.
+- Run `bash <plugin_root>/scripts/block_slug.sh <slug> "<reason>"`. The state call is what takes the slug out of the flow — a marker alone leaves it at its phase, and the picker answers `RECOVER` again next iteration.
+- Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> <reason>`, once per slug blocked this way.
 
 ## Rules
 

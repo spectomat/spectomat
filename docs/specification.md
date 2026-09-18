@@ -110,7 +110,7 @@ The task handed to the subagent is the picker's frontmatter block, verbatim, fen
 
 ### 3.4 Failure path
 
-A phase agent that cannot finish appends `(strike N)` to its log line and stops; the next iteration's picker skips that slug in favour of the next candidate in the same stage (§5.2). On its own third strike the agent writes `<slug>/blocked.md` with the reason, calls `slug_finish <slug> blocked <reason>` to move the slug's `state.json` entry to `BLOCKED`, and logs the reason (D5); the state call is what takes the slug out of the flow, so a marker written without it leaves the slug sitting at its working phase for the rest of the flow — at `STRIKE_LIMIT` the picker skips it and falls through to `RECOVER`, and below the limit it hands the slug back to the same phase again (D27). `agent-archive.sh` does the same for the `ARCHIVE` phase (§5.5). Nothing moves: the trail stays in the slug dir.
+A phase agent that cannot finish appends `(strike N)` to its log line and stops; the next iteration's picker skips that slug in favour of the next candidate in the same stage (§5.2). On its own third strike the agent writes `<slug>/blocked.md` with the reason, runs `scripts/block_slug.sh <slug> <reason>` to move the slug's `state.json` entry to `BLOCKED`, and logs the reason (D5); the state call is what takes the slug out of the flow, so a marker written without it leaves the slug sitting at its working phase for the rest of the flow — at `STRIKE_LIMIT` the picker skips it and falls through to `RECOVER`, and below the limit it hands the slug back to the same phase again (D27). `agent-archive.sh` does the same for the `ARCHIVE` phase (§5.5), via the same script. Nothing moves: the trail stays in the slug dir.
 
 An iteration that dies mid-phase leaves a dirty tree; the next picker returns `RECOVER` before any other test, and the janitor either finishes and commits the phase or discards the paths the factory owns.
 
@@ -248,7 +248,7 @@ archive(slug):
   git commit -m 'chore(<slug>): archived' (or '… blocked after 3 strikes')
       or strike_and_exit
 
-  slug_finish(slug, block ? 'blocked' : 'done', reason)   # terminal phase, after the commit lands
+  (block ? block_slug(slug, reason) : slug_done(slug, reason))   # terminal phase, after the commit lands
   log '- <ts> · ARCHIVE · <slug> · archived · gates passed'
 ```
 
@@ -319,8 +319,8 @@ The flow's state lives in two files. The gitignored `state.json` holds the flow 
 | `tasks[].status` | `pending` until the `IMPLEMENT` phase closes the task, `done` after; nothing else. Set by `tasks.sh` alone — a caller's own value is discarded, so a plan cannot arm itself closed |
 | `tasks[].dependsOn` | the ids of every task whose Produced Interfaces this one consumes; only lower ids. `tasks.sh next` picks the lowest-id pending task whose every dependency is `done`, and prints nothing on a cycle |
 | `tasks[].commits` | the `<base7>..<head7>` range of that task's one `feat` commit, recorded at close. The `REVIEW` phase reconstructs the plan's whole diff from the first task's base to the last task's head |
-| `slugs[<slug>].reason` | why the slug finished — the gate that failed, or `gates passed`; written by `slug_finish`, absent while the slug is working |
-| `slugs[<slug>].finished_at` | when it finished, UTC; written by `slug_finish` alongside `reason` |
+| `slugs[<slug>].reason` | why the slug finished — the gate that failed, or `gates passed`; written by `slug_done` or `block_slug.sh`, absent while the slug is working |
+| `slugs[<slug>].finished_at` | when it finished, UTC; written by `slug_done` or `block_slug.sh` alongside `reason` |
 | `plugin_root` | the plugin copy that armed the flow, written once at arming |
 
 `plugin_root` is authoritative for the floor, not for the scripts. A floor-side reader — the operator, `/spectomat:status`, the janitor — has no other way to name which plugin copy armed this flow, and `print_iteration` prints it as a `plugin:` line. No script reads it to locate anything: each derives `PLUGIN_ROOT` from its own `BASH_SOURCE`, and a phase agent resolves `<plugin_root>` from the picker's verdict block, as `templates/contract.md` directs.

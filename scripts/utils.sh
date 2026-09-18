@@ -6,6 +6,7 @@
 # Sets no shell options; each script chooses its own set -e/-u/pipefail.
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/slug_utils.sh"
 FLOOR=".spectomat"
 WISHLIST=".wishlist"   # the one entrance: raw ideas, one .md each; sits beside the floor, not in it
 STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
@@ -306,38 +307,14 @@ task_close() {
   [[ "$(tasks_pending "$slug")" != "0" ]] || slug_set_phase "$slug" REVIEW
 }
 
-# slug_finish SLUG done|blocked [REASON] — the slug leaves the flow and keeps
-# its entry at a terminal phase. state.json is the whole record, so a finished
+# slug_done SLUG [REASON] — the slug leaves the flow DONE and keeps its
+# entry at that terminal phase. state.json is the whole record, so a finished
 # slug is recorded, not forgotten: the counters and strikes it ends with stay
-# readable, and /spectomat:status counts it from here rather than from the
-# done.md or blocked.md its dir carries.
-slug_finish() {
-  local phase=DONE
-  [[ "$2" != blocked ]] || phase=BLOCKED
-  state_apply '.slugs[$s].phase = $p | .slugs[$s].reason = $r | .slugs[$s].finished_at = $t' \
-    --arg s "$1" --arg p "$phase" --arg r "${3:-}" --arg t "$(date -u +%FT%RZ)"
-}
-
-# slugs_at_phase PHASE — slugs at PHASE, alphabetically. The picker's candidate
-# sets, the finished counts and the blocked list are all this one shape.
-#
-# The file check comes first and the jq failure is swallowed: command-run.sh's
-# report_floor calls this before arm_flow has written state.json, and a script
-# running set -e with pipefail would die on the failing jq inside the pipeline.
-slugs_at_phase() {
-  [[ -f "$STATE_FILE" ]] || return 0
-  jq -r --arg p "$1" '.slugs // {} | to_entries[] | select(.value.phase == $p) | .key' \
-    "$STATE_FILE" 2>/dev/null | sort || true
-}
-
-# The slugs still in the flow: every one whose phase is not terminal. Empty is
-# what FINISH means, and it is not the same as "no slugs" — a finished flow
-# keeps every slug it ever had, at DONE or BLOCKED.
-slugs_unfinished() {
-  [[ -f "$STATE_FILE" ]] || return 0
-  jq -r '.slugs // {} | to_entries[]
-    | select(.value.phase != "DONE" and .value.phase != "BLOCKED") | .key' \
-    "$STATE_FILE" 2>/dev/null | sort || true
+# readable, and /spectomat:status counts it from here rather than from
+# done.md. The BLOCKED terminal phase is block_slug.sh's own, separate write.
+slug_done() {
+  state_apply '.slugs[$s].phase = "DONE" | .slugs[$s].reason = $r | .slugs[$s].finished_at = $t' \
+    --arg s "$1" --arg r "${2:-}" --arg t "$(date -u +%FT%RZ)"
 }
 
 # slug_strike SLUG PHASE — bump PHASE's strike count for SLUG and print the new
