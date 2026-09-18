@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS carries bash 3.2, which is the floor the scripts target.
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report versions
+        run: |
+          bash --version | head -1
+          jq --version
+          git --version
+
+      - name: Check manifests are valid JSON
+        run: |
+          jq -e . .claude-plugin/plugin.json > /dev/null
+          jq -e . .claude-plugin/marketplace.json > /dev/null
+
+      - name: Check the plugin version matches the marketplace entry
+        run: |
+          name=$(jq -r .name .claude-plugin/plugin.json)
+          jq -e --arg n "$name" '.plugins | map(select(.name == $n)) | length == 1' \
+            .claude-plugin/marketplace.json > /dev/null
+
+      - name: Syntax check
+        run: bash -n scripts/*.sh tests/*.sh templates/gates.sh
+
+      - name: Self-test
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "CI"
+          git config --global init.defaultBranch main
+          scripts/selftest.sh

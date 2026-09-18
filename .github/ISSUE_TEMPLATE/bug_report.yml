@@ -1,0 +1,71 @@
+name: Bug report
+description: Something in the flow went wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Terms used below are defined in [the glossary](https://github.com/spectomat/spectomat/blob/main/references/glossary.md) — flow, iteration, phase, task, floor, slug, strike.
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: From `.claude-plugin/plugin.json`, or `claude plugin list`.
+      placeholder: "0.11.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      description: Which phase was running when it went wrong?
+      options:
+        - SPECIFY
+        - REVIEW-SPEC
+        - PLAN
+        - IMPLEMENT
+        - REVIEW
+        - ARCHIVE
+        - RECOVER
+        - Not a phase (install, command, hook)
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Drop a draft in `.spectomat/drafts/`
+        2. Run `/spectomat:run`
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: state
+    attributes:
+      label: Flow state
+      description: Output of `/spectomat:status`, and `.spectomat/state.json` if you still have it. Redact anything private.
+      render: json
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, bash version (`bash --version`), `jq --version`, Claude Code version.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I restarted Claude Code after installing or updating the plugin.
+          required: true
+        - label: "`jq` is on my PATH."
+          required: true

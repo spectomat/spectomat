@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: User guide
+    url: https://github.com/spectomat/spectomat/blob/main/docs/guide.md
+    about: How the flow works, shown in a session by /spectomat:help.
+  - name: Specification
+    url: https://github.com/spectomat/spectomat/blob/main/docs/specification.md
+    about: The normative spec — domain model, algorithms, and the design decisions already taken.
+  - name: Security report
+    url: https://github.com/spectomat/spectomat/security/advisories/new
+    about: Report a vulnerability privately. Do not open a public issue.
