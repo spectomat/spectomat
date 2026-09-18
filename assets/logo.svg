@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Spectomat">
+  <title>Spectomat</title>
+  <desc>Six arc segments forming a cycle — the six phases of the flow — with one iteration marked at the top and a spec sheet at the centre.</desc>
+
+  <!-- The six phases: SPECIFY, REVIEW-SPEC, PLAN, IMPLEMENT, REVIEW, ARCHIVE.
+       The gap at twelve o'clock is wider than the rest to seat the marker. -->
+  <g fill="none" stroke="#d97757" stroke-width="15" stroke-linecap="round">
+    <path d="M 153.14 45.76 A 86 86 0 0 1 196.68 76.24"/>
+    <path d="M 207.16 94.40 A 86 86 0 0 1 207.16 161.60"/>
+    <path d="M 196.68 179.76 A 86 86 0 0 1 138.48 213.36"/>
+    <path d="M 117.52 213.36 A 86 86 0 0 1 59.32 179.76"/>
+    <path d="M 48.84 161.60 A 86 86 0 0 1 48.84 94.40"/>
+    <path d="M 59.32 76.24 A 86 86 0 0 1 102.86 45.76"/>
+  </g>
+
+  <!-- One iteration, on the cycle. Radius 15 against a 7.5 stroke half-width,
+       with 3px of air to each flanking cap, so it never touches an arc. -->
+  <circle cx="128" cy="42" r="15" fill="#d97757"/>
+
+  <!-- The spec at the centre: three ruled lines, the last one short. -->
+  <g stroke="#d97757" stroke-width="15" stroke-linecap="round">
+    <path d="M 90 100 H 166"/>
+    <path d="M 90 128 H 166"/>
+    <path d="M 90 156 H 128"/>
+  </g>
+</svg>
