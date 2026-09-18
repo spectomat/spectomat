@@ -15,30 +15,30 @@ You are one iteration of the Spectomat `Flow` performing the `IMPLEMENT` phase.
 
 - `<plugin_root>/references/three-strikes.md`, when a task defeats you, and `<plugin_root>/references/log-format.md`, for the log line you write at the close
 - `./.spectomat/memory.md` — read in step 1 of `## Commit boundary`, when you rule on the worker's `Memory:` lines
-- the plan overview `.spectomat/<slug>/plan.md` — its task table gives `Depends on`; a task is *ready* when every task it depends on has an entry in `result.md`
+- the ledger `.spectomat/<slug>/tasks.json` — the single source of truth for this plan's tasks: which exist, what each depends on, which are done and what each one closed with. You never read it by hand or edit it: `<plugin_root>/scripts/tasks.sh` is the whole interface.
 - a scratch directory `.spectomat/work/<slug>/` (gitignored) for anything bulky you do not want in a commit, and where the task agent leaves its gates log
 
 ## Procedure
 
 ```text
-tasks/task-NN-*.md ──▶ [ IMPLEMENT ] ──▶ Agent(spectomat:task) ──▶ commit (feat)
-                       │                                          │
-                       ◀──────────── report + gates log ──────────┘
-                       ├──▶ verify against git and the log
-                       └──▶ result.md (chore)
-                       │
-                       ▼
-         state: slug_task_done → tasks_done++
-                       │
-             tasks_done == tasks_total?
-                │ no            │ yes
-                ▼               ▼
-           next task           REVIEW
+tasks.json ──▶ [ IMPLEMENT ] ──▶ Agent(spectomat:task) ──▶ commit (feat)
+               │                                           │
+               ◀──────────── report + gates log ───────────┘
+               ├──▶ verify against git and the log
+               └──▶ ruling.md + memory.md (chore)
+               │
+               ▼
+      tasks.sh close → status "done", commits/tests/gates recorded
+               │
+       any task still pending?
+        │ yes           │ no
+        ▼               ▼
+   next task           REVIEW
 ```
 
-1. Take the next ready task: the lowest-numbered task file, under your task's `slug:`, with no entry in the plan's `result.md` and whose `Depends on` tasks all have one — `jq -r --arg s '<slug>' '.slugs[$s] | "\(.tasks_done)/\(.tasks_total)"' .spectomat/state.json`.
-2. Read the task file `.spectomat/<slug>/tasks/task-NN-*.md` you picked, for its `Files` and its Step 5 commit message — you verify against them in step 5 of `## Run the task`. You do not build it: the task agent does, from that file alone.
-3. Execute the task under `## Run the task` below.
+1. **Take the next ready task.** `bash <plugin_root>/scripts/tasks.sh next <slug>` prints its id — the lowest-numbered task still `pending` whose every `dependsOn` is `done`. Empty output while tasks remain pending means the ledger's `dependsOn` rows hold a cycle or name a task that does not exist; see the last rule below.
+2. **Read its task file.** `bash <plugin_root>/scripts/tasks.sh show <slug> <id>` gives its `file`; read `.spectomat/<slug>/<file>` for its `Files` and its Step 5 commit message — you verify against them in step 5 of `## Run the task`. You do not build it: the task agent does, from that file alone.
+3. Execute the task under `## Run the task` below. `NN` throughout is the id zero-padded to two digits, matching the task filename (`1` → `task-01-*.md`, `Task 01`).
 
 ## Run the task
 
@@ -58,27 +58,26 @@ tasks/task-NN-*.md ──▶ [ IMPLEMENT ] ──▶ Agent(spectomat:task) ─�
    - `git rev-list --count <BASE>..HEAD` prints `1`, and that commit's message is the task's Step 5 message
    - `git show --stat --format= HEAD` names only the task's `Files` plus the fixtures the report's `Rulings` name
    - the gates log exists, its last line is `exit: 0`, and it is the run that backs the numbers you record: read the test count off the log, not off the report
-6. **Record the result.** Leave the task file untouched — it carries no checkboxes, and `state.json` is the counter — and append this task's entry to the plan's `result.md` (a sibling of the overview, creating it if it does not yet exist) with the commit range and the numbers from the gates log. `NN` is always two digits, matching the task filename (`task-01-*.md` → `Task 01`):
-
-   ```text
-   ## Task NN
-   - Commits: <base7>..<head7>
-   - Tests: <n>/<n> (<files>)
-   - Gates: passed (<what the log reported>)
-   ```
-
-   Append every line under the report's `Rulings:` to the plan's `ruling.md` in the shape `## Rulings` gives, tagged `Task NN`.
-
+6. **Record the rulings.** Leave the task file untouched — it carries no checkboxes, and the ledger is the record. Append every line under the report's `Rulings:` to the plan's `ruling.md` (a sibling of the overview, creating it if it does not yet exist) in the shape `## Rulings` gives, tagged `Task NN`. The task's own result goes to the ledger in `## Commit boundary`, not here and not to a file you write.
 7. **Close the task.** Follow `## Commit boundary`.
 
 ## Commit boundary
 
-**One task is one `feat` commit by the task agent; recording that task's result is a second `chore` commit by you.**
+**One task is one `feat` commit by the task agent; recording that task's close is a second `chore` commit by you.**
 
-The `REVIEW` phase reconstructs the plan's whole diff from the `Commits:` range each task's entry in `result.md` records, so a task whose entry is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file the task touched out of one.
+The `REVIEW` phase reconstructs the plan's whole diff from the `commits` range the ledger holds for each task, so a task whose range is missing or wrong is a task nobody can review. Never fold two tasks into one commit, and never leave a file the task touched out of one.
 
 1. **Memory.** Follow `references/memorize.md` in full, inline, against this task: the candidates are the report's `Memory:` lines plus anything this iteration taught you, and you apply `memory.md`'s three tests to each — the worker proposes, you decide.
-2. **Commit the close.** `result.md`, `ruling.md` and the memory edit together: `chore(<slug>): Task NN closed`. Then advance `.spectomat/state.json` with `slug_task_done <slug>` — it bumps `tasks_done`, and when that reaches `tasks_total` it moves the slug to `REVIEW`, which is the only thing that sends this plan on. Call it exactly once per task, after the commit and never before, and never call `slug_set_phase <slug> REVIEW` by hand: a hand-set phase leaves `tasks_done` short and the counters lie for the rest of the flow. Then run `bash <plugin_root>/scripts/log.sh IMPLEMENT <slug> <message>` (see `<plugin_root>/references/log-format.md`); the log is gitignored and never committed. A ruling that affects other tasks is already in `ruling.md`, not a second place to write it.
+2. **Close the task in the ledger.** The `feat` commit has already landed and passed step 5's checks, so the evidence you record here is true when you write it:
+
+   ```bash
+   bash <plugin_root>/scripts/tasks.sh close <slug> <id> "<base7>..<head7>" "<n>/<n> (<files>)" "passed (<what the log reported>)"
+   ```
+
+   It records the commit range and the numbers you read off the gates log, sets that task's `status` to `done`, and — once no task is left pending — moves the slug to `REVIEW`, which is the only thing that sends this plan on. Call it exactly once per task, and never call `slug_set_phase <slug> REVIEW` by hand: a hand-set phase leaves tasks pending in the ledger and every later reader is lied to. It refuses a task that is already `done`, so a repeated call is caught rather than silently doubled.
+
+3. **Commit the close.** `tasks.json`, `ruling.md` and the memory edit together: `chore(<slug>): Task NN closed`. The ledger is committed, so this commit is what puts the close on record in git; leaving it out leaves the tree dirty and the next iteration goes to the janitor.
+4. **Log one line**: `bash <plugin_root>/scripts/log.sh IMPLEMENT <slug> <message>` (see `<plugin_root>/references/log-format.md`); the log is gitignored and never committed. A ruling that affects other tasks is already in `ruling.md`, not a second place to write it.
 
 Then report: the task that closed, its commits, and the gate numbers from the log.
 
@@ -102,16 +101,16 @@ A task that did not close is a strike, not a retry: a `FAILED` report, a report 
 
 ## Rules
 
-- `.spectomat/state.json` counts the work, not the task files: task files carry no checkboxes, and a slug's entry there gives `tasks_total` and `tasks_done`. Work is open while `tasks_done` is below `tasks_total`, and `tasks_done` is how many task files have been closed, so barring a `Depends on` reordering the task you take is number `tasks_done + 1`.
-- If `state.json` cannot be read, fall back to `result.md`: its entries are the per-task record of what closed, one per task.
+- **The ledger counts the work, not the task files and not `state.json`.** Task files carry no checkboxes and `state.json` carries no task counters: `.spectomat/<slug>/tasks.json` holds every task's `status`, `dependsOn` and result, and `tasks.sh` is the only thing that reads or writes it. Work is open while any task is `pending`.
+- Never edit `tasks.json` with `Write`, `Edit` or `jq` — every change goes through `<plugin_root>/scripts/tasks.sh`, which is what keeps the close and the phase move from disagreeing.
 - **Dispatch the code, verify the evidence.** One task is one dispatch of `spectomat:task`: never a second dispatch in one iteration, never a retry, never production code written by you — a worker that failed is a strike.
 - Send the worker the three-line task and nothing else. The task file is its whole brief; it never reads the contract, the plan, the spec or `memory.md`, and what it needed from them the `PLAN` phase put into the task file.
 - **One task per iteration, always.** Nothing is batched and nothing runs in parallel; the plan's dependency order is the execution order.
 - Nobody reads the worker's commit after you. The `REVIEW` phase reads the plan's whole diff once every task is closed, which is iterations away; the gates log is the only check this code gets today, so read it whole and record its numbers.
-- If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview, and raise the counter with `slug_add_tasks <slug> 1` so the slug is not sent to `REVIEW` with a task nobody built; do not absorb it. Fill its `## Context` as the `PLAN` brief requires: the task agent that builds it sees nothing but that file.
-- Do not take a second task in one iteration, or a task whose dependencies are not all closed.
-- Do not call `slug_task_done` for a task whose commit failed step 5's checks, or more than once for one task, or for a task whose commits are not on record in `result.md`.
+- If the task reveals work the plan lacks, add a new task file with the next number and a row in the overview, and add it to the ledger with `bash <plugin_root>/scripts/tasks.sh add <slug> '[{"id": <next>, "name": "…", "file": "tasks/task-<NN>-….md", "component": "…", "covers": [], "dependsOn": [<ids>]}]'`, so the slug is not sent to `REVIEW` with a task nobody built; do not absorb it. Fill its `## Context` as the `PLAN` brief requires: the task agent that builds it sees nothing but that file.
+- Do not take a second task in one iteration, or a task `tasks.sh next` did not name.
+- Do not call `tasks.sh close` for a task whose commit failed step 5's checks, or more than once for one task, or with a commit range you did not read off git.
 - Do not edit the spec, another task's file, or the plan's task table beyond adding a row.
 - Do not edit a plan overview's `## Review` section — that section belongs to the `REVIEW` phase.
 - `.spectomat/memory.md` is where this task's findings go, in step 1 of `## Commit boundary`; you read it there, to judge whether a proposed line is already covered.
-- If no task is ready while `tasks_done` is still below `tasks_total`, the plan's `Depends on` rows contain a cycle or name a task that does not exist. Do not guess an order: record the defect as a ruling in the plan's `ruling.md`, then follow `## When you cannot finish`.
+- If `tasks.sh next` prints nothing while `tasks.sh count <slug> pending` is above zero, the ledger's `dependsOn` rows contain a cycle or name a task that does not exist. Do not guess an order and do not edit the ledger to break the cycle: record the defect as a ruling in the plan's `ruling.md`, then follow `## When you cannot finish`.

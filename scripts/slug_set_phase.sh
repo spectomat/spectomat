@@ -6,7 +6,7 @@
 #   scripts/slug_set_phase.sh <slug> <phase>
 #
 # Never call this for PLAN -> IMPLEMENT or a task close inside IMPLEMENT:
-# those carry task counters and belong to slug_start_tasks / slug_task_done.
+# those carry the task ledger and belong to scripts/tasks.sh.
 
 set -uo pipefail
 

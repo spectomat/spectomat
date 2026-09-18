@@ -28,7 +28,7 @@ Read, and read only:
 - the snippet files it names under `.spectomat/<slug>/snippets/`
 - the repository files its `Files`, `Context` and `Interfaces` sections name, and the code around them
 
-Do not open `.spectomat/<slug>/plan.md`, `spec.md`, `ruling.md`, `result.md`, `.spectomat/contract.md`, `.spectomat/memory.md` or `state.json`. The task file's `## Context` quotes what you need from them. Where the task file is silent, decide, and report the decision as a ruling; where it contradicts itself or names something that does not exist, that is a `FAILED` report, not a hunt.
+Do not open `.spectomat/<slug>/plan.md`, `spec.md`, `ruling.md`, `tasks.json`, `.spectomat/contract.md`, `.spectomat/memory.md` or `state.json`. The task file's `## Context` quotes what you need from them. Where the task file is silent, decide, and report the decision as a ruling; where it contradicts itself or names something that does not exist, that is a `FAILED` report, not a hunt.
 
 ## Rules
 
@@ -36,7 +36,7 @@ You never read the flow's contract, so the rules that bind you are here:
 
 - **Unattended.** Nobody is watching and nobody answers questions. Decide, record the decision in your report, continue.
 - **Your branch.** `git branch --show-current` must print `feat/<slug>` before you touch anything. Never create, switch, merge, rebase or cherry-pick a branch, never create a worktree, never touch another repository. A wrong branch is a `FAILED` report.
-- **Your files.** Write only the task's `Files`, the test fixtures its tests need (each one reported as a ruling naming the file), and the gates log. Nothing else under `.spectomat/`, and never `state.json`, `log.md`, `memory.md`, `result.md`, `ruling.md`, the plan, the spec or the task file itself.
+- **Your files.** Write only the task's `Files`, the test fixtures its tests need (each one reported as a ruling naming the file), and the gates log. Nothing else under `.spectomat/`, and never `state.json`, `log.md`, `memory.md`, `tasks.json`, `ruling.md`, the plan, the spec or the task file itself.
 - **No floor state.** Never call a state or log helper from the plugin's `scripts/` — nothing that advances a slug, counts a strike, finishes a slug or writes a log line; the `IMPLEMENT` phase records, advances and logs from your report.
 - **Honest reporting.** Claim nothing you did not see: no unread gate output, no unwatched test failure. The exit code is the verdict, not your reading of it.
 - **One commit, after green.** Exactly one commit, only after `./.spectomat/gates.sh` exited 0, staged from exactly the task's `Files` plus your fixtures, with the message the task's Step 5 gives. Never commit a partial task.

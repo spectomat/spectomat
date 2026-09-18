@@ -192,27 +192,108 @@ slug_set_phase() {
   state_apply '.slugs[$s].phase = $p' --arg s "$1" --arg p "$2"
 }
 
-# slug_start_tasks SLUG TOTAL — PLAN -> IMPLEMENT: phase, tasks_total, tasks_done=0.
-slug_start_tasks() {
-  state_apply '.slugs[$s].phase = "IMPLEMENT" | .slugs[$s].tasks_total = ($t | tonumber) | .slugs[$s].tasks_done = 0' \
-    --arg s "$1" --arg t "$2"
+# --- the task ledger ------------------------------------------------------
+#
+# .spectomat/<slug>/tasks.json is the single source of truth for one slug's
+# tasks: the list PLAN writes, the dependencies IMPLEMENT picks by, and the
+# per-task record it closes with. Unlike state.json it is committed, so the
+# commit range of every task survives in git (D31). state.json keeps only
+# flow-level state — phase, strikes, iteration — and no task counters.
+#
+#   {"slug": "<slug>",
+#    "tasks": [{"id": 1, "name": "<name>", "file": "tasks/task-01-<name>.md",
+#               "component": "<component>", "covers": ["AC-1.1"],
+#               "dependsOn": [], "status": "pending",
+#               "commits": null, "tests": null, "gates": null}]}
+#
+# `status` is "pending" or "done"; nothing else. A task's `file` is relative to
+# the slug dir, and `dependsOn` holds ids, which are always lower than its own.
+
+# tasks_file SLUG — path to the slug's ledger.
+tasks_file() { printf '%s/%s/tasks.json\n' "$FLOOR" "$1"; }
+
+# tasks_apply SLUG FILTER [JQ_ARGS...] — atomic jq write to the ledger, the
+# same shape as state_apply. JQ_ARGS precede FILTER at the call site.
+tasks_apply() {
+  local slug="$1" filter="$2"; shift 2
+  local f; f="$(tasks_file "$slug")"
+  local tmp="$f.tmp.$$"
+  jq "$@" "$filter" "$f" > "$tmp" && mv "$tmp" "$f"
 }
 
-# slug_task_done SLUG — IMPLEMENT, one task closed: bump tasks_done, and move to
-# REVIEW once every task is done.
-slug_task_done() {
-  state_apply '
-    .slugs[$s].tasks_done += 1
-    | if .slugs[$s].tasks_done == .slugs[$s].tasks_total
-      then .slugs[$s].phase = "REVIEW"
-      else . end
-  ' --arg s "$1"
+# The normalising filter both writers share: a caller gives the fields that
+# describe a task, and every result field is set here, never taken from input.
+# A plan cannot arm itself half-closed, and a fix task cannot arrive "done".
+TASK_SHAPE='{
+  id: .id, name: (.name // ""), file: .file,
+  component: (.component // ""), covers: (.covers // []),
+  dependsOn: (.dependsOn // []),
+  status: "pending", commits: null, tests: null, gates: null }'
+
+# tasks_write SLUG JSON — write the ledger from a JSON array of tasks. Moves no
+# phase: PLAN writes the ledger before its commit, since the file is committed,
+# and calls tasks_start after. JSON is read from the argument, or from stdin
+# when it is "-".
+tasks_write() {
+  local slug="$1" json="${2:--}" f; f="$(tasks_file "$slug")"
+  [[ "$json" != "-" ]] || json="$(cat)"
+  mkdir -p "$(dirname "$f")"
+  printf '%s' "$json" | jq --arg s "$slug" "{slug: \$s, tasks: [ .[] | $TASK_SHAPE ]}" > "$f"
 }
 
-# slug_add_tasks SLUG N — REVIEW PARKED: N fix tasks added, back to IMPLEMENT.
-slug_add_tasks() {
-  state_apply '.slugs[$s].tasks_total += ($n | tonumber) | .slugs[$s].phase = "IMPLEMENT"' \
-    --arg s "$1" --arg n "$2"
+# tasks_start SLUG — PLAN -> IMPLEMENT, the ledger already written and committed.
+tasks_start() { slug_set_phase "$1" IMPLEMENT; }
+
+# tasks_init SLUG JSON — both at once, for a caller not building a commit
+# around the file.
+tasks_init() { tasks_write "$@" && tasks_start "$1"; }
+
+# tasks_add SLUG JSON — REVIEW: append fix tasks to the ledger and send the
+# slug back to IMPLEMENT. Same task shape as tasks_init.
+tasks_add() {
+  local slug="$1" json="${2:--}"
+  [[ "$json" != "-" ]] || json="$(cat)"
+  tasks_apply "$slug" ".tasks += [ \$new[] | $TASK_SHAPE ]" --argjson new "$json" || return 1
+  slug_set_phase "$slug" IMPLEMENT
+}
+
+# task_next SLUG — the id of the next ready task: the lowest-numbered pending
+# task whose every dependsOn is done. Prints nothing when none is ready, which
+# means either the slug is finished or its dependsOn rows hold a cycle — the
+# caller tells the two apart with tasks_pending.
+task_next() {
+  jq -r '
+    (.tasks | map(select(.status == "done") | .id)) as $done
+    | [ .tasks[] | select(.status != "done")
+        | select([ .dependsOn[] | IN($done[]) ] | all) ]
+    | sort_by(.id) | first | if . then .id else empty end
+  ' "$(tasks_file "$1")" 2>/dev/null || true
+}
+
+# tasks_count SLUG [STATUS] — how many tasks the ledger holds, or how many are
+# at STATUS. Prints 0 when there is no ledger.
+tasks_count() {
+  local f; f="$(tasks_file "$1")"
+  [[ -f "$f" ]] || { echo 0; return; }
+  jq -r --arg st "${2:-}" '
+    [ .tasks[] | select($st == "" or .status == $st) ] | length
+  ' "$f" 2>/dev/null || echo 0
+}
+
+# tasks_pending SLUG — how many tasks are not yet done.
+tasks_pending() { tasks_count "$1" pending; }
+
+# task_close SLUG ID COMMITS TESTS GATES — IMPLEMENT, one task closed: record
+# its evidence and mark it done, then move the slug to REVIEW once no task is
+# left pending. The phase move lives here, so a closed task and the transition
+# it earns cannot disagree.
+task_close() {
+  local slug="$1" id="$2"
+  tasks_apply "$slug" '
+    (.tasks[] | select(.id == ($i | tonumber)))
+      |= (.status = "done" | .commits = $c | .tests = $t | .gates = $g)
+  ' --arg i "$id" --arg c "$3" --arg t "$4" --arg g "$5" || return 1
+  [[ "$(tasks_pending "$slug")" != "0" ]] || slug_set_phase "$slug" REVIEW
 }
 
 # slug_finish SLUG done|blocked [REASON] — the slug leaves the flow and keeps

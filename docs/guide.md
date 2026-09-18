@@ -28,7 +28,7 @@ claude plugin install spectomat@spectomat
     spec.md     written by SPECIFY from the draft, then revised once by REVIEW-SPEC; or put a finished spec here yourself
     plan.md     the overview PLAN writes
     tasks/      task-NN-<name>.md per task, each a self-contained brief; snippets/ holds the code their steps name
-    ruling.md   decisions and defects that bind one task; result.md records each closed task's commits
+    ruling.md   decisions and defects that bind one task; tasks.json is the task ledger, holding each task's status, dependsOn and closing commits
     done.md     written by ARCHIVE once REVIEW has passed the plan and the gates are green
     blocked.md  written instead, with the reason, when a phase fails three times
   log.md      one line per phase, gitignored

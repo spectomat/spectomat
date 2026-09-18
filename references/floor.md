@@ -12,7 +12,7 @@ Floor is the directories and files the Flow creates and works with in the user's
     snippets/    the code a task's step names instead of inlining it
       task-NN-stepM.<ext>.snippet   one per code-bearing step; the .snippet suffix keeps gates off it
     ruling.md    decisions and defects that bind one task, one entry per task — created when the first one is earned
-    result.md    one entry per closed task, each giving that task's commit range
+    tasks.json   the task ledger: every task, its dependsOn and status, and the commits/tests/gates each closed with — committed, written only through scripts/tasks.sh
     done.md      written by ARCHIVE when the plan ships: the committed record that the slug finished
     blocked.md   written instead, with the reason, when a phase fails three times: the committed record that it was given up on
   work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky — gitignored

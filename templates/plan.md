@@ -33,14 +33,15 @@ the libraries and tools.
 Each task is an independent piece of work.
 
 One file per task, `task-NN-<name>.md`, under `.spectomat/{{SLUG}}/tasks/`, from `templates/task.md`.
-The `IMPLEMENT` phase executes them one at a time, in this order, one task per iteration;
+The ledger `.spectomat/{{SLUG}}/tasks.json` is the source of truth for the task list: its `dependsOn` and `status` fields are what the `IMPLEMENT` phase picks and closes by, and this table is the readable view of it.
+The `IMPLEMENT` phase executes them one at a time, in dependency order, one task per iteration;
 the `REVIEW` phase may append further ones after the last.
-`Depends on` may name only lower-numbered tasks, and every file in the map has exactly one owning task.
+Every file in the map has exactly one owning task.
 
-| # | File | Component | Covers | Depends on |
-| --- | --- | --- | --- | --- |
-| 1 | `task-01-<name>.md` | `<component>` | AC-1.1, AC-1.2 | — |
-| 2 | `task-02-<name>.md` | `<component>` | AC-2.1 | 1 |
+| # | File | Component | Covers |
+| --- | --- | --- | --- |
+| 1 | `task-01-<name>.md` | `<component>` | AC-1.1, AC-1.2 |
+| 2 | `task-02-<name>.md` | `<component>` | AC-2.1 |
 
 ## Coverage
 

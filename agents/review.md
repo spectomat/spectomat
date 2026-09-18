@@ -17,7 +17,7 @@ You are one iteration of the Spectomat `Flow` performing the `REVIEW` phase.
 - `./.spectomat/contract.md` in full
 - the plan overview `.spectomat/<slug>/plan.md` — Goal, Global Constraints, File map, Coverage table
 - `.spectomat/<slug>/ruling.md`, if it exists — every ruling the `IMPLEMENT` phase left, tagged by task
-- `.spectomat/<slug>/result.md` — one entry per task, each giving that task's commit range
+- the ledger `.spectomat/<slug>/tasks.json` — every task, its `dependsOn`, and the `commits` range, `tests` and `gates` each one closed with. Read it with `bash <plugin_root>/scripts/tasks.sh show <slug>`, never by hand.
 - every task file `.spectomat/<slug>/tasks/task-NN-*.md` — its Constraints, Files, Interfaces, Covers and Steps are the requirements it was built against
 - the spec `.spectomat/<slug>/spec.md` — the criteria the Coverage table claims to have covered
 - `.spectomat/memory.md` — how this codebase does things. Context, not a requirement: cite it when the diff departs from a pattern it records.
@@ -26,14 +26,14 @@ You are one iteration of the Spectomat `Flow` performing the `REVIEW` phase.
 ## Procedure
 
 ```text
-plan + tasks + result.md ──▶ [ REVIEW ] ──┬──▶ critical/important → tasks/task-NN-*.md (fix tasks)
-                                          └──▶ minor              → ruling.md
+plan + tasks + tasks.json ──▶ [ REVIEW ] ──┬──▶ critical/important → tasks/task-NN-*.md + tasks.sh add
+                                           └──▶ minor              → ruling.md
                         │
                         ▼
                 no C/I findings, or round == MAX_REVIEW_ROUNDS?
                         │ yes                          │ no
                         ▼                              ▼
-     state: phase → ARCHIVE          state: slug_add_tasks → IMPLEMENT
+     state: phase → ARCHIVE          state: tasks.sh add → IMPLEMENT
 ```
 
 1. Read the diff under The diff below.
@@ -43,7 +43,7 @@ plan + tasks + result.md ──▶ [ REVIEW ] ──┬──▶ critical/import
 
 ## Rules
 
-- You are dispatched on a plan whose every task is closed — `state.json`'s `tasks_done` for this slug equals its `tasks_total`, and the plan's `result.md` has an entry per task.
+- You are dispatched on a plan whose every task is closed — no task in the ledger is still `pending`, and every one carries a `commits` range.
 - You read what the plan actually built, you decide whether it may be archived, and you write that decision into the plan overview. **Nothing else releases a plan to `ARCHIVE`.**
 - **Change no source file and no test.** You do not fix what you find: you write the fix as a task, and the `IMPLEMENT` phase builds it under TDD in a later iteration. The only files you write are the plan overview and the task files you add, both under `.spectomat/`.
 - Do not fix a finding yourself, however small.
@@ -55,7 +55,7 @@ plan + tasks + result.md ──▶ [ REVIEW ] ──┬──▶ critical/import
 
 ## The diff
 
-The plan's range runs from the first task's base to the last task's head, both read off the `Commits:` line of each task's entry in `result.md`.
+The plan's range runs from the first task's base to the last task's head, both read off the `commits` field of each task in the ledger — `bash <plugin_root>/scripts/tasks.sh show <slug>` prints them all.
 
 ```bash
 mkdir -p .spectomat/work/<slug>
@@ -72,7 +72,7 @@ No one reviewed these commits as they landed. This is the only adversarial read 
 
 ### Part 1 — Spec compliance
 
-Per task: **Missing** — a step the task file asks for that its `result.md` entry claims as built but that the diff does not show, or a `Covers` criterion nothing implements. **Extra** — a file outside that task's `Files`, or behaviour nobody asked for. **Misunderstood** — the right feature built the wrong way, or a constant that does not match the spec's value.
+Per task: **Missing** — a step the task file asks for that its ledger entry claims as built but that the diff does not show, or a `Covers` criterion nothing implements. **Extra** — a file outside that task's `Files`, or behaviour nobody asked for. **Misunderstood** — the right feature built the wrong way, or a constant that does not match the spec's value.
 
 Then the Coverage table as a whole: every criterion in the spec, and whether the code satisfies it. A criterion the table maps to a task that did not in fact implement it is the most expensive defect this phase can catch.
 
@@ -113,18 +113,18 @@ Then append to the overview's `## Review`:
 
 Then advance `.spectomat/state.json` — every round ends in exactly one of these three, and a round that ends in none leaves the slug at `REVIEW` for the picker to hand you again:
 
-| Situation | `state.json` change |
+| Situation | The change |
 | --- | --- |
 | No Critical and no Important finding this round | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` |
-| Fix tasks added and R < `MAX_REVIEW_ROUNDS` | `slug_add_tasks <slug> <n>`, n the fix tasks just added — it moves the slug back to `IMPLEMENT` and raises `tasks_total` by n |
+| Fix tasks added and R < `MAX_REVIEW_ROUNDS` | `bash <plugin_root>/scripts/tasks.sh add <slug> '[…]'`, one object per fix task just added — it appends them to the ledger at `pending` and moves the slug back to `IMPLEMENT` |
 | R = `MAX_REVIEW_ROUNDS` and findings remain | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` — the rounds are spent, so the plan ships with every open finding ruled on in `ruling.md`, and a reader knows what shipped and why |
 
-`slug_add_tasks` is the only change that sends a plan back, and `ARCHIVE` is irreversible: a slug moved to `ARCHIVE` is never reviewed again.
+`tasks.sh add` is the only change that sends a plan back, and `ARCHIVE` is irreversible: a slug moved to `ARCHIVE` is never reviewed again. Its task objects take the same fields the `PLAN` brief's ledger table gives — `id`, `name`, `file`, `component`, `covers`, `dependsOn` — with ids continuing from the last task in the ledger, and `dependsOn` naming whichever tasks a fix builds on. Never edit `tasks.json` by hand.
 
-Commit everything you wrote in one commit: `chore(<slug>): review round R`. Then apply the `state.json` change above, then run `bash <plugin_root>/scripts/log.sh REVIEW <slug> <message>` (see `<plugin_root>/references/log-format.md`); the log is gitignored and never committed.
+Apply the change above **before** the commit when it is `tasks.sh add`: the ledger is a committed file, so it belongs in this round's commit. Then commit everything you wrote in one commit: `chore(<slug>): review round R`. For the two `ARCHIVE` rows, order does not matter — `state.json` is gitignored. Then run `bash <plugin_root>/scripts/log.sh REVIEW <slug> <message>` (see `<plugin_root>/references/log-format.md`); the log is gitignored and never committed.
 
 Then report: the round, the counts by severity, the tasks you added, and the phase you advanced to (if any).
 
 ## When you cannot finish
 
-A plan you cannot review is a strike, not a guess: a `result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, then follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `slug_finish <slug> blocked "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+A plan you cannot review is a strike, not a guess: a ledger entry with no `commits` range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, then follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `slug_finish <slug> blocked "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.

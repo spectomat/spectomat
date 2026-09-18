@@ -80,25 +80,44 @@ spec() {
   fixture_commit
 }
 
+# plan SLUG TASKS OPEN [reviewed] — an overview, TASKS task files, and the
+# ledger holding TASKS tasks of which OPEN are still pending. Each task depends
+# on the one before it, which is the shape a real PLAN writes and the one that
+# exercises task_next's dependency walk.
 plan() {
-  local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i f done_n
+  local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i f done_n rows
   mkdir -p "$FIXTURE/.spectomat/$slug/tasks"
   printf 'overview\n' > "$FIXTURE/.spectomat/$slug/plan.md"
+  done_n=$((tasks - open))
+  rows=""
   i=1
   while [[ $i -le $tasks ]]; do
     printf -v f '%s/.spectomat/%s/tasks/task-%02d-x.md' "$FIXTURE" "$slug" "$i"
     printf 'step\n' > "$f"
+    rows+="$(ledger_row "$slug" "$i" "$([[ $i -le $done_n ]] && echo done || echo pending)")"
+    [[ $i -eq $tasks ]] || rows+=","
     i=$((i + 1))
   done
-  done_n=$((tasks - open))
+  printf '{"slug": "%s", "tasks": [%s]}\n' "$slug" "$rows" \
+    > "$FIXTURE/.spectomat/$slug/tasks.json"
   if [[ -n "$reviewed" ]]; then
-    state_slug "$slug" ARCHIVE "$tasks" "$done_n"
+    state_slug "$slug" ARCHIVE
   elif [[ $open -eq 0 ]]; then
-    state_slug "$slug" REVIEW "$tasks" "$done_n"
+    state_slug "$slug" REVIEW
   else
-    state_slug "$slug" IMPLEMENT "$tasks" "$done_n"
+    state_slug "$slug" IMPLEMENT
   fi
   fixture_commit
+}
+
+# ledger_row SLUG ID STATUS — one task object, depending on the task before it.
+# A done task carries a plausible commit range; a pending one carries nulls.
+ledger_row() {
+  local slug="$1" id="$2" status="$3" dep="[]" res='null, "tests": null, "gates": null'
+  [[ "$id" -eq 1 ]] || dep="[$((id - 1))]"
+  [[ "$status" != done ]] || res='"aaaaaaa..bbbbbbb", "tests": "1/1 (x)", "gates": "passed"'
+  printf '{"id": %d, "name": "x", "file": "tasks/task-%02d-x.md", "component": "x", "covers": [], "dependsOn": %s, "status": "%s", "commits": %s}' \
+    "$id" "$id" "$dep" "$status" "$res"
 }
 
 # plan_bare SLUG — an overview with no task files, the half-finished PLAN phase
@@ -144,15 +163,12 @@ gates_block() {
   fixture_commit
 }
 
-# state_slug SLUG PHASE [TASKS_TOTAL TASKS_DONE] — set (or create) SLUG's
-# state.json entry.
+# state_slug SLUG PHASE — set (or create) SLUG's state.json entry. state.json
+# carries no task counters: the ledger does, and plan() writes it.
 state_slug() {
-  local slug="$1" phase="$2" total="${3:-}" done_n="${4:-}" filter
-  filter='.slugs[$s].phase = $p'
-  [[ -z "$total" ]] || filter+=' | .slugs[$s].tasks_total = ($t | tonumber)'
-  [[ -z "$done_n" ]] || filter+=' | .slugs[$s].tasks_done = ($d | tonumber)'
-  jq --arg s "$slug" --arg p "$phase" --arg t "$total" --arg d "$done_n" \
-    "$filter" "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
+  local slug="$1" phase="$2"
+  jq --arg s "$slug" --arg p "$phase" \
+    '.slugs[$s].phase = $p' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
     && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
 }
 

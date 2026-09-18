@@ -4,8 +4,9 @@
 #   source "$(dirname "${BASH_SOURCE[0]}")/print.sh"
 #
 # Every print_* writes one "--- section ---" block to stdout and needs FLOOR,
-# STATE_FILE, MEMORY, count, state_field, slugs_at_phase and slugs_unfinished
-# from utils.sh. Every count comes from state.json; the one floor read left is
+# STATE_FILE, MEMORY, count, state_field, slugs_at_phase, slugs_unfinished and
+# the tasks_* ledger helpers from utils.sh. Phase counts come from state.json
+# and task counts from each slug's tasks.json; the one floor read left is
 # drafts/, the intake inbox, which is not flow state.
 
 print_iteration() {
@@ -39,18 +40,25 @@ memory_entries() {
 # One line per slug state.json tracks, finished ones included: a slug at DONE or
 # BLOCKED shows its final counters, which is the whole point of keeping its
 # entry. BLOCKED is 7 characters and fits the phase field.
+#
+# state.json holds the phase and nothing about tasks, so the counts come from
+# each slug's own ledger, `.spectomat/<slug>/tasks.json`. That is one extra
+# read per slug and no directory listing (D27): the slug names are state.json's
+# own keys, and the path is composed, never globbed. A slug with no ledger — one
+# that has not reached PLAN — reads as 0 tasks, which is what it has.
 print_plans() {
-  local slug phase tasks_total tasks_done next
+  local slug phase total done_n next
   [[ -f "$STATE_FILE" ]] || return 0
-  while IFS=$'\t' read -r slug phase tasks_total tasks_done; do
+  while IFS= read -r slug; do
     [[ -n "$slug" ]] || continue
+    phase="$(slug_phase "$slug")"
+    total="$(tasks_count "$slug")"
+    done_n="$(tasks_count "$slug" done)"
     next="-"
-    [[ "$phase" != "IMPLEMENT" ]] || next=$((tasks_done + 1))
-    printf "%-24s phase %-10s tasks %2d  done %3d  next: %s\n" "$slug" "$phase" "$tasks_total" "$tasks_done" "$next"
-  done < <(jq -r '
-    .slugs // {} | to_entries[]
-    | [.key, (.value.phase // "?"), (.value.tasks_total // 0), (.value.tasks_done // 0)] | @tsv
-  ' "$STATE_FILE" 2>/dev/null | sort)
+    [[ "$phase" != "IMPLEMENT" ]] || next="$(task_next "$slug")"
+    [[ -n "$next" ]] || next="blocked: no ready task"
+    printf "%-24s phase %-10s tasks %2d  done %3d  next: %s\n" "$slug" "${phase:-?}" "$total" "$done_n" "$next"
+  done < <(jq -r '.slugs // {} | keys[]' "$STATE_FILE" 2>/dev/null | sort)
 }
 
 # One line per blocked slug, each naming the dir whose blocked.md holds the

@@ -26,7 +26,7 @@ is "implement.md allows the Agent tool" "$(grep -q '^tools:.*Agent' "$AGENTS/imp
 is "implement.md does not disallow the Agent tool" "$(grep -q '^disallowedTools:.*Agent' "$AGENTS/implement.md" && echo yes || echo no)" "no"
 is "task.md disallows the Agent tool" "$(grep -q '^disallowedTools:.*Agent' "$AGENTS/task.md" && echo yes || echo no)" "yes"
 is "task.md never advances state.json" \
-  "$(grep -q -E 'slug_task_done|slug_set_phase|slug_add_tasks|slug_start_tasks|slug_strike|slug_finish' "$AGENTS/task.md" && echo yes || echo no)" "no"
+  "$(grep -q -E 'slug_set_phase|slug_strike|slug_finish|tasks\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
 is "task.md never logs" "$(grep -q 'log\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
 TASK_TEMPLATE="$(dirname "$SCRIPTS")/templates/task.md"
 for h in "### Purpose" "### Spec, verbatim" "### Codebase"; do
@@ -37,9 +37,17 @@ is "no brief points at the deleted prompts/" \
   "$(grep -l 'prompts/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "specify.md advances state.json"     "$(grep -q 'slug_set_phase' "$AGENTS/specify.md" && echo yes || echo no)" "yes"
 is "review-spec.md advances state.json" "$(grep -q 'slug_set_phase' "$AGENTS/review-spec.md" && echo yes || echo no)" "yes"
-is "plan.md advances state.json"        "$(grep -q 'slug_start_tasks' "$AGENTS/plan.md" && echo yes || echo no)" "yes"
-is "implement.md advances state.json"   "$(grep -q 'slug_task_done' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
-is "review.md advances state.json"      "$(grep -q -E 'slug_set_phase|slug_add_tasks' "$AGENTS/review.md" && echo yes || echo no)" "yes"
+is "plan.md advances state.json"        "$(grep -q 'tasks\.sh start' "$AGENTS/plan.md" && echo yes || echo no)" "yes"
+is "plan.md writes the ledger"          "$(grep -q 'tasks\.sh write' "$AGENTS/plan.md" && echo yes || echo no)" "yes"
+is "implement.md advances state.json"   "$(grep -q 'tasks\.sh close' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
+is "implement.md picks from the ledger" "$(grep -q 'tasks\.sh next' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
+is "review.md advances state.json"      "$(grep -q -E 'slug_set_phase|tasks\.sh add' "$AGENTS/review.md" && echo yes || echo no)" "yes"
+# The ledger is the SSOT, so no brief may reach around scripts/tasks.sh to it.
+for a in plan implement review recover; do
+  is "agents/$a.md never edits tasks.json with jq" \
+    "$(grep -E 'jq[^|]*tasks\.json' "$AGENTS/$a.md" >/dev/null && echo yes || echo no)" "no"
+done
+is "no brief still names result.md" "$(grep -l 'result\.md' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 # A brief that blocks a slug must finish it in state.json in the same breath,
 # or the slug stays at its phase with its strikes spent, and the picker sends
 # every remaining iteration to the janitor instead.

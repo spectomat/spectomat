@@ -63,22 +63,27 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 Every iteration does the phase it was handed and nothing else — the picker chose it from the floor before you were launched, your task's `phase:` and `slug:` fields name it, and if it makes no sense for this floor, say so in your report and stop.
 
-`state.json` is a progress tracker on what moves work along: a phase that changes nothing there is handed to you again next iteration, on the same slug, forever. Every phase ends in exactly one of these changes, applied after its commit through `<plugin_root>/scripts/slug_set_phase.sh` or the other helpers in the plugin's `scripts/utils.sh` — never by editing the file.
+The flow's state lives in two files, and a phase that changes neither is handed to you again next iteration, on the same slug, forever.
 
-| Phase | Outcome | `state.json` change |
+- `state.json` — gitignored, flow-level: every slug's phase, its strikes, the iteration count. Changed through `<plugin_root>/scripts/slug_set_phase.sh` and the other helpers in the plugin's `scripts/utils.sh`, never by editing the file.
+- `.spectomat/<slug>/tasks.json` — committed, the slug's task ledger and the single source of truth for its tasks: the list, each one's `dependsOn` and `status`, and the `commits`, `tests` and `gates` it closed with. Changed only through `<plugin_root>/scripts/tasks.sh`, never by editing the file, and never with `jq`.
+
+Every phase ends in exactly one of these changes, applied after its commit — except where the change writes `tasks.json`, which is committed and so belongs *inside* that phase's commit.
+
+| Phase | Outcome | The change |
 | --- | --- | --- |
 | `SPECIFY` | spec written | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC` |
 | `REVIEW-SPEC` | spec ready to plan | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN` |
-| `PLAN` | N task files written | `slug_start_tasks <slug> N` — phase `IMPLEMENT`, `tasks_total` N, `tasks_done` 0 |
-| `IMPLEMENT` | one task closed | `slug_task_done <slug>` — bumps `tasks_done`, and moves to `REVIEW` once it reaches `tasks_total` |
-| `IMPLEMENT` | a task the plan lacked added | `slug_add_tasks <slug> 1` — raises `tasks_total` so the slug is not released early |
-| `REVIEW` | fix tasks added, rounds remain | `slug_add_tasks <slug> N` — back to `IMPLEMENT` with `tasks_total` raised by N |
+| `PLAN` | N task files written | `tasks.sh write <slug> '[…]'` before the commit, then `tasks.sh start <slug>` — the ledger, then phase `IMPLEMENT` |
+| `IMPLEMENT` | one task closed | `tasks.sh close <slug> <id> <commits> <tests> <gates>` — marks it `done`, and moves to `REVIEW` once none is left pending |
+| `IMPLEMENT` | a task the plan lacked added | `tasks.sh add <slug> '[…]'` — appends it pending, so the slug is not released early |
+| `REVIEW` | fix tasks added, rounds remain | `tasks.sh add <slug> '[…]'` — back to `IMPLEMENT` with the fix tasks pending |
 | `REVIEW` | nothing left to fix, or the rounds are spent | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> ARCHIVE` |
 | `ARCHIVE` | `done.md` written | `slug_finish <slug> done` — the archiver script does this itself |
 | any phase | the phase defeated you | `slug_strike <slug> <PHASE>`, and no phase change |
 | any phase | third strike, `blocked.md` written | `slug_finish <slug> blocked "<reason>"` (see *Three strikes*) |
 
-Never set a phase by hand where a counter helper exists: `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW` in place of `slug_task_done` leaves `tasks_done` short, and every later reader of the counters is lied to.
+Never set a phase by hand where a ledger helper exists: `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW` in place of `tasks.sh close` leaves tasks pending in the ledger, and every later reader is lied to.
 
 ### Three strikes
 

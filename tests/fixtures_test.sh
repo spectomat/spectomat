@@ -16,8 +16,11 @@ floor dirt; dirty
 is "dirty() dirties the tree"   "$(cd "$FIXTURE" && git status --porcelain)" "?? untracked.txt"
 floor counted; plan 001-a 3 1
 is "plan() writes N task files" "$(ls "$FIXTURE/.spectomat/001-a/tasks"/task-*.md | wc -l | tr -d ' ')" "3"
-is "plan() seeds tasks_total"   "$(jq -r '.slugs["001-a"].tasks_total' "$FIXTURE/.spectomat/state.json")" "3"
-is "plan() seeds tasks_done from OPEN" "$(jq -r '.slugs["001-a"].tasks_done' "$FIXTURE/.spectomat/state.json")" "2"
+is "plan() writes a ledger of N tasks" "$(jq -r '.tasks | length' "$FIXTURE/.spectomat/001-a/tasks.json")" "3"
+is "plan() leaves OPEN tasks pending"  "$(jq -r '[.tasks[] | select(.status == "pending")] | length' "$FIXTURE/.spectomat/001-a/tasks.json")" "1"
+is "plan() closes the rest"            "$(jq -r '[.tasks[] | select(.status == "done")] | length' "$FIXTURE/.spectomat/001-a/tasks.json")" "2"
+is "plan() chains dependsOn"           "$(jq -c '[.tasks[].dependsOn]' "$FIXTURE/.spectomat/001-a/tasks.json")" '[[],[1],[2]]'
+is "plan() keeps state.json counterless" "$(jq -r '.slugs["001-a"] | has("tasks_total")' "$FIXTURE/.spectomat/state.json")" "false"
 is "plan() with an open task is IMPLEMENT" "$(jq -r '.slugs["001-a"].phase' "$FIXTURE/.spectomat/state.json")" "IMPLEMENT"
 floor bare; plan_bare 002-b
 is "plan_bare() writes no task files" "$(ls "$FIXTURE/.spectomat/002-b/tasks"/task-*.md 2>/dev/null | wc -l | tr -d ' ')" "0"

@@ -6,10 +6,12 @@ One sentence: what exists when this task is done that did not before.
 
 ## Context
 
-**Depends on:**
+**Consumes from:**
 
 - Task <M> (or none)
   - exact names and signatures consumed from task (none for Task 1)
+
+> Ordering is not yours to read: `.spectomat/{{SLUG}}/tasks.json` holds `dependsOn`, and the `IMPLEMENT` phase has already decided this task's turn has come. This section is here for the names and signatures alone.
 
 **Branch:**
 

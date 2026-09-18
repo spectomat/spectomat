@@ -276,6 +276,15 @@ seed_state() {
       slug_add "$s" SPECIFY
     elif [[ -f "$FLOOR/$s/spec.md" && ! -f "$FLOOR/$s/plan.md" ]]; then
       slug_add "$s" REVIEW-SPEC
+    elif [[ -f "$(tasks_file "$s")" ]]; then
+      # A planned slug re-entering the flow: the ledger is committed, so it
+      # says by itself how far the plan got. Pending tasks left means
+      # IMPLEMENT; none left means the plan is built and owed a REVIEW.
+      if [[ "$(tasks_pending "$s")" == "0" ]]; then
+        slug_add "$s" REVIEW
+      else
+        slug_add "$s" IMPLEMENT
+      fi
     else
       printf '# %s — blocked\n\nArming could not classify this slug dir: its files match no phase.\n' \
         "$s" > "$FLOOR/$s/blocked.md"
