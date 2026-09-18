@@ -2,7 +2,6 @@
 name: specify
 description: The `SPECIFY` phase of the Spectomat factory - turns one draft into a normative spec. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
 model: opus
-tools: [Read, Write, Edit, Bash, Glob, Grep]
 disallowedTools: [Agent]
 permissionMode: bypassPermissions
 color: blue

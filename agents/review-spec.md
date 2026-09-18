@@ -2,7 +2,6 @@
 name: review-spec
 description: The `REVIEW-SPEC` phase of the Spectomat factory - reads one fresh spec against its draft with fresh eyes and revises it in place until it is ready to plan. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
 model: opus
-tools: [Read, Write, Edit, Bash, Glob, Grep]
 disallowedTools: [Agent]
 permissionMode: bypassPermissions
 color: cyan

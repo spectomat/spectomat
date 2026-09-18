@@ -2,7 +2,6 @@
 name: plan
 description: The `PLAN` phase of the Spectomat factory - turns one spec into a plan overview and one task file per task. Dispatched by an armed flow's pointer, one fresh agent per iteration. Never use it by hand.
 model: sonnet
-tools: [Read, Write, Edit, Bash, Glob, Grep]
 disallowedTools: [Agent]
 permissionMode: bypassPermissions
 color: purple
