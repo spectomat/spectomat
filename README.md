@@ -79,12 +79,17 @@ git clone https://github.com/spectomat/spectomat.git
 claude plugin marketplace add ~/Projects/spectomat 
 ```
 
+test
+
+```bash
+scripts/selftest.sh
+```
+
 validate
 
 ```bash
 claude plugin validate .claude-plugin/plugin.json --strict
 claude plugin validate .claude-plugin/marketplace.json --strict
-scripts/selftest.sh
 ```
 
 ## Documentation
