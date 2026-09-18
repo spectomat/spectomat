@@ -4,7 +4,7 @@
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares the floor, commits the drafts it finds, arms the Stop hook for `n` iterations (default 100) and starts iteration 1; refuses on a dirty tree |
+| `/spectomat:run [n]` | prepares the floor, commits the wishes it finds, arms the Stop hook for `n` iterations (default 100) and starts iteration 1; refuses on a dirty tree |
 | `/spectomat:status` | shows the current iteration, floor counts, per-plan step progress, blocked files and the log tail |
 | `/spectomat:cancel` | disarms the flow; the floor stays, `run` resumes from it |
 | `/spectomat:help` | shows this guide |
@@ -21,8 +21,8 @@ claude plugin install spectomat@spectomat
 ## The Floor
 
 ```text
+.wishlist/    the inbox: ideas, one .md each; the file name is the slug. `run` moves each into its own slug dir
 .spectomat/
-  drafts/     the inbox: ideas, one .md each; the file name is the slug. `run` moves each into its own slug dir
   <slug>/     everything of one idea, for its whole life — nothing is moved when it finishes
     draft.md    the idea as you wrote it
     spec.md     written by SPECIFY from the draft, then revised once by REVIEW-SPEC; or put a finished spec here yourself
@@ -68,7 +68,7 @@ Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` 
 
 ## Operating it
 
-- **Feed it.** Drop a `.md` idea into `.spectomat/drafts/`. `run` moves each draft into its own `.spectomat/<slug>/draft.md` and commits it, leaving `drafts/` empty. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `.spectomat/<slug>/spec.md`; the Flow then starts at reviewing it.
+- **Feed it.** Drop a `.md` idea into `.wishlist/`. `run` moves each draft into its own `.spectomat/<slug>/draft.md` and commits it, leaving `.wishlist/` empty. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `.spectomat/<slug>/spec.md`; the Flow then starts at reviewing it.
 - **Steer it.** Edit a spec or a plan between iterations. Edit `contract.md` to change the rules, `memory.md` to correct what the Flow believes about the codebase.
 - **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every iteration reads before working and adds to before committing. Seed it by hand before the first run and the Flow starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
 - **Gate it.** The gates are always `./.spectomat/gates.sh`, run once per task in the `IMPLEMENT` phase, before its commit, and once in the `ARCHIVE` phase before archiving. The first `run` writes that script from your `package.json`: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `lint` and `test` script found, one line each in that order. Nothing was detected? You get the script anyway, with commented examples and an honest no-op. Edit the script — it is the one place gates are defined, and gates that are not npm scripts are just more lines in it. `set -e` stops at the first failure, so its exit code is the whole run's. An iteration may never weaken a gate to pass.

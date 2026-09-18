@@ -22,7 +22,7 @@ TEMPLATE=""
 # instead of re-running git init/config/commit per call.
 floor_template() {
   TEMPLATE="$TMP/floor-template"
-  mkdir -p "$TEMPLATE/.spectomat/drafts"
+  mkdir -p "$TEMPLATE/.spectomat" "$TEMPLATE/.wishlist"
   (
     cd "$TEMPLATE" || exit 1
     git init -q .

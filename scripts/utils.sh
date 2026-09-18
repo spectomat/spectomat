@@ -7,6 +7,7 @@
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
+WISHLIST=".wishlist"   # the one entrance: raw ideas, one .md each; sits beside the floor, not in it
 STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
 CONTRACT="$FLOOR/contract.md"
 MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; gitignored, so one

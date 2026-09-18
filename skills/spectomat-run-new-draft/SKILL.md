@@ -1,6 +1,6 @@
 ---
 name: spectomat-run-new-draft
-description: Triggered by the word "spectomat" anywhere in the user's message when they are describing an idea, feature, or task rather than asking about the Spectomat tool itself. Turns the idea into a numbered draft file under .spectomat/drafts/ and starts the flow.
+description: Triggered by the word "spectomat" anywhere in the user's message when they are describing an idea, feature, or task rather than asking about the Spectomat tool itself. Turns the idea into a numbered draft file under .wishlist/ and starts the flow.
 disable-model-invocation: false
 argument-hint: express your new idea
 ---
@@ -17,10 +17,10 @@ progress or cancel (that's `spectomat:status` / `spectomat:cancel`).
 
 ## Steps
 
-1. **Find the project root.** `.spectomat/` lives at the repo root the user is working in. If
-   `.spectomat/drafts/` does not exist, create it.
+1. **Find the project root.** `.wishlist/` lives at the repo root the user is working in, beside
+   `.spectomat/`. If `.wishlist/` does not exist, create it.
 
-2. **Pick the next number.** List `.spectomat/drafts/*.md` and the slug directories `.spectomat/*/`
+2. **Pick the next number.** List `.wishlist/*.md` and the slug directories `.spectomat/*/`
    matching `NNN-*` — every idea keeps its own directory for its whole life, finished or not, so
    those two listings are the whole factory. Take the highest existing `NNN` prefix and add 1,
    zero-padded to 3 digits (`001`, `002`, …). Start at `001` if none exist.
@@ -28,7 +28,7 @@ progress or cancel (that's `spectomat:status` / `spectomat:cancel`).
 3. **Slug the name.** Derive a short kebab-case slug from the idea (2-5 words, lowercase,
    hyphen-separated, no stopwords). Combine as `<nnn>-<slug>.md`.
 
-4. **Write the draft.** Create `.spectomat/drafts/<nnn>-<slug>.md` with the user's idea written up
+4. **Write the draft.** Create `.wishlist/<nnn>-<slug>.md` with the user's idea written up
    as a clear, self-contained brief: what to build/change and why, in the user's own words where
    possible. Do not add speculative scope beyond what the user described. This is raw material for
    the `SPECIFY` phase, not a spec itself — keep it short.
@@ -39,6 +39,6 @@ progress or cancel (that's `spectomat:status` / `spectomat:cancel`).
 
 ## Notes
 
-- Never edit or delete existing files under `drafts/` — only add new ones.
+- Never edit or delete existing files under `.wishlist/` — only add new ones.
 - If the user's message is too vague to write a brief from, ask one clarifying question before
   creating the file — a bad draft costs a whole SPECIFY phase to fix.

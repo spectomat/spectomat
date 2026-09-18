@@ -14,14 +14,14 @@ echo "gates.sh render"
 # repo NAME [package.json body] — a git repo with one draft, armed by command-run.sh.
 repo() {
   R="$TMP/gr-$1"
-  mkdir -p "$R/.spectomat/drafts"
+  mkdir -p "$R/.wishlist"
   (
     cd "$R" || exit 1
     git init -q .
     git config user.email t@example.com
     git config user.name t
     [[ $# -lt 2 ]] || printf '%s\n' "$2" > package.json
-    printf 'idea\n' > .spectomat/drafts/001-thing.md
+    printf 'idea\n' > .wishlist/001-thing.md
     git add -A
     git commit -qm init
   ) >/dev/null 2>&1

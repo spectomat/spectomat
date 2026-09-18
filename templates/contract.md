@@ -21,7 +21,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### What you may write
 
-- ❌ DO NOT Edit this contract, `.spectomat/gates.sh`, anything under `drafts/`, or a slug dir carrying `done.md` or `blocked.md` — operator files and finished work.
+- ❌ DO NOT Edit this contract, `.spectomat/gates.sh`, anything under `.wishlist/`, or a slug dir carrying `done.md` or `blocked.md` — operator files and finished work.
 - ❌ DO NOT Delete a draft, spec or plan.
 - ❌ DO NOT Weaken a gate to pass.
 - ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
@@ -51,7 +51,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 **❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
 
-**❌ Never touch `drafts/`:** arming emptied it, and anything the operator drops there afterwards is for the next run.
+**❌ Never touch `.wishlist/`:** arming emptied it, and anything the operator drops there afterwards is for the next run.
 
 **❌ No completion claim without fresh evidence:** `./.spectomat/gates.sh` is the whole of the gates, and the only thing to edit when this project's checks change.
 

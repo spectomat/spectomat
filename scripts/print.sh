@@ -6,8 +6,8 @@
 # Every print_* writes one "--- section ---" block to stdout and needs FLOOR,
 # STATE_FILE, MEMORY, count, state_field, slugs_at_phase, slugs_unfinished and
 # the tasks_* ledger helpers from utils.sh. Phase counts come from state.json
-# and task counts from each slug's tasks.json; the one floor read left is
-# drafts/, the intake inbox, which is not flow state.
+# and task counts from each slug's tasks.json; the one directory read left is
+# .wishlist/, the intake inbox, which is not flow state.
 
 print_iteration() {
   echo "--- flow ---"
@@ -27,7 +27,7 @@ print_iteration() {
 
 print_floor() {
   echo "--- floor: $FLOOR ---"
-  echo "drafts: $(count "$FLOOR/drafts")   active: $(slugs_unfinished | wc -l | tr -d ' ')   done: $(slugs_at_phase DONE | wc -l | tr -d ' ')   blocked: $(slugs_at_phase BLOCKED | wc -l | tr -d ' ')   memory: $(memory_entries) entries"
+  echo "wishes: $(count "$WISHLIST")   active: $(slugs_unfinished | wc -l | tr -d ' ')   done: $(slugs_at_phase DONE | wc -l | tr -d ' ')   blocked: $(slugs_at_phase BLOCKED | wc -l | tr -d ' ')   memory: $(memory_entries) entries"
 }
 
 # Entries in memory.md: list items, which is what the contract asks a memory to be.

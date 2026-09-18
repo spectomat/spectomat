@@ -3,8 +3,8 @@
 #
 #   command-run.sh [MAX_ITERATIONS]
 #
-# Creates .spectomat/drafts/, renders contract.md, memory.md and gates.sh when
-# absent, moves each draft into its own slug dir .spectomat/<slug>/draft.md,
+# Creates .wishlist/, renders contract.md, memory.md and gates.sh when
+# absent, moves each wish into its own slug dir .spectomat/<slug>/draft.md,
 # commits what it created, and arms the Stop hook by writing state.json.
 # Default 100 iterations. Refuses when a flow is armed or no unfinished slug remains.
 
@@ -17,7 +17,7 @@ TEMPLATES="$PLUGIN_ROOT/templates"
 MAX_ITERATIONS=100
 STAGE=()     # files prepare.sh created this run, committed by commit_floor
 IGNORED=()   # .gitignore lines prepare.sh appended this run, staged by commit_floor
-INTAKEN=()   # slug dirs intake_drafts filled this run, committed by commit_floor
+INTAKEN=()   # slug dirs intake_wishes filled this run, committed by commit_floor
 
 # --- helpers ---
 
@@ -58,10 +58,11 @@ ensure_gitignored() {
   fi
 }
 
-# Floor directories, ignore rules and the log file. Idempotent.
+# The inbox, the floor's ignore rules and the log file. Idempotent.
+# .wishlist/ sits beside the floor, not in it: it is the operator's inbox.
 # The log, the state file and work/ stay local: never committed.
 prepare_floor() {
-  mkdir -p "$FLOOR/drafts"
+  mkdir -p "$FLOOR" "$WISHLIST"
   ensure_gitignored "$STATE_FILE"
   ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
   ensure_gitignored "$FLOOR/work/"
@@ -77,7 +78,7 @@ prepare_floor() {
 # The floor is slug-major: everything of one idea lives in .spectomat/<slug>/,
 # named after the draft it came from. A directory directly under the floor is a
 # slug dir when it holds at least one of draft.md, spec.md or plan.md — which
-# drafts/ and work/ never do, so no reserved-name list is needed here.
+# work/ never does, so no reserved-name list is needed here.
 #
 # This is the flow's only directory scan (D27). It lives here rather than in
 # utils.sh because prepare.sh is the intake boundary: after arming, every
@@ -93,8 +94,8 @@ slug_dirs() {
   done | sort
 }
 
-# Move every draft the operator dropped into drafts/ to its own slug dir, as
-# <slug>/draft.md: the floor is slug-major, and drafts/ is a pure inbox that
+# Move every draft the operator dropped into .wishlist/ to its own slug dir, as
+# <slug>/draft.md: the floor is slug-major, and .wishlist/ is a pure inbox that
 # arming empties. The slug is the draft's file name without .md, unchanged.
 #
 # A draft may be tracked or untracked, so this uses a plain mv and lets
@@ -104,9 +105,9 @@ slug_dirs() {
 #
 # A slug dir that already exists is the operator re-dropping a name that is
 # already in the flow: refuse rather than overwrite a draft mid-flight.
-intake_drafts() {
+intake_wishes() {
   local f s
-  for f in "$FLOOR"/drafts/*.md; do
+  for f in "$WISHLIST"/*.md; do
     [[ -f "$f" ]] || continue
     s="$(basename "$f" .md)"
     [[ ! -e "$FLOOR/$s" ]] || die "$FLOOR/$s already exists: rename $f or clear that slug first"
@@ -128,12 +129,12 @@ stage_ignore_entries() {
 
 # Commit what this run created — contract, memory, gates, ignore rules — plus
 # every slug dir on the floor, so the flow starts on a clean tree. That covers
-# both sides of each intake move (drafts/ for the removal, the slug dir for the
-# new draft.md) and a spec or plan the operator wrote by hand, which is floor
-# content just as a draft is. Nothing outside the floor is staged.
+# both sides of each intake move (.wishlist/ for the removal, the slug dir for
+# the new draft.md) and a spec or plan the operator wrote by hand, which is
+# floor content just as a draft is. Nothing but the inbox and the floor is staged.
 commit_floor() {
   local d
-  git add -A "$FLOOR/drafts" ${INTAKEN[@]+"${INTAKEN[@]}"} ${STAGE[@]+"${STAGE[@]}"}
+  git add -A "$WISHLIST" ${INTAKEN[@]+"${INTAKEN[@]}"} ${STAGE[@]+"${STAGE[@]}"}
   while IFS= read -r d; do
     [[ -n "$d" ]] || continue
     git add -A "$FLOOR/$d"
@@ -219,7 +220,7 @@ require_no_active_flow() {
 require_startable() {
   if [[ "$ACTIVE" -eq 0 ]]; then
     echo
-    echo "❌ Not starting: nothing to do. Drop a .md idea into $FLOOR/drafts/ and run /spectomat:run again."
+    echo "❌ Not starting: nothing to do. Drop a .md idea into $WISHLIST/ and run /spectomat:run again."
     exit 1
   fi
   # Whatever commit_floor did not commit is the user's own work in progress. The
@@ -249,7 +250,7 @@ seed_state() {
   [[ -f "$STATE_FILE" ]] || printf '{"slugs": {}}\n' > "$STATE_FILE"
 
   # Every slug dir with no state entry enters the flow at the stage its files
-  # place it: a draft intake_drafts just moved in starts at SPECIFY, and a spec
+  # place it: a draft intake_wishes just moved in starts at SPECIFY, and a spec
   # the operator wrote by hand starts at REVIEW-SPEC.
   #
   # The phase check is what stops a finished slug being resurrected: a slug at
@@ -363,7 +364,7 @@ main() {
   prepare_floor
   render_factory
   require_gates_passed
-  intake_drafts
+  intake_wishes
   commit_floor
   # seed_state before report_floor so every count comes from state.json, but
   # after the active-flow check so a second session cannot write into a flow it

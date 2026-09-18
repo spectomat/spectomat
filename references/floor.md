@@ -1,8 +1,8 @@
 Floor is the directories and files the Flow creates and works with in the user's project.
 
 ```text
+.wishlist/     the one entrance: raw ideas, one .md each — the user drops them here, and /spectomat:run moves each into its own slug dir
 .spectomat/
-  drafts/      the one entrance: raw ideas, one .md each — the user drops them here, and /spectomat:run moves each into its own slug dir
   <slug>/      everything of one idea, named after its draft — you write all of these
     draft.md     the idea as the user wrote it, moved here when the flow arms; never edited afterwards
     spec.md      the normative spec, written once from the draft, reviewed once, then never edited again
