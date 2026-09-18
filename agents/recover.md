@@ -34,7 +34,7 @@ Find which of the two cases below you are in, and handle only that one.
 
 1. Inspect the changes.
 2. If they are a phase all but finished, finish it and commit it under that phase's own message. Also apply that phase's state transition using whichever of `<plugin_root>/scripts/slug_set_phase.sh` and `<plugin_root>/scripts/tasks.sh` (`init`, `close`, `add`) matches the phase that crashed — the same helper that phase's own brief would have called. A `PLAN` that died after writing its task files but before its ledger is the one case for `tasks.sh init`, which writes the ledger and moves the phase in one call. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> finished <phase> left mid-iteration`.
-3. If they are partial or you cannot tell what they were for, discard them — `git checkout -- .` and `git clean -fd` the paths under `.spectomat/` and the paths the task files name. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> discarded a partial <phase>` (`floor` in place of `<slug>` if you cannot tell which slug it belonged to).
+3. If they are partial or you cannot tell what they were for, do not delete them — stash them instead: `git stash push -u -m "RECOVER <slug> <phase>" -- .spectomat <task file paths>`. This clears the tree without losing the work, so the operator can `git stash show -p` and recover it by hand if it turns out to matter. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> stashed a partial <phase>` (`floor` in place of `<slug>` if you cannot tell which slug it belonged to).
 
 ### Case: slug is at the strike limit
 

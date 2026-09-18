@@ -105,7 +105,7 @@ The spec binds; the plan argues from it; a ruling settles what neither answers. 
 A task that did not close is a strike, not a retry: a `FAILED` report, a report you cannot read, a commit that failed step 5's checks, a dependency that does not exist. Never dispatch a second task agent for it in this iteration, and never build it yourself.
 
 1. Write what defeated the task to the plan's `ruling.md`, tagged with this task's number, along with every ruling the report carried.
-2. Restore BASE: `git reset --hard <BASE>` if a commit landed, then `git checkout -- .` and `git clean -fd` the task's `Files` and anything else the worker left, so `git status --porcelain` is silent. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
+2. Restore BASE: `git reset --hard <BASE>` if a commit landed, then `git stash push -u -- <the task's Files and anything else the worker left>` so `git status --porcelain` is silent, without deleting what the worker produced. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
 3. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
 
 ## Rules

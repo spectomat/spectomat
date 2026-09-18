@@ -40,7 +40,7 @@
 
 - **Archiver** is `spectomat:archive` (`agents/archive.md`), a subagent that invokes the script `scripts/agent-archive.sh` and relays its result unchanged. The script performs the `ARCHIVE` phase: verifies gates, writes `<slug>/done.md`, commits, and marks the slug `DONE` in `state.json`. The agent does none of that mutation itself.
 
-- **Janitor** is `spectomat:recover` (`agents/recover.md`): a subagent that recovers from a dirty tree by finishing or discarding a crashed phase's changes, or rules on the slugs that have run out of strikes.
+- **Janitor** is `spectomat:recover` (`agents/recover.md`): a subagent that recovers from a dirty tree by finishing or stashing a crashed phase's changes, or rules on the slugs that have run out of strikes.
 
 - **Strike** is one failed attempt at a phase for a slug, counted per phase in `state.json`. Three strikes write `.spectomat/<slug>/blocked.md` with the reason and mark the slug `BLOCKED` in `state.json`, so the flow moves on.
 

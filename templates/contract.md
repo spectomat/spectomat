@@ -49,7 +49,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### Before iteration
 
-**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
+**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git stash push -u -- <the paths you own>` to clear it without deleting it. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
 
 **❌ Never touch `.wishlist/`:** arming emptied it, and anything the operator drops there afterwards is for the next run.
 

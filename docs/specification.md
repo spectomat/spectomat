@@ -112,7 +112,7 @@ The task handed to the subagent is the picker's frontmatter block, verbatim, fen
 
 A phase agent that cannot finish appends `(strike N)` to its log line and stops; the next iteration's picker skips that slug in favour of the next candidate in the same stage (§5.2). On its own third strike the agent writes `<slug>/blocked.md` with the reason, runs `scripts/block_slug.sh <slug> <reason>` to move the slug's `state.json` entry to `BLOCKED`, and logs the reason (D5); the state call is what takes the slug out of the flow, so a marker written without it leaves the slug sitting at its working phase for the rest of the flow — at `STRIKE_LIMIT` the picker skips it and falls through to `RECOVER`, and below the limit it hands the slug back to the same phase again (D27). `agent-archive.sh` does the same for the `ARCHIVE` phase (§5.5), via the same script. Nothing moves: the trail stays in the slug dir.
 
-An iteration that dies mid-phase leaves a dirty tree; the next picker returns `RECOVER` before any other test, and the janitor either finishes and commits the phase or discards the paths the factory owns.
+An iteration that dies mid-phase leaves a dirty tree; the next picker returns `RECOVER` before any other test, and the janitor either finishes and commits the phase or stashes the paths the factory owns.
 
 ### 3.5 Completion
 

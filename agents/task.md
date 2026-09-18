@@ -54,7 +54,7 @@ You never read the flow's contract, so the rules that bind you are here:
    ```
 
    That script is the gates — never substitute a single test file, a narrower npm script, or a command of your own. Red is a debugging job, not a retry: go to `## Gates`, then run the script again the same way, so the log always holds the last whole run.
-4. **Commit.** `git add` exactly this task's `Files`, plus any test fixture you created, and commit with the message the task's Step 5 gives. Anything left unstaged belongs to nobody: inspect it, then discard it. `git status --porcelain` must be silent afterwards.
+4. **Commit.** `git add` exactly this task's `Files`, plus any test fixture you created, and commit with the message the task's Step 5 gives. Anything left unstaged belongs to nobody: inspect it, then stash it — `git stash push -u -- <those paths>` — rather than deleting it. `git status --porcelain` must be silent afterwards.
 5. **Report** under `## Report`.
 
 ## Build the task
