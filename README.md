@@ -8,7 +8,8 @@
 
 Spec-driven code development flow for Claude Code.
 
-Drop ideas into `.wishlist/`, call one `/spectomat:run` command, and an unattended flow turns each idea into a spec, each spec into a plan and tasks, and then executes all of them to produce well-tested, committed code.
+You drop ideas into `.wishlist/` and call one `/spectomat:run` command,
+then an *unattended flow* turns each idea into a spec, each spec into a plan and tasks, and then executes all of them to produce well-tested, committed code.
 
 ## Workflow
 
@@ -23,13 +24,14 @@ claude plugin install spectomat@spectomat
 
 ### Usage
 
-in a chat:
+just express your wish in a chat mentioning `spectomat` keyword:
 
 ```text
-use spectomat to do some marvelous things
+use spectomat to do some marvelous things...
 ```
 
-to start working on the next wish from the `./.wishlist` folder (or continue a flow that was previously cancelled)
+to start working on the next wish picked from the `.wishlist` folder
+(if a unfinished flow exists - it will continue on it instead)
 
 ```text
 /spectomat:run 25 
@@ -69,8 +71,12 @@ claude plugin update spectomat@spectomat
 
 ### Development
 
-See [File structure](./references/file-structure.md) for the plugin anatomy, and [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and the full verification steps.
+See
 
+- [Specification](docs/specification.md) for The normative spec: domain model, algorithms, design decisions.  
+- [File structure](./references/file-structure.md) for the plugin anatomy,
+- [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and the full verification steps.
+- [Glossary](references/glossary.md) for the termology used.
 install from a local machine
 
 ```bash
@@ -91,15 +97,6 @@ validate
 claude plugin validate .claude-plugin/plugin.json --strict
 claude plugin validate .claude-plugin/marketplace.json --strict
 ```
-
-## Documentation
-
-| File | What it is |
-| --- | --- |
-| [User guide](docs/guide.md) | How the flow works. Printed by `/spectomat:help`. |
-| [Specification](docs/specification.md) | The normative spec: domain model, algorithms, design decisions. |
-| [Glossary](references/glossary.md) | The terms — flow, iteration, phase, task, floor, contract, slug, strike. |
-| [File structure](references/file-structure.md) | The plugin anatomy. |
 
 ## Contributing
 
