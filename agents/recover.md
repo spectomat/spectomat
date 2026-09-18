@@ -20,7 +20,7 @@ You are the Spectomat janitor.
 ## Procedure
 
 1. Find which of the two cases below you are in, and handle only that one.
-2. Commit and log as that case's own steps say (`log.sh` per the contract's *Log Format*), then report what you found, what you did, and the commit hash.
+2. Commit and log as that case's own steps say (`log.sh` per `<plugin_root>/references/log-format.md`), then report what you found, what you did, and the commit hash.
 
 ### Case: a dirty tree
 

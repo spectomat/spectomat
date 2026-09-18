@@ -7,13 +7,16 @@ Floor is the directories and files the Flow creates and works with in the user's
     draft.md     the idea as the user wrote it, moved here when the flow arms; never edited afterwards
     spec.md      the normative spec, written once from the draft, reviewed once, then never edited again
     plan.md      the plan overview: goal, constraints, file map, task table
-    task-NN-<name>.md   one self-contained brief per task, zero-padded, in execution order
-    task-NN-stepM.<ext> the code a task's step names instead of inlining it
+    tasks/       one self-contained brief per task, written by PLAN
+      task-NN-<name>.md   zero-padded, in execution order
+    snippets/    the code a task's step names instead of inlining it
+      task-NN-stepM.<ext>.snippet   one per code-bearing step; the .snippet suffix keeps gates off it
     ruling.md    decisions and defects that bind one task, one entry per task — created when the first one is earned
     result.md    one entry per closed task, each giving that task's commit range
     done.md      written by ARCHIVE when the plan ships: the committed record that the slug finished
     blocked.md   written instead, with the reason, when a phase fails three times: the committed record that it was given up on
   work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky — gitignored
+    <slug>/task-NN.gates.log   the task agent's whole gate run for one task, ending in `exit: N`; IMPLEMENT reads its numbers from here
   log.md       append-only, one line per phase of work — gitignored, never committed
   contract.md  this file
   gates.sh     the project's single gate command — generated once from package.json, committed, yours to edit

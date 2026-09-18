@@ -82,11 +82,11 @@ spec() {
 
 plan() {
   local slug="$1" tasks="$2" open="$3" reviewed="${4:-}" i f done_n
-  mkdir -p "$FIXTURE/.spectomat/$slug"
+  mkdir -p "$FIXTURE/.spectomat/$slug/tasks"
   printf 'overview\n' > "$FIXTURE/.spectomat/$slug/plan.md"
   i=1
   while [[ $i -le $tasks ]]; do
-    printf -v f '%s/.spectomat/%s/task-%02d-x.md' "$FIXTURE" "$slug" "$i"
+    printf -v f '%s/.spectomat/%s/tasks/task-%02d-x.md' "$FIXTURE" "$slug" "$i"
     printf 'step\n' > "$f"
     i=$((i + 1))
   done

@@ -43,7 +43,7 @@ pk "a closing verdict releases it to ARCHIVE" "ARCHIVE 001-a"
 # REVIEW round 1 adds fix tasks and writes no verdict: the plan reopens and the
 # picker sends it back to IMPLEMENT, which is the whole fix loop.
 floor p_fixtasks; spec 001-a; plan 001-a 3 0
-printf 'step\n' > "$FIXTURE/.spectomat/001-a/task-04-fix.md"
+printf 'step\n' > "$FIXTURE/.spectomat/001-a/tasks/task-04-fix.md"
 printf 'overview\n\n## Review\n\n- Round 1 — 2 findings (0 critical, 2 important, 0 minor) — tasks 04 added\n' > "$FIXTURE/.spectomat/001-a/plan.md"
 fixture_commit
 state_slug 001-a IMPLEMENT 4 3

@@ -27,7 +27,7 @@ Also you may check if some thing useful and relevant found in `./docs/*.md` proj
 3. Record memory where a line is earned — the edit rides inside the commit below, never a commit of its own.
 4. Commit everything with `<type>(<slug>): …`.
 5. Advance `.spectomat/state.json`: run `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC`.
-6. Run `bash <plugin_root>/scripts/log.sh SPECIFY <slug> <message>` (see the contract's *Log Format*), after the commit — the log is gitignored and never enters it.
+6. Run `bash <plugin_root>/scripts/log.sh SPECIFY <slug> <message>` (see `<plugin_root>/references/log-format.md`), after the commit — the log is gitignored and never enters it.
 
 ## Rules
 
@@ -49,6 +49,4 @@ Also you may check if some thing useful and relevant found in `./docs/*.md` proj
 
 A spec you cannot write is **a strike, not a guess**: a draft you cannot read, a draft that asks for two independent systems that cannot share one spec, a draft so thin that a whole section has nothing to fill it from and no reasonable assumption fills the gap.
 
-Do not advance the slug's phase in `state.json`; instead bump its `SPECIFY` strike count (`slug_strike`), leave the tree clean, run `log.sh SPECIFY <slug> <reason> (strike N)` with N from `slug_strike`'s own output, and stop.
-
-`slug_strike` prints the new count. If it is the third, the slug is blocked: follow the contract's *Three strikes* — write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then `slug_finish <slug> blocked "<reason>"`, so the slug leaves the flow.
+Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `slug_finish <slug> blocked "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.

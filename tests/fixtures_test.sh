@@ -15,12 +15,12 @@ is "fresh fixture is clean"     "$(cd "$FIXTURE" && git status --porcelain)" ""
 floor dirt; dirty
 is "dirty() dirties the tree"   "$(cd "$FIXTURE" && git status --porcelain)" "?? untracked.txt"
 floor counted; plan 001-a 3 1
-is "plan() writes N task files" "$(ls "$FIXTURE/.spectomat/001-a"/task-*.md | wc -l | tr -d ' ')" "3"
+is "plan() writes N task files" "$(ls "$FIXTURE/.spectomat/001-a/tasks"/task-*.md | wc -l | tr -d ' ')" "3"
 is "plan() seeds tasks_total"   "$(jq -r '.slugs["001-a"].tasks_total' "$FIXTURE/.spectomat/state.json")" "3"
 is "plan() seeds tasks_done from OPEN" "$(jq -r '.slugs["001-a"].tasks_done' "$FIXTURE/.spectomat/state.json")" "2"
 is "plan() with an open task is IMPLEMENT" "$(jq -r '.slugs["001-a"].phase' "$FIXTURE/.spectomat/state.json")" "IMPLEMENT"
 floor bare; plan_bare 002-b
-is "plan_bare() writes no task files" "$(ls "$FIXTURE/.spectomat/002-b"/task-*.md 2>/dev/null | wc -l | tr -d ' ')" "0"
+is "plan_bare() writes no task files" "$(ls "$FIXTURE/.spectomat/002-b/tasks"/task-*.md 2>/dev/null | wc -l | tr -d ' ')" "0"
 is "plan_bare() writes the overview"  "$([[ -f "$FIXTURE/.spectomat/002-b/plan.md" ]] && echo yes || echo no)" "yes"
 
 floor marked; archived 003-c; archived 004-d blocked

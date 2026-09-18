@@ -24,14 +24,14 @@ Also you may check if something useful and relevant found in `./docs/*.md` proje
 
 ```text
 <slug>/spec.md ──▶ [ PLAN ] ──┬──▶ <slug>/plan.md
-                              └──▶ <slug>/task-NN-*.md
+                              └──▶ <slug>/tasks/task-NN-*.md
                       │
                       ▼
        state: slug_start_tasks → IMPLEMENT
 ```
 
 1. Write the overview `.spectomat/<slug>/plan.md` from `<plugin root>/templates/plan.md`, following Before the tasks below.
-2. Write one self-contained task file per task under `.spectomat/<slug>/`, from `<plugin root>/templates/task.md`, following Each task file below.
+2. Write one self-contained task file per task under `.spectomat/<slug>/tasks/`, from `<plugin root>/templates/task.md`, following Each task file below.
 3. Run the Self-review below and fix inline.
 4. Record memory, commit `<type>(<slug>): …` — the memory edit rides inside this commit, never a commit of its own.
 5. Advance `.spectomat/state.json`: call `slug_start_tasks <slug> <N>` with N the number of task files written.
@@ -39,14 +39,14 @@ Also you may check if something useful and relevant found in `./docs/*.md` proje
 
 ## Rules
 
-- A plan is an overview plus one file per task. Each task file is a complete brief: the `IMPLEMENT` phase, which sees nothing else, can execute it alone, later, without opening the plan or the spec. DRY, YAGNI, TDD.
+- A plan is an overview plus one file per task. Each task file is a complete brief: the task agent that builds it may open only that file, its snippets and the repository — not the plan, the spec, the contract or `memory.md`. Whatever it needs from those goes into the task file's `## Context`, quoted, not cited. DRY, YAGNI, TDD.
 - Every task file carries five numbered steps; the `IMPLEMENT` phase finds its work from `state.json`'s `tasks_done` counter, not from the task files' own text.
 - Templates: `<plugin root>/templates/plan.md` and `<plugin root>/templates/task.md`. Copy them, fill in the slug and task number, keep every section.
 - Save to:
 
 ```text
-.spectomat/<slug>/plan.md               overview
-.spectomat/<slug>/task-01-<name>.md     one per task, zero-padded, in execution order
+.spectomat/<slug>/plan.md                     overview
+.spectomat/<slug>/tasks/task-01-<name>.md     one per task, zero-padded, in execution order
 .spectomat/<slug>/snippets/task-01-step1.<ext>.snippet   the code for that task's code-bearing steps
 ```
 
@@ -65,6 +65,7 @@ Also you may check if something useful and relevant found in `./docs/*.md` proje
 
 Follow `<plugin root>/templates/task.md` exactly. A task file is read by an agent that sees nothing else, so it repeats what it needs:
 
+- **Context** — fill the template's four subsections: `Purpose` in your own words; `Spec, verbatim` quotes the full text of every criterion in `Covers` and every spec rule, constant and message the task implements; `Codebase` copies the existing signatures the task touches, the exemplar path to copy, the test command and every `memory.md` line that applies. An id, a section number or a file name is a pointer, and pointers are what the task agent cannot follow.
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths; **Interfaces** with exact names and signatures consumed from earlier tasks and produced for later ones.
 - **Covers** — the criterion ids this task's tests name.
@@ -79,5 +80,6 @@ After writing every file, check them against the spec yourself:
 2. **Placeholders** — search every task file and every snippet for the patterns in Rules.
 3. **Consistency** — a name, signature or type consumed in a later task is produced, spelled the same, by a task it depends on.
 4. **Ownership** — no file appears in the Files of two tasks unless the later one depends on the earlier, and no `Depends on` names a higher number.
-5. **Self-containment** — read one task file alone: could it be executed without the plan? If not, copy in what is missing.
+5. **Self-containment** — read one task file alone, as the task agent will: only this file, its snippets and the code. Every `Covers` id quoted in full under `Spec, verbatim`? Every consumed signature under `Codebase` or `Consumes`? Every `memory.md` fact it needs copied? If not, copy it in.
 6. **Snippets exist** — every snippet path a task file names under `.spectomat/<slug>/snippets/` is a file you actually wrote.
+7. **No pointers in Context** — `Purpose`, `Spec, verbatim` and `Codebase` contain no "see §N", "see plan", "as in memory.md": the text itself is there.

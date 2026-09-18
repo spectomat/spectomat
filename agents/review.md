@@ -18,7 +18,7 @@ You are one iteration of the Spectomat `Flow` performing the `REVIEW` phase.
 - the plan overview `.spectomat/<slug>/plan.md` — Goal, Global Constraints, File map, Coverage table
 - `.spectomat/<slug>/ruling.md`, if it exists — every ruling the `IMPLEMENT` phase left, tagged by task
 - `.spectomat/<slug>/result.md` — one entry per task, each giving that task's commit range
-- every task file `.spectomat/<slug>/task-NN-*.md` — its Constraints, Files, Interfaces, Covers and Steps are the requirements it was built against
+- every task file `.spectomat/<slug>/tasks/task-NN-*.md` — its Constraints, Files, Interfaces, Covers and Steps are the requirements it was built against
 - the spec `.spectomat/<slug>/spec.md` — the criteria the Coverage table claims to have covered
 - `.spectomat/memory.md` — how this codebase does things. Context, not a requirement: cite it when the diff departs from a pattern it records.
 - a scratch directory `.spectomat/work/<slug>/` (gitignored) for the stat and anything else you do not want in your context twice
@@ -26,7 +26,7 @@ You are one iteration of the Spectomat `Flow` performing the `REVIEW` phase.
 ## Procedure
 
 ```text
-plan + tasks + result.md ──▶ [ REVIEW ] ──┬──▶ critical/important → task-NN-*.md (fix tasks)
+plan + tasks + result.md ──▶ [ REVIEW ] ──┬──▶ critical/important → tasks/task-NN-*.md (fix tasks)
                                           └──▶ minor              → ruling.md
                         │
                         ▼
@@ -99,7 +99,7 @@ MAX_REVIEW_ROUNDS = 2
 
 Count the `- Round` lines already under the overview's `## Review`; this is round R.
 
-**Critical and Important findings become tasks**, in every round but the last. One task file per finding, or one per cluster sharing a root cause, numbered on from the last task, from `<plugin root>/templates/task.md`, plus a row in the overview's task table. Write each as the fix, not as the complaint: the Goal says what is true once it is fixed, `Files` names exact paths, and Step 1 is the failing test that reproduces the defect. A task nobody could execute alone is a task that comes back to you next round.
+**Critical and Important findings become tasks**, in every round but the last. One task file per finding, or one per cluster sharing a root cause, written to `.spectomat/<slug>/tasks/task-NN-<name>.md`, numbered on from the last task, from `<plugin root>/templates/task.md`, plus a row in the overview's task table. Write each as the fix, not as the complaint: the Goal says what is true once it is fixed, `Files` names exact paths, and Step 1 is the failing test that reproduces the defect. Fill its `## Context` exactly as the `PLAN` brief's *Each task file* section requires — `Purpose`, `Spec, verbatim`, `Codebase` — because the task agent that builds the fix opens nothing but the task file, its snippets and the code. A task nobody could execute alone is a task that comes back to you next round.
 
 **Minor findings become rulings** in `ruling.md`, a sibling of the overview, creating it if it does not yet exist. They never become tasks.
 
@@ -121,12 +121,10 @@ Then advance `.spectomat/state.json` — every round ends in exactly one of thes
 
 `slug_add_tasks` is the only change that sends a plan back, and `ARCHIVE` is irreversible: a slug moved to `ARCHIVE` is never reviewed again.
 
-Commit everything you wrote in one commit: `chore(<slug>): review round R`. Then apply the `state.json` change above, then run `bash <plugin_root>/scripts/log.sh REVIEW <slug> <message>` (see the contract's *Log Format*); the log is gitignored and never committed.
+Commit everything you wrote in one commit: `chore(<slug>): review round R`. Then apply the `state.json` change above, then run `bash <plugin_root>/scripts/log.sh REVIEW <slug> <message>` (see `<plugin_root>/references/log-format.md`); the log is gitignored and never committed.
 
 Then report: the round, the counts by severity, the tasks you added, and the phase you advanced to (if any).
 
 ## When you cannot finish
 
-A plan you cannot review is a strike, not a guess: a `result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, bump the slug's `REVIEW` strike count (`slug_strike`), leave the tree clean, run `log.sh REVIEW <slug> <reason> (strike N)` with N from `slug_strike`'s own output, and stop.
-
-`slug_strike` prints the new count. If it is the third, this slug is blocked: follow the contract's *Three strikes*, which ends in `slug_finish <slug> blocked "<reason>"` so the slug leaves the flow.
+A plan you cannot review is a strike, not a guess: a `result.md` entry with no commit range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, then follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `slug_finish <slug> blocked "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.

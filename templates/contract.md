@@ -40,7 +40,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### Where you work
 
-- ❌ DO NOT Spawn a subagent — this phase is your fresh context; do the work yourself.
+- ❌ DO NOT Spawn a subagent — this phase is your fresh context; do the work yourself. The one exception is `IMPLEMENT`, which dispatches `spectomat:task` for the single task it took and stays answerable for verifying, recording and closing it; the worker touches no floor state.
 - ✅ DO Work on your slug's own branch, `feat/<slug>`, created by arming: `git checkout feat/<slug>` before you touch anything, and commit every phase of that slug there. Committing to another branch is a strike.
 - ❌ DO NOT Create, rename or delete a branch — arming created yours. A missing `feat/<slug>` is a strike, not something to fix by branching.
 - ❌ DO NOT Merge, rebase or cherry-pick between branches — the operator merges finished work by hand. `ARCHIVE` commits `done.md` on the slug's branch and leaves it there.
@@ -82,7 +82,7 @@ Never set a phase by hand where a counter helper exists: `bash <plugin_root>/scr
 
 ### Three strikes
 
-If a phase defeats you, append `(strike N)` to its log line and skip it next time by picking the following candidate in the same stage. On the third strike the slug is blocked: write `.spectomat/<slug>/blocked.md` naming the phase and the reason, commit it, then call `scripts/utils.sh`'s `slug_finish <slug> blocked "<reason>"`, log the reason, and continue. Both happen in the same iteration, in that order: the state call is what takes the slug out of the flow, so a marker written without it leaves the slug at its phase with three strikes against it — the picker skips it, finds no other candidate, and sends every remaining iteration to the janitor; and writing the marker first keeps any commit from describing a state change that did not happen. The marker is the committed record — `state.json` is gitignored, so `blocked.md` is the only trace of how the slug ended that survives in git. Nothing moves and nothing is deleted — the trail stays in the slug dir for the operator to read.
+A phase that defeats you is a strike, and the third strike blocks the slug. The procedure is `<plugin_root>/references/three-strikes.md` — read it when a phase defeats you. It is the one copy: no brief restates it.
 
 ## Memory
 
@@ -96,14 +96,4 @@ Its own header carries the rules for what earns a line — the three tests, the 
 
 ## Log Format
 
-`log.md` is append-only; never edit an earlier line. Its format is not yours to
-compose: run `bash <plugin_root>/scripts/log.sh <PHASE> <slug> <message>` and it
-writes the line — timestamp, `·` separators and all — deterministically. Never
-`printf`, `echo >>` or otherwise hand-write a line into `log.md`; `log.sh` is
-the only writer. No commit SHA in the message: `git log` is the ledger of
-commits, this file the ledger of phases.
-
-The message is numbers, never adjectives — `Task 2/6 done · tests 41/41`, not
-"tests mostly passing". A log line without numbers did not run the gates. A
-strike ends the message `(strike N: <reason>)`, N from `slug_strike`'s own
-output, not counted by hand.
+`log.md` is append-only and `bash <plugin_root>/scripts/log.sh <PHASE> <slug> <message>` is its only writer — never hand-write a line. The message shape is `<plugin_root>/references/log-format.md`. It is the one copy: no brief restates it.

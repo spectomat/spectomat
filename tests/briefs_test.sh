@@ -11,13 +11,27 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "briefs"
 AGENTS="$(dirname "$SCRIPTS")/agents"
-for a in specify review-spec plan implement review archive recover; do
+for a in specify review-spec plan implement review archive recover task; do
   is "agents/$a.md exists" "$([[ -f "$AGENTS/$a.md" ]] && echo yes || echo no)" "yes"
   is "agents/$a.md is named $a" "$(sed -n 's/^name: *//p' "$AGENTS/$a.md" | head -1)" "$a"
   is "agents/$a.md has a description" \
     "$(grep -c '^description: ' "$AGENTS/$a.md")" "1"
 done
-is "AGENT_COUNT is 7" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "7"
+is "AGENT_COUNT is 8" "$(ls "$AGENTS"/*.md | wc -l | tr -d ' ')" "8"
+# implement dispatches the task agent (D30); the task agent builds one task and
+# touches no floor state — a worker that advanced state.json or logged would
+# make one task two entries.
+is "implement.md dispatches spectomat:task" "$(grep -q 'spectomat:task' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
+is "implement.md allows the Agent tool" "$(grep -q '^tools:.*Agent' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
+is "implement.md does not disallow the Agent tool" "$(grep -q '^disallowedTools:.*Agent' "$AGENTS/implement.md" && echo yes || echo no)" "no"
+is "task.md disallows the Agent tool" "$(grep -q '^disallowedTools:.*Agent' "$AGENTS/task.md" && echo yes || echo no)" "yes"
+is "task.md never advances state.json" \
+  "$(grep -q -E 'slug_task_done|slug_set_phase|slug_add_tasks|slug_start_tasks|slug_strike|slug_finish' "$AGENTS/task.md" && echo yes || echo no)" "no"
+is "task.md never logs" "$(grep -q 'log\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
+TASK_TEMPLATE="$(dirname "$SCRIPTS")/templates/task.md"
+for h in "### Purpose" "### Spec, verbatim" "### Codebase"; do
+  is "templates/task.md Context has '$h'" "$(grep -q "^$h\$" "$TASK_TEMPLATE" && echo yes || echo no)" "yes"
+done
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "no brief points at the deleted prompts/" \
   "$(grep -l 'prompts/' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"

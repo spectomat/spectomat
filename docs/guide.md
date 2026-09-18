@@ -26,7 +26,8 @@ claude plugin install spectomat@spectomat
   <slug>/     everything of one idea, for its whole life — nothing is moved when it finishes
     draft.md    the idea as you wrote it
     spec.md     written by SPECIFY from the draft, then revised once by REVIEW-SPEC; or put a finished spec here yourself
-    plan.md     the overview PLAN writes, plus task-NN-<name>.md per task, each a self-contained brief
+    plan.md     the overview PLAN writes
+    tasks/      task-NN-<name>.md per task, each a self-contained brief; snippets/ holds the code their steps name
     ruling.md   decisions and defects that bind one task; result.md records each closed task's commits
     done.md     written by ARCHIVE once REVIEW has passed the plan and the gates are green
     blocked.md  written instead, with the reason, when a phase fails three times
@@ -47,9 +48,9 @@ Stop hook ──▶ feeds back the pointer prompt ──▶ picker (scripts/phas
 ```
 
 ```text
-<slug>/draft.md ──SPECIFY──▶ spec.md ──REVIEW-SPEC──▶ reviewed spec ──PLAN──▶ plan.md + task-NN-*.md
+<slug>/draft.md ──SPECIFY──▶ spec.md ──REVIEW-SPEC──▶ reviewed spec ──PLAN──▶ plan.md + tasks/task-NN-*.md
                                                                                    │
-                                                                            IMPLEMENT×n (TDD, gates, one commit)
+                                                                            IMPLEMENT×n (one task agent each: TDD, gates, one commit)
                                                                                    │
                                                                                    ▼
                                        done.md ◀──ARCHIVE── verdict ◀──REVIEW── finished plan

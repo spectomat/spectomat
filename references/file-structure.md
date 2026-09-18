@@ -1,19 +1,20 @@
 # Spectomat plugin file structure index
 
-- `.claude-plugin/` 
+- `.claude-plugin/`
   - `marketplace.json` (this repo as a one-plugin marketplace, source `./`).
-  - `plugin.json` (the plugin attribution) 
+  - `plugin.json` (the plugin attribution)
 
-- `commands/` 
-  - `run.md`, `status.md`, `cancel.md`, `help.md`. 
+- `commands/`
+  - `run.md`, `status.md`, `cancel.md`, `help.md`.
 
-- `agents/` 
-  -  `specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `archive.md`, `recover.md`.
+- `agents/`
+  - `specify.md`, `review-spec.md`, `plan.md`, `implement.md`, `review.md`, `archive.md`, `recover.md` — one per verdict the picker can emit,
+  - `task.md` — the task agent, dispatched by `implement.md` once per task, never by the picker.
 
-- `hooks/` 
+- `hooks/`
   - `hooks.json` registers the Stop hook; the hook itself is `scripts/stop-hook.sh`, which keeps the flow iterations going.
 
-- `scripts/` 
+- `scripts/`
   - `utils.sh` holds the shared paths and helpers the others source,
   - `command-run.sh` sets up the floor `.spectomat/`, renders `contract.md`, `memory.md` and `gates.sh`, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
   - `phase.sh` is the picker: one verdict block per iteration, naming the phase and the subagent/brief to dispatch it to,
@@ -32,6 +33,8 @@
   - `memorize.md` (the memory-writing procedure `IMPLEMENT` and `REVIEW-SPEC` each follow inline before their own commit),
   - `file-structure.md` (this file),
   - `floor.md` (the floor layout, rendered into the project's `contract.md`),
+  - `three-strikes.md` (the strike and blocked-slug procedure every phase follows when it is defeated),
+  - `log-format.md` (the `log.md` message shape every writer of a log line follows),
   - `glossary.md` (the terms this repo uses consistently, printed by `/spectomat:help` alongside `guide.md`).
 
 - `templates/`
