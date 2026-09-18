@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <rect width="1280" height="640" fill="#ffffff"/>
+
+  <!-- the mark, scaled from the 256 box to 220 and placed left of the text -->
+  <g transform="translate(150 210) scale(0.859)">
+    <g fill="none" stroke="#d97757" stroke-width="15" stroke-linecap="round">
+      <path d="M 153.14 45.76 A 86 86 0 0 1 196.68 76.24"/>
+      <path d="M 207.16 94.40 A 86 86 0 0 1 207.16 161.60"/>
+      <path d="M 196.68 179.76 A 86 86 0 0 1 138.48 213.36"/>
+      <path d="M 117.52 213.36 A 86 86 0 0 1 59.32 179.76"/>
+      <path d="M 48.84 161.60 A 86 86 0 0 1 48.84 94.40"/>
+      <path d="M 59.32 76.24 A 86 86 0 0 1 102.86 45.76"/>
+    </g>
+    <circle cx="128" cy="42" r="15" fill="#d97757"/>
+    <g stroke="#d97757" stroke-width="15" stroke-linecap="round">
+      <path d="M 90 100 H 166"/>
+      <path d="M 90 128 H 166"/>
+      <path d="M 90 156 H 128"/>
+    </g>
+  </g>
+
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+    <text x="410" y="288" font-size="86" font-weight="700" fill="#1c1c1a" letter-spacing="-2">Spectomat</text>
+    <text x="410" y="344" font-size="30" fill="#55534e">Spec-driven code development flow for Claude Code</text>
+    <text x="410" y="408" font-size="26" fill="#d97757" font-weight="600">draft → spec → plan → tested, committed code</text>
+  </g>
+</svg>
