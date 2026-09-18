@@ -6,10 +6,14 @@ One sentence: what exists when this task is done that did not before.
 
 ## Context
 
-**Covers:** AC-1.1, AC-1.2
-**Depends on:** Task <M> (or none)
-**Branch:** `feat/{{SLUG}}` — the only branch this task commits to
-**Source:** `.spectomat/{{SLUG}}/plan.md`, `.spectomat/{{SLUG}}/spec.md` §<sections> — provenance for the `REVIEW` phase; the task agent never opens them
+**Depends on:**
+
+- Task <M> (or none)
+  - exact names and signatures consumed from task (none for Task 1)
+
+**Branch:**
+
+`feat/{{SLUG}}` — the only branch this task commits to
 
 ### Purpose
 
@@ -45,12 +49,6 @@ What the task agent must know and cannot read off this file or the code it names
 4. **Step 4: Run it, expect PASS** — same command; the full suite stays green
 5. **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the task agent stages exactly this task's Files and makes one commit
 
-## Interfaces
+## Produced Interfaces
 
-### Consumes
-
-- exact names and signatures produced by earlier tasks (none for Task 1)
-
-### Produces
-  
 - exact names and signatures later tasks rely on
