@@ -1,5 +1,5 @@
 #!/bin/bash
-# prepare.sh — arms and refuses to arm the floor; commits drafts; arm writes
+# command-run.sh — arms and refuses to arm the floor; commits drafts; arm writes
 # state.json, cancel marks it inactive without touching the floor.
 #
 #   tests/prepare_test.sh              tests ../scripts
@@ -11,9 +11,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # Arming a floor must leave a clean tree. The picker reads `git status` and
 # answers RECOVER to any dirt, so a draft the user dropped into drafts/ must be
-# moved into its slug dir and committed by prepare.sh, or iteration 1 burns on
+# moved into its slug dir and committed by command-run.sh, or iteration 1 burns on
 # the janitor.
-echo "prepare.sh drafts"
+echo "command-run.sh drafts"
 
 # One `git init` for every case below, copied like floor() does.
 REPO_TEMPLATE="$TMP/repo-template"
@@ -28,13 +28,13 @@ mkdir -p "$REPO_TEMPLATE"
   git commit -qm init
 ) >/dev/null 2>&1
 
-# Drop an untracked draft on the floor: prepare.sh commits it and arms.
+# Drop an untracked draft on the floor: command-run.sh commits it and arms.
 DROP="$TMP/drop"
 mkdir -p "$DROP"
 cp -R "$REPO_TEMPLATE/." "$DROP"
 mkdir -p "$DROP/.spectomat/drafts"
 printf 'idea\n' > "$DROP/.spectomat/drafts/001-thing.md"
-(cd "$DROP" && bash "$SCRIPTS/prepare.sh" 3) >/dev/null 2>&1
+(cd "$DROP" && bash "$SCRIPTS/command-run.sh" 3) >/dev/null 2>&1
 is "a dropped draft leaves a clean tree" "$(cd "$DROP" && git status --porcelain)" ""
 is "the draft moves into its slug dir" "$([[ -f "$DROP/.spectomat/001-thing/draft.md" ]] && echo yes || echo no)" "yes"
 is "drafts/ is emptied by arming"      "$(ls "$DROP/.spectomat/drafts" | wc -l | tr -d ' ')" "0"
@@ -53,7 +53,7 @@ mkdir -p "$DROP2/.spectomat/drafts"
   git add .spectomat/drafts/001-thing.md
   git commit -qm draft
 ) >/dev/null 2>&1
-(cd "$DROP2" && bash "$SCRIPTS/prepare.sh" 3) >/dev/null 2>&1
+(cd "$DROP2" && bash "$SCRIPTS/command-run.sh" 3) >/dev/null 2>&1
 is "a committed draft arms cleanly" "$(cd "$DROP2" && git status --porcelain)" ""
 is "a committed draft reaches SPECIFY" "$(verdict "$DROP2" "$SCRIPTS")" "SPECIFY 001-thing"
 
@@ -65,19 +65,19 @@ mkdir -p "$HAND"
 cp -R "$REPO_TEMPLATE/." "$HAND"
 mkdir -p "$HAND/.spectomat/001-mine"
 printf 'spec\n' > "$HAND/.spectomat/001-mine/spec.md"
-(cd "$HAND" && bash "$SCRIPTS/prepare.sh" 3) >/dev/null 2>&1
+(cd "$HAND" && bash "$SCRIPTS/command-run.sh" 3) >/dev/null 2>&1
 is "a hand-written spec arms cleanly"    "$(cd "$HAND" && git status --porcelain)" ""
 is "a hand-written spec reaches REVIEW-SPEC" "$(verdict "$HAND" "$SCRIPTS")" "REVIEW-SPEC 001-mine"
 
 # Unrelated work in progress would make the picker answer RECOVER every iteration, so
-# prepare.sh refuses to arm rather than spend the whole cap on the janitor.
+# command-run.sh refuses to arm rather than spend the whole cap on the janitor.
 DIRTY="$TMP/dirty"
 mkdir -p "$DIRTY"
 cp -R "$REPO_TEMPLATE/." "$DIRTY"
 mkdir -p "$DIRTY/.spectomat/drafts"
 printf 'idea\n' > "$DIRTY/.spectomat/drafts/001-thing.md"
 printf 'edited\n' > "$DIRTY/README.md"
-out=$(cd "$DIRTY" && bash "$SCRIPTS/prepare.sh" 3 2>&1); rc=$?
+out=$(cd "$DIRTY" && bash "$SCRIPTS/command-run.sh" 3 2>&1); rc=$?
 case "$out" in *"tree is dirty"*) got=yes ;; *) got=no ;; esac
 is "a dirty tree refuses to arm"      "$got" "yes"
 is "the refusal exits non-zero"       "$rc" "1"
@@ -94,7 +94,7 @@ mkdir -p "$ORDER/.spectomat/drafts"
 printf 'b\n' > "$ORDER/.spectomat/drafts/beta.md"
 printf 'a\n' > "$ORDER/.spectomat/drafts/alpha.md"
 touch "$ORDER/.spectomat/drafts/beta.md"   # newer, but alphabetically second
-(cd "$ORDER" && bash "$SCRIPTS/prepare.sh" 3) >/dev/null 2>&1
+(cd "$ORDER" && bash "$SCRIPTS/command-run.sh" 3) >/dev/null 2>&1
 is "drafts are read alphabetically" "$(verdict "$ORDER" "$SCRIPTS")" "SPECIFY alpha"
 
 # Arming writes state.json, the armed flag every existence test below reads.
@@ -107,17 +107,17 @@ mkdir -p "$ARM"
 cp -R "$REPO_TEMPLATE/." "$ARM"
 mkdir -p "$ARM/.spectomat/drafts"
 printf 'idea\n' > "$ARM/.spectomat/drafts/001-thing.md"
-(cd "$ARM" && bash "$SCRIPTS/prepare.sh" 7) >/dev/null 2>&1
+(cd "$ARM" && bash "$SCRIPTS/command-run.sh" 7) >/dev/null 2>&1
 is "state.json is valid JSON"   "$(cd "$ARM" && jq -e . .spectomat/state.json >/dev/null 2>&1 && echo y || echo n)" "y"
 is "the iteration starts at 1"       "$(cd "$ARM" && jq -r .iteration .spectomat/state.json)" "1"
 is "the cap is a JSON number"   "$(cd "$ARM" && jq -r '.max_iterations | type' .spectomat/state.json)" "number"
 is "arming leaves a clean tree" "$(cd "$ARM" && git status --porcelain)" ""
 is "arming marks the flow active" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "true"
-(cd "$ARM" && bash "$SCRIPTS/cancel.sh") >/dev/null 2>&1
+(cd "$ARM" && bash "$SCRIPTS/command-cancel.sh") >/dev/null 2>&1
 is "cancel keeps state.json"        "$([[ -e "$ARM/.spectomat/state.json" ]] && echo yes || echo no)" "yes"
 is "cancel marks the flow inactive" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "false"
 is "cancel keeps the floor"         "$([[ -d "$ARM/.spectomat/drafts" ]] && echo yes || echo no)" "yes"
-(cd "$ARM" && bash "$SCRIPTS/prepare.sh" 7) >/dev/null 2>&1
+(cd "$ARM" && bash "$SCRIPTS/command-run.sh" 7) >/dev/null 2>&1
 is "resuming re-arms the flow" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "true"
 is "arming records the plugin copy" "$(cd "$ARM" && jq -r .plugin_root .spectomat/state.json)" "$(dirname "$SCRIPTS")"
 
@@ -135,12 +135,12 @@ printf 'plan\n' > "$RE/.spectomat/001-old/plan.md"
 printf 'archived\n' > "$RE/.spectomat/001-old/done.md"
 printf 'idea\n' > "$RE/.spectomat/drafts/002-new.md"
 (cd "$RE" && git add -A && git commit -qm seed) >/dev/null 2>&1
-out=$( (cd "$RE" && bash "$SCRIPTS/prepare.sh" 7) 2>&1 )
+out=$( (cd "$RE" && bash "$SCRIPTS/command-run.sh" 7) 2>&1 )
 is "a pre-D27 finished slug is seeded DONE" "$(cd "$RE" && jq -r '.slugs["001-old"].phase' .spectomat/state.json)" "DONE"
 is "the finished slug is not counted as active" "$(printf '%s\n' "$out" | grep -c 'active: 1   done: 1')" "1"
 is "the new draft still arms" "$(cd "$RE" && jq -r '.slugs["002-new"].phase' .spectomat/state.json)" "SPECIFY"
-(cd "$RE" && bash "$SCRIPTS/cancel.sh") >/dev/null 2>&1
-(cd "$RE" && bash "$SCRIPTS/prepare.sh" 7) >/dev/null 2>&1
+(cd "$RE" && bash "$SCRIPTS/command-cancel.sh") >/dev/null 2>&1
+(cd "$RE" && bash "$SCRIPTS/command-run.sh" 7) >/dev/null 2>&1
 is "a second arming leaves the finished slug alone" "$(cd "$RE" && jq -r '.slugs["001-old"].phase' .spectomat/state.json)" "DONE"
 is "re-arming leaves a clean tree" "$(cd "$RE" && git status --porcelain)" ""
 

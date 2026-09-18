@@ -1,13 +1,15 @@
 # Task {{N}}: {{SLUG}}  <component>
 
+## Goal
+
+One sentence: what exists when this task is done that did not before.
+
+## Context
+
 **Plan:** .spectomat/{{SLUG}}/plan.md
 **Spec:** .spectomat/{{SLUG}}/spec.md — §<sections this task implements>
 **Covers:** AC-1.1, AC-1.2
 **Depends on:** Task <M> (or none)
-
-## Goal
-
-One sentence: what exists when this task is done that did not before.
 
 ## Constraints
 

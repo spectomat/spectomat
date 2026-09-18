@@ -34,10 +34,10 @@ for a in specify review-spec implement review recover; do
 done
 is "contract.md's three strikes finishes the slug" \
   "$(grep -q 'slug_finish' "$(dirname "$SCRIPTS")/templates/contract.md" && echo yes || echo no)" "yes"
-# archive.md is a thin wrapper (D21): the mutation stays in archive.sh. FINISH
-# has no brief at all (D24) — the Stop hook ends the flow and composes the
-# report, so no agent can claim the floor is empty.
-is "archive.md invokes archive.sh" "$(grep -q 'archive.sh' "$AGENTS/archive.md" && echo yes || echo no)" "yes"
+# archive.md is a thin wrapper (D21): the mutation stays in agent-archive.sh.
+# FINISH has no brief at all (D24) — the Stop hook ends the flow and composes
+# the report, so no agent can claim the floor is empty.
+is "archive.md invokes agent-archive.sh" "$(grep -q 'agent-archive.sh' "$AGENTS/archive.md" && echo yes || echo no)" "yes"
 is "archive.md never calls slug_finish itself" "$(grep -q 'slug_finish' "$AGENTS/archive.md" && echo yes || echo no)" "no"
 is "there is no finish brief" "$([[ -e "$AGENTS/finish.md" ]] && echo yes || echo no)" "no"
 is "no brief mentions the retired promise" "$(grep -l 'FACTORY EMPTY' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"

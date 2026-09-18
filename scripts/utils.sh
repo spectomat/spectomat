@@ -56,7 +56,7 @@ render_template() {
   printf '%s' "$body" > "$dest"
 }
 
-# The prompt the Stop hook feeds back every iteration, and what prepare.sh
+# The prompt the Stop hook feeds back every iteration, and what command-run.sh
 # previews when it arms a flow. No template file on disk: PLUGIN_ROOT is
 # already a shell variable in every script that sources this file, so it is
 # substituted the same way render_template does, straight into the heredoc.
@@ -107,7 +107,7 @@ EOF
 }
 
 # slug_branch SLUG — the branch every phase of SLUG works on. One name, one
-# place: prepare.sh creates it, the phase agents check it out, and nothing else
+# place: command-run.sh creates it, the phase agents check it out, and nothing else
 # composes "feat/$slug" by hand.
 slug_branch() { printf 'feat/%s\n' "$1"; }
 
@@ -230,7 +230,7 @@ slug_finish() {
 # slugs_at_phase PHASE — slugs at PHASE, alphabetically. The picker's candidate
 # sets, the finished counts and the blocked list are all this one shape.
 #
-# The file check comes first and the jq failure is swallowed: prepare.sh's
+# The file check comes first and the jq failure is swallowed: command-run.sh's
 # report_floor calls this before arm_flow has written state.json, and a script
 # running set -e with pipefail would die on the failing jq inside the pipeline.
 slugs_at_phase() {

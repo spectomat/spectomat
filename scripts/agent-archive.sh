@@ -1,7 +1,7 @@
 #!/bin/bash
 # Spectomat archiver — the ARCHIVE phase.
 #
-#   archive.sh <slug>
+#   agent-archive.sh <slug>
 #
 # Runs the contract's gates, marks the slug finished, makes one commit, records
 # the terminal phase in state.json and writes one log line. Nothing moves: the
@@ -29,7 +29,7 @@ log_line() { bash "$PLUGIN_ROOT/scripts/log.sh" ARCHIVE "$SLUG" "$1"; }
 # since neither DONE nor BLOCKED is ARCHIVE.
 require_ready() {
   local phase
-  [[ -n "$SLUG" ]] || die "usage: archive.sh <slug>"
+  [[ -n "$SLUG" ]] || die "usage: agent-archive.sh <slug>"
   [[ -z "$(git status --porcelain)" ]] || die "tree is dirty: the janitor runs before ARCHIVE"
   phase="$(slug_phase "$SLUG")"
   [[ -n "$phase" ]] || die "$SLUG is not tracked in $STATE_FILE"

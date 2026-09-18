@@ -6,7 +6,7 @@ allowed-tools: []
 # Spectomat help
 
 ```!
-cat "${CLAUDE_PLUGIN_ROOT}/docs/guide.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/command-help.sh"
 ```
 
 Show the guide above to the user verbatim, as Markdown. Add nothing, summarise nothing, change nothing.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# archive.sh — the ARCHIVE phase: green/red gates, strikes, blocking, and the
+# agent-archive.sh — the ARCHIVE phase: green/red gates, strikes, blocking, and the
 # marker file that finishes a slug in place without moving its trail.
 #
 #   tests/archive_test.sh              tests ../scripts
@@ -9,9 +9,9 @@ set -uo pipefail
 SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)}"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-echo "archive.sh"
+echo "agent-archive.sh"
 # ready NAME SLUG GATE — a floor with a finished plan and a one-line gate block.
-# The slug is parked at ARCHIVE, which is what archive.sh now requires: a slug
+# The slug is parked at ARCHIVE, which is what agent-archive.sh now requires: a slug
 # at any other phase is refused before a gate runs.
 ready() {
   floor "arc-$1"; spec "$2"; plan "$2" 2 0; gates_block "$3"
@@ -21,7 +21,7 @@ ready() {
   # has to stand where a real floor stands: on feat/<slug>.
   ( cd "$FIXTURE" && git checkout -q -B "feat/$2" )
 }
-arc()   { ( cd "$FIXTURE" && bash "$SCRIPTS/archive.sh" "$1" >/dev/null 2>&1 ); }
+arc()   { ( cd "$FIXTURE" && bash "$SCRIPTS/agent-archive.sh" "$1" >/dev/null 2>&1 ); }
 there() { [[ -e "$FIXTURE/.spectomat/$1" ]] && echo yes || echo no; }
 commits() { ( cd "$FIXTURE" && git rev-list --count HEAD ); }
 
@@ -68,7 +68,7 @@ arc 002-b; is "an unknown slug is refused" "$?" "1"
 # a second commit over finished work, and (for a blocked slug) would silently
 # promote it to shipped. The refusal comes from the phase, not the marker — a
 # marker written by hand is a floor file the flow no longer reads.
-echo "archive.sh: a finished slug is refused"
+echo "agent-archive.sh: a finished slug is refused"
 ready twice 001-a 'true'
 arc 001-a; n0=$(commits)
 arc 001-a; is "archiving a done slug exits non-zero" "$?" "1"

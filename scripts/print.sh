@@ -55,7 +55,7 @@ print_plans() {
 
 # One line per blocked slug, each naming the dir whose blocked.md holds the
 # reason. A blocked slug that nothing reports is a silently dropped idea. The
-# path is built from the slug name, never stat'd: archive.sh writes the marker
+# path is built from the slug name, never stat'd: agent-archive.sh writes the marker
 # before it records BLOCKED, so a slug at that phase has its file.
 print_blocked() {
   local blocked

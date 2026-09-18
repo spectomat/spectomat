@@ -1,7 +1,7 @@
 #!/bin/bash
-# Spectomat prepare — set up the factory floor and arm the unattended flow.
+# Spectomat run — set up the factory floor and arm the unattended flow.
 #
-#   prepare.sh [MAX_ITERATIONS]
+#   command-run.sh [MAX_ITERATIONS]
 #
 # Creates .spectomat/drafts/, renders contract.md, memory.md and gates.sh when
 # absent, moves each draft into its own slug dir .spectomat/<slug>/draft.md,

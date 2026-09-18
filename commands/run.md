@@ -10,7 +10,7 @@ Run the code development flow
 Floor setup and the start of iterations over `draft → spec → plan → executed plan → done` phases, each slug in its own `.spectomat/<slug>/`:
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}/scripts/prepare.sh" $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}/scripts/command-run.sh" $ARGUMENTS
 ```
 
 If the output ends in `❌ Not starting`, report why and stop.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# prepare.sh renders .spectomat/gates.sh — once, from package.json, executable,
+# command-run.sh renders .spectomat/gates.sh — once, from package.json, executable,
 # and never over an existing one.
 #
 #   tests/gates_render_test.sh              tests ../scripts
@@ -11,7 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "gates.sh render"
 
-# repo NAME [package.json body] — a git repo with one draft, armed by prepare.sh.
+# repo NAME [package.json body] — a git repo with one draft, armed by command-run.sh.
 repo() {
   R="$TMP/gr-$1"
   mkdir -p "$R/.spectomat/drafts"
@@ -28,7 +28,7 @@ repo() {
   # Captured before arming, so "arming leaves HEAD alone" compares against the
   # real starting branch rather than a guess at git's default name.
   HEAD_BEFORE="$(cd "$R" && git rev-parse --abbrev-ref HEAD)"
-  ( cd "$R" && bash "$SCRIPTS/prepare.sh" 3 ) >/dev/null 2>&1
+  ( cd "$R" && bash "$SCRIPTS/command-run.sh" 3 ) >/dev/null 2>&1
 }
 # gate_lines — the rendered script minus its comments and blank lines.
 gate_lines() { grep -vE '^[[:space:]]*(#|$)' "$R/.spectomat/gates.sh" | grep -v '^set -e$' | grep -v '^cd ' | tr '\n' '|'; }
@@ -69,7 +69,7 @@ is "no package.json is an honest no-op" "$(gate_lines)" 'echo "ok: no gates yet 
 
 # A second run must not overwrite what the operator edited.
 printf '#!/bin/bash\nset -e\necho mine\n' > "$R/.spectomat/gates.sh"
-( cd "$R" && git commit -qam edit && bash "$SCRIPTS/prepare.sh" 3 ) >/dev/null 2>&1
+( cd "$R" && git commit -qam edit && bash "$SCRIPTS/command-run.sh" 3 ) >/dev/null 2>&1
 is "an edited gates.sh is kept" "$(gate_lines)" "echo mine|"
 
 finish

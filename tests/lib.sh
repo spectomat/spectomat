@@ -110,7 +110,7 @@ plan_bare() {
   fixture_commit
 }
 
-# archived SLUG [blocked] — a finished slug, as archive.sh leaves it: the trail
+# archived SLUG [blocked] — a finished slug, as agent-archive.sh leaves it: the trail
 # stays put, one marker file says how it ended, and state.json carries the
 # terminal phase that actually takes it out of the flow.
 archived() {
@@ -133,7 +133,7 @@ logline() { printf '%s\n' "$1" >> "$FIXTURE/.spectomat/log.md"; }
 # dirty — leave an untracked file so `git status --porcelain` is not silent.
 dirty() { printf 'x\n' > "$FIXTURE/untracked.txt"; }
 
-# gates_block LINE... — a .spectomat/gates.sh running LINE..., the way prepare.sh
+# gates_block LINE... — a .spectomat/gates.sh running LINE..., the way command-run.sh
 # renders it: `set -e` chains the lines, so the exit code is the whole run's.
 gates_block() {
   {
