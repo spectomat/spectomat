@@ -1,5 +1,7 @@
 # Spectomat
 
+<img src="assets/logo.svg" alt="" width="88" align="right">
+
 [![CI](https://github.com/spectomat/spectomat/actions/workflows/ci.yml/badge.svg)](https://github.com/spectomat/spectomat/actions/workflows/ci.yml)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757.svg)](https://docs.claude.com/en/docs/claude-code/plugins)
@@ -7,8 +9,6 @@
 Spec-driven code development flow for Claude Code.
 
 Drop ideas into `.spectomat/drafts/`, call one `/spectomat:run` command, and an unattended flow turns each idea into a spec, each spec into a plan and tasks, and then executes all of them to produce well-tested, committed code.
-
-> [User guide](docs/guide.md) is shown by `/spectomat:help`.
 
 ## Workflow
 
@@ -19,22 +19,45 @@ claude plugin marketplace add spectomat/spectomat
 claude plugin install spectomat@spectomat
 ```
 
-### Run
+> Requires `jq` and `git` on PATH.
+
+### Usage
 
 in a chat:
 
 ```text
-just refer the word "spectomat" in your message
-or explicitly call /spectomat:spectomat-run-new-draft
+use spectomat to do some marvelous things
 ```
 
-inside a project with a draft on the floor.
+to start working on next wish (or continue work on currently in progess)
+
+```text
+/spectomat:run 25 
+```
+
+the same with CLI a project with a draft on the floor.
 
 ```bash
 claude -p "/spectomat:run 25" --plugin-dir <this repo>
 ```
 
-> Requires `jq` on PATH.
+to disarm the current flow; the floor stays, `/spectomat:run` will resume from it
+
+```text
+/spectomat:cancel
+```
+
+to check the current flow status:
+
+```text
+/spectomat:status
+```
+
+to see the full [User guide](docs/guide.md).
+
+```text
+/spectomat:help
+```
 
 ### Update
 
@@ -48,10 +71,17 @@ claude plugin update spectomat@spectomat
 
 See [File structure](./references/file-structure.md) for the plugin anatomy, and [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and the full verification steps.
 
+install from a local machine
+
 ```bash
-claude plugin marketplace add ~/Projects/spectomat # from a local machine
-claude plugin install spectomat@spectomat
-claude plugin update spectomat@spectomat
+cd ~/Projects
+git clone https://github.com/spectomat/spectomat.git
+claude plugin marketplace add ~/Projects/spectomat 
+```
+
+validate
+
+```bash
 claude plugin validate .claude-plugin/plugin.json --strict
 claude plugin validate .claude-plugin/marketplace.json --strict
 scripts/selftest.sh
