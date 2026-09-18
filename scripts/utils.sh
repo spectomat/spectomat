@@ -39,19 +39,28 @@ disarm() { rm -f "$STATE_FILE"; }
 
 # Render a template, replacing every {{KEY}} with its value:
 #   render_template SRC DEST KEY=value ...
-# Values are inserted literally - bash pattern substitution gives no meaning to
-# & or \ in a replacement, which is why this needs no escaping pass. Keys are
-# applied in the order given, so a value holding {{X}} is still expanded by a
-# later X= argument.
+# Values are inserted literally. Bash 5.2 gave an unquoted & in a substitution
+# replacement the sed meaning "the text that matched", so ${body//.../$val} put
+# the {{KEY}} back for any value holding & - and escaping it instead leaves a
+# literal backslash under bash 3.2, which never had that rule. Splitting the
+# body on the placeholder sidesteps the replacement rules altogether and reads
+# the same on every bash. Keys are applied in the order given, so a value
+# holding {{X}} is still expanded by a later X= argument.
 render_template() {
-  local src="$1" dest="$2" kv key val body
+  local src="$1" dest="$2" kv key val body out head
   shift 2
   body=$(cat "$src"; printf X)   # X guards the trailing newlines $() would strip
   body="${body%X}"
   for kv in "$@"; do
     key="${kv%%=*}"
     val="${kv#*=}"
-    body="${body//\{\{$key\}\}/$val}"
+    out=""
+    while [[ "$body" == *"{{$key}}"* ]]; do
+      head="${body%%\{\{$key\}\}*}"       # everything before the first match
+      out="$out$head$val"
+      body="${body#"$head"\{\{$key\}\}}"  # everything after it
+    done
+    body="$out$body"
   done
   printf '%s' "$body" > "$dest"
 }
