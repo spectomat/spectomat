@@ -21,14 +21,23 @@ Two to four sentences: the plan's goal, the architecture this task sits in, what
 
 ### Spec, verbatim
 
-Every requirement, criterion, constant, format and message this task implements, quoted from the spec with its id and section — the full text, never the id alone:
+Every requirement, criterion, constant, format and message this task implements, quoted from the spec with its id and section — the full text copied, not referenced, never the id alone:
 
-> **AC-1.1** (§3.2) — <the criterion's full text>
-> **§4.1** — <the rule's full text>
+#### **AC-1.1** (§3.2)
+
+ <the criterion's full text>
+
+#### **§4.1**
+
+ <the rule's full text>
+
+### From Memory
+
+- every `memory.md` line that applies
 
 ### Codebase
 
-What the task agent must know and cannot read off this file or the code it names: the existing files and signatures it touches (`path:lines`), the exemplar to copy (`path`), how tests run here, and every `memory.md` line that applies — copied, not referenced.
+What the task agent must know and cannot read off this file or the code it names: the existing files and signatures it touches (`path:lines`), the exemplar to copy (`path`), how tests run here.
 
 ## Constraints
 
