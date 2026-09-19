@@ -19,7 +19,7 @@ jobs:
         # macOS carries bash 3.2, which is the floor the scripts target.
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Report versions
         run: |
