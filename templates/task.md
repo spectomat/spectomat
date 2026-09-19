@@ -1,27 +1,30 @@
-# Task {{N}}: {{SLUG}}  <component>
+---
+component: <component>
+slug: "{{SLUG}}"
+task_number: "{{N}}"
+branch: feat/{{SLUG}}
+tasks: .spectomat/{{SLUG}}/tasks.json
+---
+
+# Task {{N}}: {{SLUG}}
+
+**Task**
+: is one independent piece of work in a plan, with its own file brief, its own test cycle and its own commit.
+: The `implement` agent executes tasks one-by-one, in dependency order, running a `task` subagent in a separate session.
+
+This document is a specific task brief: self-sufficient performative document. Readable with no other file open.
+
+## Scope
+
+the entire plan's goal, the architecture this task sits in.
 
 ## Goal
 
-One sentence: what exists when this task is done that did not before.
+what this task adds: what exists when this task is done that did not before.
 
 ## Context
 
-**Consumes from:**
-
-- Task <M> (or none)
-  - exact names and signatures consumed from task (none for Task 1)
-
-> Ordering is not yours to read: `.spectomat/{{SLUG}}/tasks.json` holds `dependsOn`, and the `IMPLEMENT` phase has already decided this task's turn has come. This section is here for the names and signatures alone.
-
-**Branch:**
-
-`feat/{{SLUG}}` — the only branch this task commits to
-
-### Purpose
-
-Two to four sentences: the plan's goal, the architecture this task sits in, what this task adds. Readable with no other file open.
-
-### Spec, verbatim
+### Excerpts from Spec
 
 Every requirement, criterion, constant, format and message this task implements, quoted from the spec with its id and section — the full text copied, not referenced, never the id alone:
 
@@ -37,9 +40,14 @@ Every requirement, criterion, constant, format and message this task implements,
 
 - every `memory.md` line that applies
 
-### Codebase
+### From existing codebase
 
 What the task agent must know and cannot read off this file or the code it names: the existing files and signatures it touches (`path:lines`), the exemplar to copy (`path`), how tests run here.
+
+### From previous tasks
+
+- Task <M> (or none)
+  - exact names and signatures consumed from task (none for Task 1)
 
 ## Constraints
 
@@ -48,18 +56,35 @@ What the task agent must know and cannot read off this file or the code it names
 
 ## Files
 
-- Create: `exact/path.js`
-- Modify: `exact/existing.js:120-140`
+### Tests
+
 - Test: `exact/path.test.js`
 
-## Steps
+### Code
 
-1. **Step 1: Write the failing test** — create `exact/path.test.js` with the content of `.spectomat/{{SLUG}}/snippets/task-{{N}}-step1.js.snippet`
-2. **Step 2: Run it, expect FAIL** — `npm test -- exact/path.test.js`, fails with "fn is not defined"
-3. **Step 3: Minimal implementation** — create `exact/path.js` with the content of `.spectomat/{{SLUG}}/snippets/task-{{N}}-step3.js.snippet`
-4. **Step 4: Run it, expect PASS** — same command; the full suite stays green
-5. **Step 5: Commit** — message `feat({{SLUG}}): <what>`; the task agent stages exactly this task's Files and makes one commit
+- Create: `exact/path.js`
+- Modify: `exact/existing.js:120-140`
 
-## Produced Interfaces
+### Others (docs,resources, configs)
 
-- exact names and signatures later tasks rely on
+- Create: `exact/path.md`
+
+## Procedure
+
+### Step 1: Write test
+
+— create `exact/path.test.js` with the content of `.spectomat/{{SLUG}}/snippets/task-{{N}}-step1.js.snippet`
+
+### Step 2: Run test before Building
+
+— `npm test -- exact/path.test.js`, fails with "fn is not defined"
+
+### Step 3: Building
+
+- create `exact/path.js` with the content of `.spectomat/{{SLUG}}/snippets/task-{{N}}-step3.js.snippet`
+- modify `exact/existing.js:120-140`
+- create: `exact/path.md` with the content of `.spectomat/{{SLUG}}/snippets/task-{{N}}-step3.md.snippet`
+
+### Step 4: Run test after Building
+
+— `npm test -- exact/path.test.js`, the full suite stays green

@@ -16,6 +16,10 @@ STATE_SESSION=""
 STATE_ACTIVE=""
 STATE_BROKEN=""   # why the state file could not be parsed, when it could not
 
+# Set by ask_picker (utils.sh)
+PICK_PHASE=""
+PICK_SLUG=""
+
 # --- helpers ---
 
 # End the flow normally: the message reaches the operator as systemMessage,
@@ -35,12 +39,6 @@ stop_corrupt() {
   echo "   The flow is stopping. Run /spectomat:run again to start fresh." >&2
   disarm
   exit 0
-}
-
-# The picker's verdict for the floor as it stands now. phase.sh cd_root's
-# itself, so this is safe from any cwd, and it mutates nothing.
-ask_picker() {
-  bash "$PLUGIN_ROOT/scripts/phase.sh" 2>/dev/null | sed -n 's/^phase://p'
 }
 
 # The lines the flow ends on, at most four. Every finished slug keeps its
@@ -109,7 +107,9 @@ require_below_max() {
   fi
 }
 
-# Bump the iteration counter in place and emit the block decision with the prompt.
+# Bump the iteration counter in place, record the verdict the next iteration
+# will be handed as `current` (CURRENT_SET skips a RECOVER, so a dirty death
+# stays named), and emit the block decision with the prompt. One write for both.
 continue_iteration() {
   local next_iteration prompt_text temp_file system_msg
   next_iteration=$((ITERATION + 1))
@@ -117,7 +117,8 @@ continue_iteration() {
   prompt_text=$(pointer_prompt)
 
   temp_file="${STATE_FILE}.tmp.$$"
-  jq --argjson n "$next_iteration" '.iteration = $n' "$STATE_FILE" > "$temp_file" \
+  jq --argjson n "$next_iteration" --arg p "$PICK_PHASE" --arg s "$PICK_SLUG" \
+    '.iteration = $n | '"$CURRENT_SET" "$STATE_FILE" > "$temp_file" \
     && mv "$temp_file" "$STATE_FILE" \
     || { rm -f "$temp_file"; stop_corrupt "could not write the iteration counter"; }
 
@@ -141,7 +142,8 @@ main() {
   require_sane_state
   [[ "$STATE_ACTIVE" == "true" ]] || exit 0
   require_below_max
-  [[ "$(ask_picker)" != FINISH ]] || finish "$(closing_report)"
+  ask_picker
+  [[ "$PICK_PHASE" != FINISH ]] || finish "$(closing_report)"
   continue_iteration
   exit 0
 }

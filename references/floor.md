@@ -21,7 +21,7 @@ Floor is the directories and files the Flow creates and works with in the user's
   contract.md  this file
   gates.sh     the project's single gate command — generated once from package.json, committed, yours to edit
   memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit
-  state.json   the whole of the flow's state — every slug, its phase, task counters and strikes, and the plugin copy that armed the flow: gitignored, changed only through the Flow
+  state.json   the whole of the flow's state — every slug, its phase, task counters and strikes, the current phase and slug, and the plugin copy that armed the flow: gitignored, changed only through the Flow
 ```
 
 > A `slug` is the draft's file name without `.md`. Everything of one idea lives under `.spectomat/<slug>/` for its whole life: nothing is moved when it finishes, so the trail of one idea is one directory.

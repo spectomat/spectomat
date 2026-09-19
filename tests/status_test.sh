@@ -14,6 +14,11 @@ st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/command-status.sh" 2>/dev/null)
 is "status prints the next section" "$(printf '%s\n' "$st_out" | grep -c '^--- next ---$')" "1"
 is "status predicts the verdict"    "$(printf '%s\n' "$st_out" | grep -c '^phase:IMPLEMENT$')" "1"
 is "status predicts the slug"       "$(printf '%s\n' "$st_out" | grep -c '^slug:001-a$')" "1"
+is "status prints no current before one is recorded" "$(printf '%s\n' "$st_out" | grep -c '^current:')" "0"
+jq '.current = {phase: "IMPLEMENT", slug: "001-a"}' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
+  && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
+st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/command-status.sh" 2>/dev/null)
+is "status prints the current verdict" "$(printf '%s\n' "$st_out" | grep '^current:')" "current: IMPLEMENT 001-a"
 floor st2
 st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/command-status.sh" 2>/dev/null)
 is "an empty floor predicts FINISH" "$(printf '%s\n' "$st_out" | grep -c '^phase:FINISH$')" "1"

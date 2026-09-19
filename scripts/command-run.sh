@@ -331,7 +331,12 @@ branch_slugs() {
 # has already created the file and filled .slugs, so this only sets the flow's
 # own fields. MAX_ITERATIONS is passed through tonumber; parse_args has already
 # required it to match ^[0-9]+$.
+#
+# It also records the first iteration's verdict as `current`: the Stop hook
+# records every later one, but the first runs before any hook has fired. The
+# tree is clean by now, so the picker answers what that iteration will be handed.
 arm_flow() {
+  ask_picker
   state_apply '
     .active = true
     | .iteration = 1
@@ -339,8 +344,10 @@ arm_flow() {
     | .session_id = $sid
     | .started_at = $now
     | .plugin_root = $root
-  ' --arg m "$MAX_ITERATIONS" --arg sid "${CLAUDE_CODE_SESSION_ID:-}" \
-    --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg root "$PLUGIN_ROOT"
+    | '"$CURRENT_SET" \
+    --arg m "$MAX_ITERATIONS" --arg sid "${CLAUDE_CODE_SESSION_ID:-}" \
+    --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg root "$PLUGIN_ROOT" \
+    --arg p "$PICK_PHASE" --arg s "$PICK_SLUG"
 }
 
 announce() {

@@ -18,7 +18,7 @@ You are one iteration of the Spectomat `Flow` performing the `REVIEW` phase.
 - the plan overview `.spectomat/<slug>/plan.md` — Goal, Global Constraints, File map, Coverage table
 - `.spectomat/<slug>/ruling.md`, if it exists — every ruling the `IMPLEMENT` phase left, tagged by task
 - the ledger `.spectomat/<slug>/tasks.json` — every task, its `dependsOn`, and the `commits` range, `tests` and `gates` each one closed with. Read it with `bash <plugin_root>/scripts/tasks.sh show <slug>`, never by hand.
-- every task file `.spectomat/<slug>/tasks/task-NN-*.md` — its Constraints, Files, Interfaces, Covers and Steps are the requirements it was built against
+- every task file `.spectomat/<slug>/tasks/task-NN-*.md` — its Goal, Constraints, Files, From previous tasks, Covers and Procedure are the requirements it was built against
 - the spec `.spectomat/<slug>/spec.md` — the criteria the Coverage table claims to have covered
 - `.spectomat/memory.md` — how this codebase does things. Context, not a requirement: cite it when the diff departs from a pattern it records.
 - a scratch directory `.spectomat/work/<slug>/` (gitignored) for the stat and anything else you do not want in your context twice
@@ -84,7 +84,7 @@ This is why the review sits here and not inside each task:
 
 - the same helper written twice by two tasks
 - code task 3 left behind that task 7 replaced
-- an interface that drifted — task 2 `Produces` one shape, task 6 `Consumes` another, and a cast in between hides it
+- an interface that drifted — task 2 builds one shape, task 6's `From previous tasks` expects another, and a cast in between hides it
 - a spec constant duplicated instead of imported
 - a test that asserts on a mock, or that passes with the production code removed
 - an error path no task owned and nobody handled
@@ -99,7 +99,7 @@ MAX_REVIEW_ROUNDS = 2
 
 Count the `- Round` lines already under the overview's `## Review`; this is round R.
 
-**Critical and Important findings become tasks**, in every round but the last. One task file per finding, or one per cluster sharing a root cause, written to `.spectomat/<slug>/tasks/task-NN-<name>.md`, numbered on from the last task, from `<plugin root>/templates/task.md`, plus a row in the overview's task table. Write each as the fix, not as the complaint: the Goal says what is true once it is fixed, `Files` names exact paths, and Step 1 is the failing test that reproduces the defect. Fill its `## Context` exactly as the `PLAN` brief's *Each task file* section requires — `Purpose`, `Spec, verbatim`, `Codebase` — because the task agent that builds the fix opens nothing but the task file, its snippets and the code. A task nobody could execute alone is a task that comes back to you next round.
+**Critical and Important findings become tasks**, in every round but the last. One task file per finding, or one per cluster sharing a root cause, written to `.spectomat/<slug>/tasks/task-NN-<name>.md`, numbered on from the last task, from `<plugin root>/templates/task.md`, plus a row in the overview's task table. Write each as the fix, not as the complaint: the Goal says what is true once it is fixed, `Files` names exact paths, and Step 1 is the failing test that reproduces the defect. Fill its `## Scope` and `## Context` exactly as the `PLAN` brief's *Each task file* section requires, because the task agent that builds the fix opens nothing but the task file, its snippets and the code. A task nobody could execute alone is a task that comes back to you next round.
 
 **Minor findings become rulings** in `ruling.md`, a sibling of the overview, creating it if it does not yet exist. They never become tasks.
 

@@ -113,6 +113,7 @@ is "the iteration starts at 1"       "$(cd "$ARM" && jq -r .iteration .spectomat
 is "the cap is a JSON number"   "$(cd "$ARM" && jq -r '.max_iterations | type' .spectomat/state.json)" "number"
 is "arming leaves a clean tree" "$(cd "$ARM" && git status --porcelain)" ""
 is "arming marks the flow active" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "true"
+is "arming records the first verdict as current" "$(cd "$ARM" && jq -r '.current | "\(.phase) \(.slug)"' .spectomat/state.json)" "SPECIFY 001-thing"
 (cd "$ARM" && bash "$SCRIPTS/command-cancel.sh") >/dev/null 2>&1
 is "cancel keeps state.json"        "$([[ -e "$ARM/.spectomat/state.json" ]] && echo yes || echo no)" "yes"
 is "cancel marks the flow inactive" "$(cd "$ARM" && jq -r .active .spectomat/state.json)" "false"

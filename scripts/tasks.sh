@@ -8,7 +8,11 @@
 #   scripts/tasks.sh start <slug>                  -> IMPLEMENT, ledger already written
 #   scripts/tasks.sh add   <slug> '<json array>'   REVIEW: append fix tasks, -> IMPLEMENT
 #   scripts/tasks.sh next  <slug>                  the next ready task's id, or empty
-#   scripts/tasks.sh show  <slug> [id]             the ledger, or one task, as JSON
+#   scripts/tasks.sh dispatch <slug>               IMPLEMENT: clear the next ready task's gates
+#                                                  log, print its five-line prompt, or empty
+#   scripts/tasks.sh show  <slug> [id]             the ledger, or one task, as JSON; an empty id
+#                                                  prints nothing, so `show <slug> "$(next <slug>)"`
+#                                                  is the next ready task, or empty
 #   scripts/tasks.sh count <slug> [status]         how many tasks, or how many at status
 #   scripts/tasks.sh close <slug> <id> <commits> <tests> <gates>
 #                                                  record the evidence, -> REVIEW when last
@@ -26,7 +30,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 cd_root
 
 usage() {
-  die "usage: tasks.sh write|init|start|add|next|show|count|close <slug> [args]"
+  die "usage: tasks.sh write|init|start|add|next|dispatch|show|count|close <slug> [args]"
 }
 
 require_ledger() {
@@ -62,12 +66,17 @@ main() {
       require_ledger "$slug"
       task_next "$slug"
       ;;
+    dispatch)
+      require_ledger "$slug"
+      local id; id="$(task_next "$slug")"
+      [[ -z "$id" ]] || task_dispatch "$slug" "$id" || die "could not dispatch task $id — no file in $(tasks_file "$slug"), or no scratch dir"
+      ;;
     show)
       require_ledger "$slug"
-      if [[ -n "${1:-}" ]]; then
-        jq --arg i "$1" '.tasks[] | select(.id == ($i | tonumber))' "$(tasks_file "$slug")"
-      else
+      if [[ $# -eq 0 ]]; then
         cat "$(tasks_file "$slug")"
+      elif [[ -n "$1" ]]; then
+        jq --arg i "$1" '.tasks[] | select(.id == ($i | tonumber))' "$(tasks_file "$slug")"
       fi
       ;;
     count)

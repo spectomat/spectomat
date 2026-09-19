@@ -14,7 +14,7 @@ You are the Spectomat janitor.
 You are called from any phase in case if something went wrong.
 You are intended to  
 
-- either reset dirty tree ,
+- either stash dirty tree,
 - either try to fix issue within this phase's own work,
 - either block the flow
 
@@ -22,7 +22,9 @@ You are intended to
 
 - `./.spectomat/contract.md`
 - `./.spectomat/memory.md`
-- `./.spectomat/<slug>/ruling.md`
+- `./.spectomat/log.md` - related to the task only
+- `./.spectomat/<slug>/ruling.md` - related to the task only
+- `../spectomat/work/<slug>/task-NN.gates.log`
 
 ## Procedure
 
@@ -30,7 +32,7 @@ Find which of the two cases below you are in, and handle only that one.
 
 ### Case: a dirty tree
 
-`git status --porcelain` is not silent, so a previous iteration died mid-phase.
+`git status --porcelain` is not silent, so a previous iteration died mid-phase. Your task's `slug:` names the slug it died on, and `jq -r '.current.phase' .spectomat/state.json` the phase it was doing — `<slug>` and `<phase>` below. An empty `slug:` means `state.json` recorded no verdict; work both out from the changes.
 
 1. Inspect the changes.
 2. If they are a phase all but finished, finish it and commit it under that phase's own message. Also apply that phase's state transition using whichever of `<plugin_root>/scripts/slug_set_phase.sh` and `<plugin_root>/scripts/tasks.sh` (`init`, `close`, `add`) matches the phase that crashed — the same helper that phase's own brief would have called. A `PLAN` that died after writing its task files but before its ledger is the one case for `tasks.sh init`, which writes the ledger and moves the phase in one call. Run `bash <plugin_root>/scripts/log.sh RECOVER <slug> finished <phase> left mid-iteration`.

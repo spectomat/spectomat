@@ -30,6 +30,7 @@
 
 - `references/`
   - `brainstorm.md` (the `REVIEW-SPEC` phase's brainstorming procedure),
+  - `gates.md` (how the task agent reads the gates log and debugs a red gate),
   - `memorize.md` (the memory-writing procedure `IMPLEMENT` and `REVIEW-SPEC` each follow inline before their own commit),
   - `file-structure.md` (this file),
   - `floor.md` (the floor layout, rendered into the project's `contract.md`),

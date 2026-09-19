@@ -34,6 +34,37 @@ state_field() {
   jq -r --arg k "$1" '.[$k] // empty' "$STATE_FILE" 2>/dev/null || true
 }
 
+# --- the current verdict --------------------------------------------------
+#
+# state.json's `current` is {phase, slug}: the last working verdict the picker
+# gave, recorded by arm_flow for the first iteration and by the Stop hook for
+# every later one. The picker itself never writes it (it mutates nothing), and
+# a RECOVER or FINISH verdict leaves it as it was, so after a dirty death it
+# still names the iteration that died and phase.sh hands that slug to RECOVER.
+
+# The jq filter that records a verdict as .current, given $p (phase) and $s
+# (slug). A RECOVER, a FINISH or a failed picker call (empty slug) records nothing.
+CURRENT_SET='if $p == "RECOVER" or $s == "" then . else .current = {phase: $p, slug: $s} end'
+
+# current_field KEY — `phase` or `slug` of the recorded verdict; empty when none is.
+current_field() {
+  jq -r --arg k "$1" '.current[$k] // empty' "$STATE_FILE" 2>/dev/null || true
+}
+
+# ask_picker — run the picker and set PICK_PHASE and PICK_SLUG from its block.
+# phase.sh cd_root's itself, so this is safe from any cwd, and it mutates
+# nothing. Plain bash reads the block: the Stop hook runs this every iteration.
+ask_picker() {
+  local line
+  PICK_PHASE=""; PICK_SLUG=""
+  while IFS= read -r line; do
+    case "$line" in
+      phase:*) PICK_PHASE="${line#phase:}" ;;
+      slug:*)  PICK_SLUG="${line#slug:}" ;;
+    esac
+  done < <(bash "$PLUGIN_ROOT/scripts/phase.sh" 2>/dev/null)
+}
+
 # Remove the armed flag. Nothing else needs cleaning up: the prompt the Stop
 # hook feeds back is generated fresh by pointer_prompt(), not stored on disk.
 disarm() { rm -f "$STATE_FILE"; }
@@ -84,7 +115,7 @@ Run `bash {{PLUGIN_ROOT}}/scripts/phase.sh` once. It prints exactly one frontmat
 ```text
 ---
 phase:<PHASE>
-slug:<slug, empty for RECOVER and FINISH>
+slug:<slug; empty for FINISH, and for a RECOVER on a clean tree>
 subagent:<subagent_type>
 brief:<absolute path to the brief file>
 plugin_root:<absolute plugin path>
@@ -278,6 +309,24 @@ task_next() {
         | select([ .dependsOn[] | IN($done[]) ] | all) ]
     | sort_by(.id) | first | if . then .id else empty end
   ' "$(tasks_file "$1")" 2>/dev/null || true
+}
+
+# task_dispatch SLUG ID — the five lines IMPLEMENT sends the task agent, built
+# from the ledger alone so every dispatch of one task reads the same. NN is the
+# id zero-padded to two digits, matching the task filename. Also prepares the
+# scratch dir and deletes a stale gates log from an earlier strike, so the log
+# the worker leaves is always this dispatch's run. Fails when the task is not in
+# the ledger or carries no file.
+task_dispatch() {
+  local slug="$1" id="$2" file nn log
+  file="$(jq -r --arg i "$id" '.tasks[] | select(.id == ($i | tonumber)) | .file // empty' \
+    "$(tasks_file "$slug")" 2>/dev/null)"
+  [[ -n "$file" ]] || return 1
+  nn="$(printf '%02d' "$id")"
+  log="$FLOOR/work/$slug/task-$nn.gates.log"
+  mkdir -p "$FLOOR/work/$slug" && rm -f "$log" || return 1
+  printf 'slug: %s\ntask: %s\ntask_file: %s/%s/%s\ngates_log: %s\nplugin_root: %s\n' \
+    "$slug" "$nn" "$FLOOR" "$slug" "$file" "$log" "$PLUGIN_ROOT"
 }
 
 # tasks_count SLUG [STATUS] — how many tasks the ledger holds, or how many are
