@@ -11,4 +11,4 @@ Run the code development flow over your wishes.
 "${CLAUDE_PLUGIN_ROOT}/scripts/command-run.sh" $ARGUMENTS
 ```
 
-Report and stop.
+Report and STOP.

@@ -15,7 +15,7 @@ main() {
   local iteration
   iteration=$(state_field iteration)
   state_apply '.active = false'
-  echo "Cancelled Spectomat flow (was at iteration ${iteration:-?}). Progress is kept in $STATE_FILE; /spectomat:run resumes it."
+  echo "Spectomat flow has been cancelled at iteration ${iteration:-?}. Progress is kept in $STATE_FILE; /spectomat:run resumes it."
 }
 
 main "$@"
