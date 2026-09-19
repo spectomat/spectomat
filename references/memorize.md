@@ -5,7 +5,7 @@ description: A reference brief for the memory-writing step every phase brief run
 
 # MEMORIZE
 
-This is not a phase and nothing dispatches it. `SPECIFY`, `PLAN`, `REVIEW` and `ARCHIVE` write no code and earn no entries most iterations; `IMPLEMENT` and `REVIEW-SPEC` are the two phases with a "Memory" step in their own `## Commit boundary` / step 5, and that step says: apply this brief, inline, in your own context, before your own commit. Nobody reads `memory.md`'s findings back from you — you fold them into the commit you were already making.
+This is not a phase and nothing dispatches it. `SPECIFY`, `PLAN`, `REVIEW` and `ARCHIVE` write no code and earn no entries most iterations; `IMPLEMENT` and `REVIEW-SPEC` are the two phases with a "Memory" step in their own Procedure (step 8 and step 5), and that step says: apply this brief, inline, in your own context, before your own commit. Nobody reads `memory.md`'s findings back from you — you fold them into the commit you were already making.
 
 ## Procedure
 
