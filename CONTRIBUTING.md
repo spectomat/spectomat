@@ -30,14 +30,19 @@ Check the design decisions before proposing a change. They record what was rejec
 
 ## Verifying a change
 
-Run all four from the repository root.
+Run one command from the repository root. It is the only way to verify a change, and it runs whenever verification is requested.
 
 ```bash
-claude plugin validate .claude-plugin/plugin.json --strict
-claude plugin validate .claude-plugin/marketplace.json --strict
-bash -n scripts/*.sh tests/*.sh templates/gates.sh       # syntax only
-scripts/selftest.sh                                      # the full suite
+scripts/verify_all.sh
 ```
+
+It runs five checks in parallel, prints one line each, then the output of any that failed:
+
+- `claude plugin validate --strict` on the plugin and marketplace manifests,
+- `bash -n` on the scripts, the tests and the gates template,
+- `scripts/selftest.sh`, the full suite,
+- every relative markdown link across the tracked docs,
+- `git diff --check`.
 
 `scripts/selftest.sh` runs every `tests/*_test.sh` file and reports the combined tally. The whole suite finishes in under eight seconds.
 

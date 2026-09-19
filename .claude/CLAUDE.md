@@ -6,7 +6,7 @@ An agentic ledger, transient by nature. Durable knowledge lives in the files bel
 
 | Need | Read |
 | --- | --- |
-| What this repo is, requirements, verifying a change, installing, conventions, commits | `CONTRIBUTING.md` |
+| What this repo is, requirements, verifying a change (always `scripts/verify_all.sh`), installing, conventions, commits | `CONTRIBUTING.md` |
 | Overview, boundaries, operator surface, and the map of every section — read before changing behaviour | `docs/specification.md` |
 | Domain model (§2): verdict, strike ledger, gates | `references/domain-model.md` |
 | Behaviour (§3): iteration, dispatch, failure path, completion | `references/behaviour.md` |

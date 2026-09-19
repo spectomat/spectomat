@@ -38,12 +38,12 @@ jobs:
           jq -e --arg n "$name" '.plugins | map(select(.name == $n)) | length == 1' \
             .claude-plugin/marketplace.json > /dev/null
 
-      - name: Syntax check
-        run: bash -n scripts/*.sh tests/*.sh templates/gates.sh
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
 
-      - name: Self-test
+      - name: Verify
         run: |
           git config --global user.email "ci@example.com"
           git config --global user.name "CI"
           git config --global init.defaultBranch main
-          scripts/selftest.sh
+          scripts/verify_all.sh

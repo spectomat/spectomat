@@ -163,6 +163,6 @@ What the suite cannot cover is the live runtime (§10.5). A real flow is exercis
 
 ### 10.8 Two bash generations
 
-`.github/workflows/ci.yml` runs the manifest checks, `bash -n` and `scripts/selftest.sh` on both `ubuntu-latest` and `macos-latest`, for every push and pull request. **The two runners are not redundant:** macOS carries bash 3.2 and Ubuntu bash 5.x, and a passing local run on one proves nothing about the other. Bash 5.2 gave an unquoted `&` in a `${var//pat/repl}` replacement the sed meaning "the text that matched"; that broke `render_template` on Linux only, while every macOS run stayed green.
+`.github/workflows/ci.yml` runs the manifest checks and `scripts/verify_all.sh` on both `ubuntu-latest` and `macos-latest`, for every push and pull request. **The two runners are not redundant:** macOS carries bash 3.2 and Ubuntu bash 5.x, and a passing local run on one proves nothing about the other. Bash 5.2 gave an unquoted `&` in a `${var//pat/repl}` replacement the sed meaning "the text that matched"; that broke `render_template` on Linux only, while every macOS run stayed green.
 
 Rule: prefer constructs whose meaning does not move between the two generations; where one is unavoidable, cover it with a test rather than a comment.

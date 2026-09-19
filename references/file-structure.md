@@ -40,14 +40,15 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
   - `tasks.sh` is the only writer of a slug's task ledger, `tasks.json` (§6.4, D31): `write`/`start`/`init`/`next`/`dispatch`/`show`/`count`/`close`/`add`; the phase move rides inside `close` and `add`,
   - `slug_set_phase.sh` and `block_slug.sh` are thin CLIs over the slug helpers in `utils.sh`: advance a slug that carries no tasks, or take one out of the flow at `BLOCKED` (§3.4),
   - `log.sh` formats and appends every `log.md` line — the one place that format lives (D28),
-  - `selftest.sh` runs every `tests/*_test.sh` file and reports the combined tally.
+  - `selftest.sh` runs every `tests/*_test.sh` file and reports the combined tally,
+  - `verify_all.sh` runs every check a change must pass — manifests, syntax, the suite, doc links, whitespace — in parallel.
 
 - `tests/`
   - `*_test.sh` — the suite (§10.7), one section each, independently runnable,
   - `lib.sh` — the shared fixture harness.
 
 - `.github/workflows/`
-  - `ci.yml` runs the syntax check and the suite on `ubuntu-latest` and `macos-latest` — two bash generations (§10.8).
+  - `ci.yml` runs `scripts/verify_all.sh` on `ubuntu-latest` and `macos-latest` — two bash generations (§10.8).
 
 - `assets/`
   - `logo.svg`, `social.svg` and the PNGs rendered from them.
