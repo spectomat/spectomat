@@ -5,9 +5,9 @@ argument-hint: "[max-iterations]  (default 100)"
 allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Agent", "Task"]
 ---
 
-Run the code development flow
+Run the code development flow over your wishes.
 
-Floor setup and the start of iterations over `draft → spec → plan → executed plan → done` phases, each slug in its own `.spectomat/<slug>/`:
+Floor setup and the start of iterations over `draft → spec → plan → executed plan → done` phases, each wish slug in its own `.spectomat/<slug>/`:
 
 ```!
 "${CLAUDE_PLUGIN_ROOT}/scripts/command-run.sh" $ARGUMENTS
