@@ -2,19 +2,13 @@
 title: Spectomat run
 description: "Run the Spectomat code development flow"
 argument-hint: "[max-iterations]  (default 100)"
-allowed-tools: ["Bash", "Read", "Write", "Edit", "Grep", "Glob", "Agent", "Task"]
+allowed-tools: ["Bash"]
 ---
 
 Run the code development flow over your wishes.
-
-Floor setup and the start of iterations over `draft → spec → plan → executed plan → done` phases, each wish slug in its own `.spectomat/<slug>/`:
 
 ```!
 "${CLAUDE_PLUGIN_ROOT}/scripts/command-run.sh" $ARGUMENTS
 ```
 
-If the output ends in `❌ Not starting`, report why and stop.
-
-If the factory is armed, begin iteration 1 now: follow the prompt printed at the end of the output, exactly as it directs — it is the authoritative dispatch table, and the Stop hook feeds you the same prompt again after every iteration.
-
-**This flow is unattended.**  
+Report and stop.

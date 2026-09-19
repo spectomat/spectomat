@@ -19,6 +19,7 @@ STATE_BROKEN=""   # why the state file could not be parsed, when it could not
 # Set by ask_picker (utils.sh)
 PICK_PHASE=""
 PICK_SLUG=""
+PICK_BLOCK=""
 
 # --- helpers ---
 
@@ -111,10 +112,10 @@ require_below_max() {
 # will be handed as `current` (CURRENT_SET skips a RECOVER, so a dirty death
 # stays named), and emit the block decision with the prompt. One write for both.
 continue_iteration() {
-  local next_iteration prompt_text temp_file system_msg
+  local next_iteration reason temp_file system_msg
   next_iteration=$((ITERATION + 1))
 
-  prompt_text=$(pointer_prompt)
+  reason=$(pointer_prompt "$PICK_BLOCK")
 
   temp_file="${STATE_FILE}.tmp.$$"
   jq --argjson n "$next_iteration" --arg p "$PICK_PHASE" --arg s "$PICK_SLUG" \
@@ -122,15 +123,15 @@ continue_iteration() {
     && mv "$temp_file" "$STATE_FILE" \
     || { rm -f "$temp_file"; stop_corrupt "could not write the iteration counter"; }
 
-  system_msg="🔄 Spectomat iteration $next_iteration | Ends when scripts/phase.sh answers FINISH, or at the cap ($MAX_ITERATIONS)"
+  system_msg="🔄 Spectomat iteration: $next_iteration "
 
   jq -n \
-    --arg prompt "$prompt_text" \
-    --arg msg "$system_msg" \
+    --arg reason "$reason" \
+    --arg system_msg "$system_msg" \
     '{
       "decision": "block",
-      "reason": $prompt,
-      "systemMessage": $msg
+      "reason": $reason,
+      "systemMessage": $system_msg
     }'
 }
 

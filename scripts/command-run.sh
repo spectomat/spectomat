@@ -11,7 +11,7 @@
 set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/gates.sh"
+source "$PLUGIN_ROOT/scripts/gates.sh"
 cd_root
 TEMPLATES="$PLUGIN_ROOT/templates"
 MAX_ITERATIONS=100
@@ -24,18 +24,6 @@ INTAKEN=()   # slug dirs intake_wishes filled this run, committed by commit_floo
 usage() { sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # --- phases ---
-
-parse_args() {
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      -h|--help) usage; exit 0 ;;
-      -*) die "unknown option: $1" ;;
-      *)
-        [[ "$1" =~ ^[0-9]+$ ]] || die "max iterations must be a number, got: $1"
-        MAX_ITERATIONS="$1"; shift ;;
-    esac
-  done
-}
 
 require_git_repo() {
   [[ -d .git ]] || die "Not a git repository. The factory commits every phase; run 'git init' first."
@@ -67,10 +55,6 @@ prepare_floor() {
   ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
   ensure_gitignored "$FLOOR/work/"
   ensure_gitignored "$FLOOR/log.md"
-  # Gitignored on purpose: each slug works on its own feat/<slug> branch, and a
-  # committed memory.md would fork into one copy per branch, so a lesson learned
-  # on one slug would be invisible to the next. Ignored, it is one local file
-  # every branch shares.
   ensure_gitignored "$MEMORY"
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
 }
@@ -208,9 +192,7 @@ report_floor() {
 # session, and this one must not write into its state.
 require_no_active_flow() {
   if [[ -f "$STATE_FILE" ]] && [[ "$(state_field active)" == "true" ]]; then
-    echo
-    echo "❌ Not starting: a flow is already active ($STATE_FILE). Run /spectomat:cancel first."
-    exit 1
+    die "Not starting: a flow is already active ($STATE_FILE). Run /spectomat:cancel first."
   fi
 }
 
@@ -219,9 +201,7 @@ require_no_active_flow() {
 # the floor holds, and the next run re-seeds it.
 require_startable() {
   if [[ "$ACTIVE" -eq 0 ]]; then
-    echo
-    echo "❌ Not starting: nothing to do. Drop a .md idea into $WISHLIST/ and run /spectomat:run again."
-    exit 1
+    die "Not starting: nothing to do. Drop a .md idea into $WISHLIST/ and run /spectomat:run again."
   fi
   # Whatever commit_floor did not commit is the user's own work in progress. The
   # picker answers RECOVER to any dirt, so arming now would send every iteration to the
@@ -230,11 +210,7 @@ require_startable() {
   local dirt
   dirt="$(git status --porcelain)"
   if [[ -n "$dirt" ]]; then
-    echo
-    echo "❌ Not starting: the tree is dirty. Every iteration would go to the janitor."
-    printf '%s\n' "$dirt" | head -10
-    echo "Commit or stash the above, then run /spectomat:run again."
-    exit 1
+    die "Not starting: the git tree is dirty."
   fi
 }
 
@@ -248,24 +224,6 @@ require_startable() {
 seed_state() {
   local s
   [[ -f "$STATE_FILE" ]] || printf '{"slugs": {}}\n' > "$STATE_FILE"
-
-  # Every slug dir with no state entry enters the flow at the stage its files
-  # place it: a draft intake_wishes just moved in starts at SPECIFY, and a spec
-  # the operator wrote by hand starts at REVIEW-SPEC.
-  #
-  # The phase check is what stops a finished slug being resurrected: a slug at
-  # DONE or BLOCKED has a phase, so it is skipped. Do not "simplify" it away.
-  #
-  # A dir already carrying a marker but absent from state.json is a floor armed
-  # before D27, when ARCHIVE deleted the entry instead of finishing it. Seeding
-  # its terminal phase here is the whole migration: it needs no version check,
-  # and the phase check above makes a second run a no-op. No reason or
-  # finished_at is invented — the reason is in the marker, the time is in git.
-  #
-  # A dir the files place nowhere — a plan with no spec, say — is blocked on
-  # the spot. Nothing derives state from the floor any more, so an unseeded dir
-  # would simply be invisible to the flow forever; a BLOCKED entry puts it in
-  # /spectomat:status where the operator can see it.
   while IFS= read -r s; do
     [[ -n "$s" ]] || continue
     [[ -z "$(slug_phase "$s")" ]] || continue
@@ -327,16 +285,20 @@ branch_slugs() {
   done < <(slugs_unfinished)
 }
 
-# Arm the flow: the state the Stop hook reads on every exit attempt. seed_state
-# has already created the file and filled .slugs, so this only sets the flow's
-# own fields. MAX_ITERATIONS is passed through tonumber; parse_args has already
-# required it to match ^[0-9]+$.
-#
-# It also records the first iteration's verdict as `current`: the Stop hook
-# records every later one, but the first runs before any hook has fired. The
-# tree is clean by now, so the picker answers what that iteration will be handed.
-arm_flow() {
+main() {
+  require_git_repo
+  prepare_floor
+  render_factory
+  require_gates_passed
+  intake_wishes
+  commit_floor
+  require_no_active_flow
+  seed_state
+  report_floor
+  require_startable
+  branch_slugs
   ask_picker
+  # arm_flow
   state_apply '
     .active = true
     | .iteration = 1
@@ -345,47 +307,13 @@ arm_flow() {
     | .started_at = $now
     | .plugin_root = $root
     | '"$CURRENT_SET" \
-    --arg m "$MAX_ITERATIONS" --arg sid "${CLAUDE_CODE_SESSION_ID:-}" \
-    --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg root "$PLUGIN_ROOT" \
-    --arg p "$PICK_PHASE" --arg s "$PICK_SLUG"
-}
-
-announce() {
-  cat <<EOF
-  
-🏭 Spectomat code development flow is armed in this session.
-
-Iteration: 1 of $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo "$MAX_ITERATIONS"; else echo "unlimited"; fi)
-State: $STATE_FILE
-Cancel: /spectomat:cancel
-
-When you try to exit, the Stop hook feeds the prompt below back to you.
-Each iteration asks scripts/phase.sh which phase applies and dispatches it.
-The flow ends when the picker answers FINISH, or at the iteration cap.
-EOF
-}
-
-main() {
-  parse_args "$@"
-  require_git_repo
-  prepare_floor
-  render_factory
-  require_gates_passed
-  intake_wishes
-  commit_floor
-  # seed_state before report_floor so every count comes from state.json, but
-  # after the active-flow check so a second session cannot write into a flow it
-  # does not own. A refusal after this point leaves an unarmed state.json,
-  # which require_no_active_flow tolerates and the next run re-seeds.
-  require_no_active_flow
-  seed_state
-  report_floor
-  require_startable
-  # After require_startable: a floor that refuses to arm leaves no branches behind.
-  branch_slugs
-  arm_flow
-  announce
-  pointer_prompt
+    --arg m "$MAX_ITERATIONS" \
+    --arg sid "${CLAUDE_CODE_SESSION_ID:-}" \
+    --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg root "$PLUGIN_ROOT" \
+    --arg p "$PICK_PHASE" \
+    --arg s "$PICK_SLUG"
+  echo "🏭 Spectomat flow is armed."
 }
 
 main "$@"

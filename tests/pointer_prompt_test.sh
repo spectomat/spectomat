@@ -10,10 +10,12 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 echo "pointer_prompt"
 
-out="$(pointer_prompt)"
-is "it opens with the pointer heading" "$(printf '%s\n' "$out" | head -1)" "# Spectomat pointer"
-is "PLUGIN_ROOT is resolved, not a placeholder" "$(printf '%s\n' "$out" | grep -c '{{')" "0"
-is "it names the phase.sh command under PLUGIN_ROOT" \
-  "$(printf '%s\n' "$out" | grep -c "bash $PLUGIN_ROOT/scripts/phase.sh")" "1"
+block=$'---\nphase:SPECIFY\nslug:001-a\nsubagent:spectomat:specify\nbrief:'"$PLUGIN_ROOT"$'/agents/specify.md\nplugin_root:'"$PLUGIN_ROOT"$'\n---'
+out="$(pointer_prompt "$block")"
+is "it opens with the pointer heading" "$(printf '%s\n' "$out" | head -1)" "# Spectomat next iteration pointer"
+is "no unresolved placeholder is left" "$(printf '%s\n' "$out" | grep -c '{{')" "0"
+is "it embeds the picker's block verbatim" "$(printf '%s\n' "$out" | grep -c "^phase:SPECIFY$")" "1"
+is "it does not tell the agent to run phase.sh itself" \
+  "$(printf '%s\n' "$out" | grep -c "bash .*phase.sh")" "0"
 
 finish

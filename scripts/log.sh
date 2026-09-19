@@ -3,11 +3,7 @@
 #
 #   log.sh <PHASE> <slug> <message...>
 #
-# Appends "- <ts> · <PHASE> · <slug> · <message>" to log.md. The timestamp is
-# always `date -u +%FT%RZ` run now — a caller never supplies one, so the log
-# cannot carry a remembered or typed time. Creates log.md with its header on
-# first use, matching command-run.sh's own bootstrap. The log is gitignored and
-# never committed; this script only appends to it.
+# Appends "- <ts> · <PHASE> · <slug> · <message>" to log.md.
 
 set -uo pipefail
 

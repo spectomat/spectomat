@@ -3,11 +3,6 @@
 #
 #   source gates.sh; detect_gates   sets GATES to the gate lines for this repo
 #   gates.sh                        prints those lines for the repo it is run in
-#
-# A `gates` script in package.json is the single gate. Without one, every
-# typecheck, lint and test script is a gate, in that order. GATES holds one
-# command per line; command-run.sh renders it into .spectomat/gates.sh, whose
-# `set -e` stops at the first failure. Empty when package.json defines none.
 
 # True when package.json defines the named script.
 has_script() { [[ -f package.json ]] && grep -qE "\"$1\"[[:space:]]*:" package.json; }
