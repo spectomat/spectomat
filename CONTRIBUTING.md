@@ -10,14 +10,20 @@ Read these in order. They are short, and they carry the vocabulary the rest of t
 | --- | --- |
 | [`references/glossary.md`](references/glossary.md) | The terms — flow, iteration, phase, task, floor, contract, slug, strike. Use these words, not synonyms. |
 | [`docs/guide.md`](docs/guide.md) | The user guide, printed together with the glossary by `/spectomat:help`. |
-| [`docs/specification.md`](docs/specification.md) | The normative spec: domain model, algorithms in pseudocode, and §8's table of design decisions already taken and rejected. |
-| [`references/file-structure.md`](references/file-structure.md) | The plugin anatomy — what lives where. |
+| [`docs/specification.md`](docs/specification.md) | The normative spec: overview, boundaries, operator surface; it points at the sections below. |
+| [`references/domain-model.md`](references/domain-model.md) | §2 of the spec: the verdict, the strike ledger, the gates. |
+| [`references/behaviour.md`](references/behaviour.md) | §3 of the spec: the iteration, dispatch, the failure path, completion. |
+| [`references/algorithms.md`](references/algorithms.md) | §5 of the spec: the named constants and the algorithms in pseudocode. |
+| [`references/architecture.md`](references/architecture.md) | §6 of the spec: the contract, the briefs, the state and the pointer. |
+| [`references/decisions.md`](references/decisions.md) | §8 of the spec: the design decisions already taken and rejected. |
+| [`references/file-structure.md`](references/file-structure.md) | The plugin anatomy — what lives where, and the dispatch picture. |
+| [`references/testing.md`](references/testing.md) | §9–§10 of the spec: acceptance criteria, fixtures, the gates, the suite. |
 
-Check §8 of the specification before proposing a change. It records what was rejected and why.
+Check the design decisions before proposing a change. They record what was rejected and why.
 
 ## Requirements
 
-- `bash` 3.2 or later — the scripts target macOS's bash, so no GNU-only flags.
+- `bash` 3.2 or later — the scripts target macOS's bash, so no GNU-only flags. CI runs bash 3.2 and 5.x, and a green run on one proves nothing about the other ([testing §10.8](references/testing.md)).
 - `jq` on `PATH`.
 - `git`.
 - Claude Code, for `claude plugin validate` and for exercising a real flow.
@@ -53,6 +59,8 @@ What the suite cannot cover is the live runtime. **Exercise a real flow in a scr
 The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`. Edits here are not live until the version in `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run` again. Restart Claude Code after an install or update — a live session keeps the old copy.
 
 ```bash
+cd ~/Projects
+git clone https://github.com/spectomat/spectomat.git
 claude plugin marketplace add ~/Projects/spectomat
 claude plugin install spectomat@spectomat
 claude plugin update spectomat@spectomat
@@ -70,7 +78,7 @@ These are enforced by review, not by a linter.
 - A change to the verdict grammar must keep `scripts/phase.sh`, `pointer_prompt` in `scripts/utils.sh`, `scripts/print.sh` and `scripts/agent-archive.sh` in step.
 - A rule that binds every phase belongs in `templates/contract.md`'s Constitution and nowhere else, under one of its five groups — Judgement, What you may write, Honest reporting, Ending a phase, Where you work. A brief's Rules list holds only what is true of that one phase. A rule that would read the same in two briefs is a contract rule: move it rather than repeating it.
 - A change to what a phase does belongs in its brief, not in the contract or the pointer.
-- Behaviour changes belong in `docs/specification.md`, not only in the prose of `CLAUDE.md`.
+- Behaviour changes belong in `docs/specification.md` or the section of it kept under `references/`. `.claude/CLAUDE.md` is a transient ledger that only points at the docs: durable knowledge never lives there.
 
 ## Commits and pull requests
 

@@ -1,48 +1,31 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+An agentic ledger, transient by nature. Durable knowledge lives in the files below: read it there, write it there, and keep only pointers and unsettled notes here.
 
-## What this is
+## Where the knowledge lives
 
-A Claude Code plugin, not an application: bash scripts, Markdown commands, agent briefs and templates. No dependencies and no build; `tests/*.sh` covers the text helpers in `utils.sh`, everything else is exercised by hand. `jq` must be on PATH. `README.md` covers layout and licensing; `docs/guide.md` is the user guide and `references/glossary.md` the glossary, both printed together by `/spectomat:help` (via `scripts/command-help.sh`); the glossary's terms (flow, iteration, phase, task, floor, contract, slug, strike) are this repo's, used consistently. Use those words, not synonyms. `docs/specification.md` is the normative spec behind all of this — domain model, the `pick_phase`/`least_struck`/`strike_count`/`run_gates`/`detect_gates`/`archive` algorithms in pseudocode, and the design-decisions table (§8) recording what was rejected and why; read it before changing behaviour that this file only summarizes in prose. `references/brainstorm.md` is the REVIEW-SPEC phase's brainstorming procedure, referenced (not inlined) from `agents/review-spec.md` when the spec and draft are both silent; `references/gates.md` is the task agent's gate-reading and debugging procedure, referenced from `agents/task.md` — the one plugin file the worker reads, which is why it gets `plugin_root` as its fifth line.
+| Need | Read |
+| --- | --- |
+| What this repo is, requirements, verifying a change, installing, conventions, commits | `CONTRIBUTING.md` |
+| Overview, boundaries, operator surface, and the map of every section — read before changing behaviour | `docs/specification.md` |
+| Domain model (§2): verdict, strike ledger, gates | `references/domain-model.md` |
+| Behaviour (§3): iteration, dispatch, failure path, completion | `references/behaviour.md` |
+| Algorithms (§5): constants, the picker, strikes, gates, the archiver — in pseudocode | `references/algorithms.md` |
+| Architecture (§6): contract, briefs, state and ledger schemas, the pointer | `references/architecture.md` |
+| Design decisions (§8): what was decided, what was rejected, and why — check before proposing a change | `references/decisions.md` |
+| Where a rule lives, phase-agent confinement | `references/architecture.md` §6.2 |
+| Placeholders and literal substitution | `references/testing.md` §10.2 |
+| Acceptance criteria, fixtures, the test suite; bash 3.2 vs 5.x in CI | `references/testing.md` §9, §10.3, §10.7, §10.8 |
+| The terms — flow, iteration, phase, task, floor, contract, slug, strike. Use these words, not synonyms | `references/glossary.md` |
+| What lives where in the plugin, the dispatch picture (§1.2, §6.1) | `references/file-structure.md` |
+| The floor's files in the user's project | `references/floor.md` |
+| Logo and social card: drawing, rendering, publishing | `references/assets.md` |
+| Phase procedures: brainstorm, gates, memorize, three strikes, log format | `references/` |
+| The user guide | `docs/guide.md` |
+| Third-party material and licences | `NOTICE.md` |
 
-## Verifying changes
+## Ledger
 
-```bash
-claude plugin validate .claude-plugin/plugin.json --strict      # run from this directory
-claude plugin validate .claude-plugin/marketplace.json --strict
-bash -n scripts/*.sh tests/*.sh templates/gates.sh                          # syntax only
-scripts/selftest.sh                                              # utils.sh, picker, archiver, command-run.sh, Stop hook
-```
+Rules learned from the operator's edits, newest first. Once a rule settles, move it to its durable home above and delete it here.
 
-`scripts/selftest.sh` runs every `tests/*_test.sh` file and reports the combined tally — the picker, the archiver, the task ledger, `command-run.sh` arming and refusing, and the Stop hook driven with a fabricated `{session_id}` payload. What it cannot cover is the live runtime: exercise a real flow in a scratch git repo, never here. `scripts/gates.sh` run inside any repo prints the gate command it would compile there.
-
-Each file under `tests/` is one section (`phase_test.sh`, `archive_test.sh`, `tasks_test.sh`, `prepare_test.sh`, …), owns its own fixtures via the shared harness in `tests/lib.sh`, and is independently runnable and selectable: `bash tests/phase_test.sh` drives just the picker. Within a file, assertions are still one linear script of `is NAME GOT WANT` calls, printing `ok`/`FAIL` per assertion; the whole suite runs top to bottom in under 8 seconds. An optional `DIR` argument — to `scripts/selftest.sh` or to any one `tests/*_test.sh` file — points the run at a different `scripts/` copy — the installed cache under `~/.claude/plugins/cache/spectomat/`, for instance — instead of the one next to it.
-
-`.github/workflows/ci.yml` runs the manifest checks, `bash -n` and `scripts/selftest.sh` on both `ubuntu-latest` and `macos-latest` for every push and pull request. **The two runners are not redundant: macOS carries bash 3.2 and Ubuntu bash 5.x, and a passing local run on one proves nothing about the other.** Bash 5.2 gave an unquoted `&` in a `${var//pat/repl}` replacement the sed meaning "the text that matched" — that broke `render_template` on Linux only, while every macOS run stayed green. Prefer constructs whose meaning does not move between the two; where one is unavoidable, cover it with a test rather than a comment.
-
-The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`, so edits here are not live until the version in `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run` again.
-
-## How the pieces fit
-
-Each command in `commands/` runs a script in its `!` block, then tells Claude what to do with the output. All scripts source `scripts/utils.sh` (paths, `cd_root`, `state_field`, `render_template`) and set their own `set -e/-u` options; bash 3.2 compatible, no GNU-only flags.
-
-`command-run.sh` sets up the floor `.spectomat/` in the user's project: renders `contract.md`, `memory.md` and `gates.sh` once (never overwritten afterwards, each checked on its own so an older floor picks up a newly added file), moves every draft the user dropped into `.wishlist/` to its own `.spectomat/<slug>/draft.md`, commits that and what it created, then arms the flow on every run by writing `state.json`, and refuses if a flow is already active or no unfinished slug remains — a `state.json` left behind by `/spectomat:cancel` has `active: false`, and arming over it resumes the flow with its slug progress intact. The operator names the drafts and the picker works the slugs in alphabetical order (D13); `seed_state` reads every slug dir into `state.json` — a hand-written `<slug>/spec.md` enters at `REVIEW-SPEC`, a dir with a committed `tasks.json` enters at `IMPLEMENT` or `REVIEW` depending on whether any task is still pending (D31), a dir carrying a marker enters at `DONE` or `BLOCKED` (the pre-D27 migration), and a dir whose files match no phase is blocked on the spot rather than left invisible. **That scan is the flow's only directory listing (D27): after arming, `phase.sh`, `print.sh`, `stop-hook.sh` and `agent-archive.sh` read `state.json` and nothing else.** A slug is finished when its phase is `DONE` or `BLOCKED`, not when its dir carries a marker; `done.md` and `blocked.md` are the committed record, since `state.json` is gitignored, and nothing reads them back. Arming must end on a clean tree: the picker reads `git status` and answers `RECOVER` to any dirt, so an unstaged leftover costs the flow its first iteration.
-
-`agents/implement.md` is the one brief with the Agent tool: per iteration it dispatches `spectomat:task` (`agents/task.md`) with five lines — slug, task number, task file path, gates log path, plugin root — printed by `tasks.sh dispatch`, which also creates the scratch dir and deletes a stale gates log, and the task file is the worker's whole input, which is why `agents/plan.md` and `agents/review.md` must inline the spec into a task file's `## Context` rather than cite it. The worker builds and gates, and never writes to git; `implement` checks the branch before the dispatch, verifies the tree and the gates log, makes the `feat` commit, then records the rulings, closes the task in the ledger and commits the close (D30 in the spec).
-
-`.spectomat/<slug>/tasks.json` is the task ledger and the single source of truth for one slug's tasks (D31): the list `PLAN` writes prepopulated, each task's `dependsOn` and `status`, and the `commits`/`tests`/`gates` it closed with. It is **committed**, unlike `state.json`, so a task's evidence and the plan's position survive in git — a floor whose `state.json` is gone re-arms straight back to where it was. `scripts/tasks.sh` (`write`/`start`/`init`/`next`/`dispatch`/`show`/`count`/`close`/`add`) is its only writer, and the phase move rides inside `close` and `add`, so a closed task and the slug's phase cannot disagree. `state.json` keeps only the flow level — phase, strikes, iteration, and `current`, the last working verdict's phase and slug, which the Stop hook and arming record and a `RECOVER` never replaces (D33) — and carries no task counters. Because the ledger is tracked, `PLAN` writes it *before* its commit and `IMPLEMENT`/`REVIEW` change it before theirs, which is the one place the contract's "state moves after the commit" rule is inverted.
-
-`references/floor.md` covers the floor's persistent files in full — what each one carries and why, the pointer prompt, the Stop hook wiring, and how each phase writes its own transition into `state.json`.
-
-## Conventions
-
-- Markdown paragraphs and list items are one line each, no hard wraps. Fenced blocks, tables and frontmatter are the only multi-line structures.
-- Placeholders in templates are `{{KEY}}`, substituted literally by `render_template`; a new placeholder needs a value in the matching `render_template` call in `command-run.sh`. Literally means literally: a value carrying `&`, `\`, `$` or `{{X}}` lands as written, and `tests/render_template_test.sh` holds a case for each.
-- The gates are always `./.spectomat/gates.sh`, rendered once by `command-run.sh` from `templates/gates.sh` and never overwritten. `{{GATES}}` lands in that script under its `set -e`, so every line must be a real command whose exit code means what it says. A repo with no gates detected gets commented examples plus an honest no-op (`echo "ok: …"`), never an `echo "❌ …"` that prints failure and exits 0. The contract only names the path; nothing parses commands out of it any more.
-- A phase agent is confined to the project under flow. It must never `git stash`, commit or checkout in another repository — including this plugin's own checkout — and must never ask its caller to run a command a permission check denied it. Both were observed in a live run: an `ARCHIVE` agent stashed the operator's uncommitted template edits here to get past `agent-archive.sh`'s dirty-tree guard, then asked the caller to run the blocked script. Both rules live under `templates/contract.md`'s Constitution — *Where you work* and *Honest reporting*.
-- Third-party material and its licence go in `NOTICE.md`; changes to derived files are listed there.
-- Verdicts are upper case (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`, `ARCHIVE`, `RECOVER`, `FINISH`); `state.json`'s `phase` field holds the six working phases plus the terminal `DONE` and `BLOCKED`, which are never verdicts and dispatch nothing; the agent types and brief files that serve them are lower case (`spectomat:review-spec`, `agents/review-spec.md`), and the pointer lowercases the verdict's first word to bridge the two.
-- A change to the verdict grammar must keep `phase.sh`, `pointer_prompt` in `utils.sh`, `print.sh` and `agent-archive.sh` in step; a change to what a phase does belongs in its brief, not in the contract or the pointer.
-- A rule that binds every phase belongs in `templates/contract.md`'s Constitution and nowhere else, under one of its five groups — Judgement, What you may write, Honest reporting, Ending a phase, Where you work; a brief's Rules list holds only what is true of that one phase. A rule that would read the same in two briefs is a contract rule — move it rather than repeating it, and delete the copies.
-- `assets/logo.svg` is the source of the mark and `assets/social.svg` the source of the 1280×640 preview card; the PNGs beside them are rendered from the SVGs and are never edited by hand. Both are a single accent colour, `#d97757` (Claude Code terracotta, the same value as the README's plugin badge), on no background, so they read on a light or dark page. Six arc segments are the six phases, the node at twelve o'clock is one iteration on the cycle, and the three centre rules are a spec — changing the phase count means redrawing the ring, and the card carries its own copy of the paths. Render with headless Chrome (`--screenshot --window-size=1280,640`) rather than `qlmanage`, which scales a thumbnail to fill its square and makes every margin measurement wrong. GitHub exposes no API for the social preview: `assets/social.png` is uploaded by hand under Settings › General.
+- (empty)

@@ -4,7 +4,7 @@ labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
-      value: "`docs/specification.md` §8 records what was already rejected and why — please check it before proposing."
+      value: "`references/decisions.md` records what was already rejected and why — please check it before proposing."
   - type: textarea
     id: problem
     attributes:

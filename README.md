@@ -69,38 +69,9 @@ claude plugin update spectomat@spectomat
 
 > Restart Claude Code to apply an install or update: the plugin runs from a cache copy, so a live session keeps the old one.
 
-### Development
-
-See
-
-- [Specification](docs/specification.md) for The normative spec: domain model, algorithms, design decisions.  
-- [File structure](./references/file-structure.md) for the plugin anatomy,
-- [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions and the full verification steps.
-- [Glossary](references/glossary.md) for the termology used.
-install from a local machine
-
-```bash
-cd ~/Projects
-git clone https://github.com/spectomat/spectomat.git
-claude plugin marketplace add ~/Projects/spectomat 
-```
-
-test
-
-```bash
-scripts/selftest.sh
-```
-
-validate
-
-```bash
-claude plugin validate .claude-plugin/plugin.json --strict
-claude plugin validate .claude-plugin/marketplace.json --strict
-```
-
 ## Contributing
 
-Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and §8 of the specification, which records what was already rejected and why.
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and [the design decisions](references/decisions.md), which record what was already rejected and why.
 
 This project ships a [Code of Conduct](CODE_OF_CONDUCT.md). Security reports go through a [private advisory](https://github.com/spectomat/spectomat/security/advisories/new), never a public issue — see [SECURITY.md](SECURITY.md).
 
