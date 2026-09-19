@@ -45,17 +45,27 @@ fire() {
 
 hook_state() { [[ -e "$FIXTURE/.spectomat/state.json" ]] && echo yes || echo no; }
 hook_iter()  { jq -r .iteration "$FIXTURE/.spectomat/state.json" 2>/dev/null; }
+hook_current() { jq -r '.current | "\(.phase) \(.slug)"' "$FIXTURE/.spectomat/state.json" 2>/dev/null; }
 msg()        { printf '%s' "$1" | jq -r '.systemMessage // ""' 2>/dev/null; }
 
-# The pointer prompt stop-hook.sh feeds back, computed the same way it does:
-# by sourcing utils.sh (in a subshell, so PLUGIN_ROOT etc. do not leak here).
-POINTER_PROMPT="$(source "$SCRIPTS/utils.sh" && pointer_prompt)"
+# The pointer prompt stop-hook.sh feeds back embeds the picker's own block for
+# this iteration verbatim, so the expected text is built from that same block
+# rather than re-running the picker separately (which could answer
+# differently if a test above it left the tree in a different state).
+POINTER_PROMPT() { (cd "$FIXTURE" && source "$SCRIPTS/utils.sh" && pointer_prompt "$(bash "$SCRIPTS/phase.sh")"); }
 
 hook_floor h_block OWNER 1 5
 out=$(fire OWNER)
 is "the owner is blocked from exiting" "$(printf '%s' "$out" | jq -r .decision)" "block"
-is "the pointer is fed back"           "$(printf '%s' "$out" | jq -r .reason)"   "$POINTER_PROMPT"
+is "the pointer is fed back"           "$(printf '%s' "$out" | jq -r .reason)"   "$(POINTER_PROMPT)"
 is "the iteration is bumped"           "$(hook_iter)" "2"
+is "the verdict is recorded as current" "$(hook_current)" "SPECIFY 001-a"
+
+# A RECOVER is never recorded: after a dirty death `current` must still name the
+# iteration that died, for the picker to hand that slug to the janitor.
+dirty
+fire OWNER >/dev/null
+is "a RECOVER leaves current alone"    "$(hook_current)" "SPECIFY 001-a"
 
 # Session isolation: the hook fires in every session of the project, and only
 # the one that armed the flow may advance or end it.

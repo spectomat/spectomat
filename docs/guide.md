@@ -35,7 +35,7 @@ claude plugin install spectomat@spectomat
   contract.md the rules, re-read every iteration
   gates.sh    the project's single gate command — generated once, yours to edit
   memory.md   durable valuable facts about the codebase, accumulated all along the time
-  state.json  the whole of the flow's state: every slug and its phase, task counters, strikes, iteration counter, cap, session, plugin copy — gitignored
+  state.json  the whole of the flow's state: every slug and its phase, task counters, strikes, iteration counter, cap, session, plugin copy, current phase and slug — gitignored
   work/       per-task briefs, reports and diffs, gitignored
 ```
 

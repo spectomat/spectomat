@@ -15,7 +15,7 @@ The message contains the word "spectomat" **and** describes something to build, 
 not a question about how Spectomat works (that's `spectomat:help`) and not a request to check
 progress or cancel (that's `spectomat:status` / `spectomat:cancel`).
 
-## Steps
+## Procedure
 
 1. **Find the project root.** `.wishlist/` lives at the repo root the user is working in, beside
    `.spectomat/`. If `.wishlist/` does not exist, create it.
@@ -37,7 +37,7 @@ progress or cancel (that's `spectomat:status` / `spectomat:cancel`).
 
 6. **Run the flow** by invoking the `/spectomat:run` command.
 
-## Notes
+## RULES
 
 - Never edit or delete existing files under `.wishlist/` — only add new ones.
 - If the user's message is too vague to write a brief from, ask one clarifying question before

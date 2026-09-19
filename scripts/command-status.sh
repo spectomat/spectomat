@@ -4,7 +4,7 @@
 set -uo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/print.sh"
+source "$PLUGIN_ROOT/scripts/print.sh"
 cd_root
 
 main() {

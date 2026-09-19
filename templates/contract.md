@@ -49,7 +49,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### Before iteration
 
-**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git checkout -- .` and `git clean -fd` the paths you own. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
+**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git stash push -u -- <the paths you own>` to clear it without deleting it. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
 
 **❌ Never touch `.wishlist/`:** arming emptied it, and anything the operator drops there afterwards is for the next run.
 
@@ -65,7 +65,7 @@ Every iteration does the phase it was handed and nothing else — the picker cho
 
 The flow's state lives in two files, and a phase that changes neither is handed to you again next iteration, on the same slug, forever.
 
-- `state.json` — gitignored, flow-level: every slug's phase, its strikes, the iteration count. Changed through `<plugin_root>/scripts/slug_set_phase.sh` and the other helpers in the plugin's `scripts/utils.sh`, never by editing the file.
+- `state.json` — gitignored, flow-level: every slug's phase, its strikes, the iteration count, and `current` — the phase and slug being worked, recorded by the Stop hook. Changed through `<plugin_root>/scripts/slug_set_phase.sh` and the other helpers in the plugin's `scripts/utils.sh`, never by editing the file.
 - `.spectomat/<slug>/tasks.json` — committed, the slug's task ledger and the single source of truth for its tasks: the list, each one's `dependsOn` and `status`, and the `commits`, `tests` and `gates` it closed with. Changed only through `<plugin_root>/scripts/tasks.sh`, never by editing the file, and never with `jq`.
 
 Every phase ends in exactly one of these changes, applied after its commit — except where the change writes `tasks.json`, which is committed and so belongs *inside* that phase's commit.

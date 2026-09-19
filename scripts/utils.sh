@@ -20,6 +20,9 @@ cd_root() {
   cd "$ROOT"
 }
 
+# Remove the armed flag. Nothing else needs cleaning up.
+disarm() { rm -f "$STATE_FILE"; }
+
 die() { echo "❌ $*" >&2; exit 1; }
 
 # Number of files matching GLOB (default '*.md') directly inside a directory,
@@ -34,9 +37,40 @@ state_field() {
   jq -r --arg k "$1" '.[$k] // empty' "$STATE_FILE" 2>/dev/null || true
 }
 
-# Remove the armed flag. Nothing else needs cleaning up: the prompt the Stop
-# hook feeds back is generated fresh by pointer_prompt(), not stored on disk.
-disarm() { rm -f "$STATE_FILE"; }
+# --- the current verdict --------------------------------------------------
+#
+# state.json's `current` is {phase, slug}: the last working verdict the picker
+# gave, recorded by arm_flow for the first iteration and by the Stop hook for
+# every later one. The picker itself never writes it (it mutates nothing), and
+# a RECOVER or FINISH verdict leaves it as it was, so after a dirty death it
+# still names the iteration that died and phase.sh hands that slug to RECOVER.
+
+# The jq filter that records a verdict as .current, given $p (phase) and $s
+# (slug). A RECOVER, a FINISH or a failed picker call (empty slug) records nothing.
+CURRENT_SET='if $p == "RECOVER" or $s == "" then . else .current = {phase: $p, slug: $s} end'
+
+# current_field KEY — `phase` or `slug` of the recorded verdict; empty when none is.
+current_field() {
+  jq -r --arg k "$1" '.current[$k] // empty' "$STATE_FILE" 2>/dev/null || true
+}
+
+# ask_picker — run the picker once, keep its raw block in PICK_BLOCK, and set
+# PICK_PHASE/PICK_SLUG from it. phase.sh cd_root's itself, so this is safe from
+# any cwd, and it mutates nothing. The Stop hook runs this every iteration and
+# embeds PICK_BLOCK in the pointer prompt, so the dispatched agent never has to
+# invoke the picker a second time for the same verdict.
+ask_picker() {
+  local line
+  PICK_PHASE=""; PICK_SLUG=""; PICK_BLOCK=""
+  PICK_BLOCK=$(bash "$PLUGIN_ROOT/scripts/phase.sh" 2>/dev/null)
+  while IFS= read -r line; do
+    case "$line" in
+      phase:*) PICK_PHASE="${line#phase:}" ;;
+      slug:*)  PICK_SLUG="${line#slug:}" ;;
+    esac
+  done <<< "$PICK_BLOCK"
+}
+
 
 # Render a template, replacing every {{KEY}} with its value:
 #   render_template SRC DEST KEY=value ...
@@ -66,59 +100,51 @@ render_template() {
   printf '%s' "$body" > "$dest"
 }
 
-# The prompt the Stop hook feeds back every iteration, and what command-run.sh
-# previews when it arms a flow. No template file on disk: PLUGIN_ROOT is
-# already a shell variable in every script that sources this file, so it is
-# substituted the same way render_template does, straight into the heredoc.
+# The prompt the Stop hook feeds back every iteration. BLOCK is the picker's
+# own block for this iteration, already computed once by ask_picker to decide
+# FINISH vs continue — embedding it here spares the dispatched agent a second,
+# redundant phase.sh call for a verdict that cannot have changed since
+# (nothing mutates state.json or the tree between that call and this one).
 pointer_prompt() {
-  local body
-  body=$(cat <<'EOF'
-# Spectomat pointer
+  local block="$1" body
+  body=$(cat <<EOF
+# Spectomat next iteration pointer
 
-Fresh context each iteration. Do no factory work here.
+Fresh context each iteration.
 
-## 1. Ask the picker
+## 1. The picker's verdict
 
-Run `bash {{PLUGIN_ROOT}}/scripts/phase.sh` once. It prints exactly one frontmatter block and exits 0:
+The picker already ran for this iteration. Its frontmatter block:
 
-```text
----
-phase:<PHASE>
-slug:<slug, empty for RECOVER and FINISH>
-subagent:<subagent_type>
-brief:<absolute path to the brief file>
-plugin_root:<absolute plugin path>
----
-```
-
-Do not interpret the floor, the contract or the code yourself — act only on that block.
+\`\`\`text
+$block
+\`\`\`
 
 ## 2. Act on that block, and only on it
 
-Launch exactly one subagent with the Agent tool: 
- `run_in_background: false`, 
- `subagent_type` set to the `subagent` field of that block, 
-  and the body of the file named by `brief` — its own frontmatter stripped — as the brief. 
+Launch exactly one subagent with the Agent tool:
+ \`run_in_background: false\`,
+ \`subagent_type\` set to the \`subagent\` field of that block,
+  and the body of the file named by \`brief\` — its own frontmatter stripped — as the brief.
 
-The one exception is a block whose `subagent` field is empty, which only `FINISH` produces: dispatch nothing and go to step 3.
+The one exception is a block whose \`subagent\` field is empty, which only \`FINISH\` produces: dispatch nothing and go to step 3.
 
-The task handed to the subagent is the block phase.sh printed, verbatim, fences included. 
+The task handed to the subagent is the block above, verbatim, fences included.
 
-Do not reformat it, extract fields out of it, or drop any line — the subagent reads `phase:`, `slug:` and `plugin_root:` for itself.
+Do not reformat it, extract fields out of it, or drop any line — the subagent reads \`phase:\`, \`slug:\` and \`plugin_root:\` for itself.
 
 ## 3. Report and stop
 
-Print the report in at most five lines, then stop. 
-Never retry a failed iteration here — the next iteration is a new picker call and a new subagent. 
-A `FINISH` block means the flow has already ended and the Stop hook has reported it; say so in one line and stop. 
+Print the report in at most five lines, then stop.
+Never retry a failed iteration here — the next iteration is a new picker call and a new subagent.
+A \`FINISH\` block means the flow has already ended and the Stop hook has reported it; say so in one line and stop.
 EOF
 )
-  printf '%s\n' "${body//\{\{PLUGIN_ROOT\}\}/$PLUGIN_ROOT}"
+
+  printf '%s\n' "$body"
 }
 
-# slug_branch SLUG — the branch every phase of SLUG works on. One name, one
-# place: command-run.sh creates it, the phase agents check it out, and nothing else
-# composes "feat/$slug" by hand.
+# slug_branch SLUG — the branch every phase of SLUG works on.
 slug_branch() { printf 'feat/%s\n' "$1"; }
 
 # slug_checkout SLUG — put the slug's branch in the working tree. Used by the
@@ -280,6 +306,24 @@ task_next() {
   ' "$(tasks_file "$1")" 2>/dev/null || true
 }
 
+# task_dispatch SLUG ID — the five lines IMPLEMENT sends the task agent, built
+# from the ledger alone so every dispatch of one task reads the same. NN is the
+# id zero-padded to two digits, matching the task filename. Also prepares the
+# scratch dir and deletes a stale gates log from an earlier strike, so the log
+# the worker leaves is always this dispatch's run. Fails when the task is not in
+# the ledger or carries no file.
+task_dispatch() {
+  local slug="$1" id="$2" file nn log
+  file="$(jq -r --arg i "$id" '.tasks[] | select(.id == ($i | tonumber)) | .file // empty' \
+    "$(tasks_file "$slug")" 2>/dev/null)"
+  [[ -n "$file" ]] || return 1
+  nn="$(printf '%02d' "$id")"
+  log="$FLOOR/work/$slug/task-$nn.gates.log"
+  mkdir -p "$FLOOR/work/$slug" && rm -f "$log" || return 1
+  printf 'slug: %s\ntask: %s\ntask_file: %s/%s/%s\ngates_log: %s\nplugin_root: %s\n' \
+    "$slug" "$nn" "$FLOOR" "$slug" "$file" "$log" "$PLUGIN_ROOT"
+}
+
 # tasks_count SLUG [STATUS] — how many tasks the ledger holds, or how many are
 # at STATUS. Prints 0 when there is no ledger.
 tasks_count() {
@@ -308,10 +352,6 @@ task_close() {
 
 # slugs_at_phase PHASE — slugs at PHASE, alphabetically. The picker's candidate
 # sets, the finished counts and the blocked list are all this one shape.
-#
-# The file check comes first and the jq failure is swallowed: command-run.sh's
-# report_floor calls this before arm_flow has written state.json, and a script
-# running set -e with pipefail would die on the failing jq inside the pipeline.
 slugs_at_phase() {
   [[ -f "$STATE_FILE" ]] || return 0
   jq -r --arg p "$1" '.slugs // {} | to_entries[] | select(.value.phase == $p) | .key' \

@@ -9,4 +9,4 @@ allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/command-cancel.sh:*)"]
 "${CLAUDE_PLUGIN_ROOT}/scripts/command-cancel.sh"
 ```
 
-Report the line above to the user as is. Do not start or modify anything.
+Report and STOP.

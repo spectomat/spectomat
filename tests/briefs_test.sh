@@ -29,8 +29,8 @@ is "task.md never advances state.json" \
   "$(grep -q -E 'slug_set_phase|slug_strike|slug_done|block_slug\.sh|tasks\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
 is "task.md never logs" "$(grep -q 'log\.sh' "$AGENTS/task.md" && echo yes || echo no)" "no"
 TASK_TEMPLATE="$(dirname "$SCRIPTS")/templates/task.md"
-for h in "### Purpose" "### Spec, verbatim" "### Codebase"; do
-  is "templates/task.md Context has '$h'" "$(grep -q "^$h\$" "$TASK_TEMPLATE" && echo yes || echo no)" "yes"
+for h in "## Scope" "### Excerpts from Spec" "### From Memory" "### From existing codebase" "### From previous tasks"; do
+  is "templates/task.md has '$h'" "$(grep -q "^$h\$" "$TASK_TEMPLATE" && echo yes || echo no)" "yes"
 done
 is "no brief carries a placeholder" "$(grep -l '{{' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
 is "no brief points at the deleted prompts/" \
@@ -41,6 +41,7 @@ is "plan.md advances state.json"        "$(grep -q 'tasks\.sh start' "$AGENTS/pl
 is "plan.md writes the ledger"          "$(grep -q 'tasks\.sh write' "$AGENTS/plan.md" && echo yes || echo no)" "yes"
 is "implement.md advances state.json"   "$(grep -q 'tasks\.sh close' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
 is "implement.md picks from the ledger" "$(grep -q 'tasks\.sh next' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
+is "implement.md prints the dispatch"   "$(grep -q 'tasks\.sh dispatch' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
 is "review.md advances state.json"      "$(grep -q -E 'slug_set_phase|tasks\.sh add' "$AGENTS/review.md" && echo yes || echo no)" "yes"
 # The ledger is the SSOT, so no brief may reach around scripts/tasks.sh to it.
 for a in plan implement review recover; do

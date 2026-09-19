@@ -3,3 +3,8 @@
 *.local.json
 .claude/worktrees/
 .superpowers/
+.spectomat/state.json
+.spectomat/state.json.tmp.*
+.spectomat/work/
+.spectomat/log.md
+.spectomat/memory.md

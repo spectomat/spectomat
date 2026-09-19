@@ -4,7 +4,7 @@
 #   source "$(dirname "${BASH_SOURCE[0]}")/print.sh"
 #
 # Every print_* writes one "--- section ---" block to stdout and needs FLOOR,
-# STATE_FILE, MEMORY, count, state_field, slugs_at_phase, slugs_unfinished (the
+# STATE_FILE, MEMORY, count, state_field, current_field, slugs_at_phase, slugs_unfinished (the
 # latter two from slug_utils.sh, sourced by utils.sh) and the tasks_* ledger
 # helpers from utils.sh. Phase counts come from state.json
 # and task counts from each slug's tasks.json; the one directory read left is
@@ -18,6 +18,8 @@ print_iteration() {
     else
       echo "cancelled: was at iteration $(state_field iteration) of $(state_field max_iterations) — /spectomat:run resumes it"
     fi
+    # The last working verdict handed out; a RECOVER does not replace it.
+    [[ -z "$(current_field slug)" ]] || echo "current: $(current_field phase) $(current_field slug)"
     # The plugin copy that armed this flow. Scripts never read it — each runs
     # from its own copy — but a floor-side reader has no other way to name it.
     echo "plugin: $(state_field plugin_root)"

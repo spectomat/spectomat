@@ -80,6 +80,42 @@ t init 001-a '[{"id":1,"file":"a.md","dependsOn":[2]},{"id":2,"file":"b.md","dep
 is "next is empty on a cycle"          "$(t next 001-a)" ""
 is "count still reports them pending"  "$(t count 001-a pending)" "2"
 
+# --- dispatch -------------------------------------------------------------
+
+# The five lines IMPLEMENT sends the task agent, byte for byte: the worker reads
+# them by key, so the shape is part of the contract, not a formatting choice.
+ROOT_OF_SCRIPTS="$(cd "$SCRIPTS/.." && pwd)"
+floor d; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
+is "dispatch prints the next task's five lines" "$(t dispatch 001-a)" "slug: 001-a
+task: 01
+task_file: .spectomat/001-a/tasks/task-01-a.md
+gates_log: .spectomat/work/001-a/task-01.gates.log
+plugin_root: $ROOT_OF_SCRIPTS"
+is "dispatch creates the scratch dir"  "$([[ -d "$FIXTURE/.spectomat/work/001-a" ]] && echo yes || echo no)" "yes"
+# A log left by an earlier strike must not pass for this dispatch's run.
+echo "exit: 0" > "$FIXTURE/.spectomat/work/001-a/task-01.gates.log"
+t dispatch 001-a >/dev/null
+is "dispatch deletes a stale gates log" "$([[ -e "$FIXTURE/.spectomat/work/001-a/task-01.gates.log" ]] && echo yes || echo no)" "no"
+t close 001-a 1 "a..b" "1/1" "passed" >/dev/null
+is "dispatch follows next"             "$(t dispatch 001-a | sed -n 2,3p)" "task: 02
+task_file: .spectomat/001-a/tasks/task-02-b.md"
+t close 001-a 2 "b..c" "1/1" "passed" >/dev/null
+t close 001-a 3 "c..d" "1/1" "passed" >/dev/null
+is "dispatch is empty when all are done" "$(t dispatch 001-a)" ""
+
+floor d12; state_slug 001-a PLAN
+t init 001-a '[{"id":12,"name":"x","file":"tasks/task-12-x.md","dependsOn":[]}]' >/dev/null
+is "dispatch keeps a two-digit id"      "$(t dispatch 001-a | sed -n 4p)" "gates_log: .spectomat/work/001-a/task-12.gates.log"
+
+floor dcyc; state_slug 001-a PLAN
+t init 001-a '[{"id":1,"file":"a.md","dependsOn":[2]},{"id":2,"file":"b.md","dependsOn":[1]}]' >/dev/null
+is "dispatch is empty on a cycle"      "$(t dispatch 001-a)" ""
+
+floor dnofile; state_slug 001-a PLAN
+t init 001-a '[{"id":1,"name":"x","dependsOn":[]}]' >/dev/null
+err=$(terr dispatch 001-a); case "$err" in *"no file"*) got=yes ;; *) got=no ;; esac
+is "dispatch refuses a task with no file" "$got" "yes"
+
 # --- close ----------------------------------------------------------------
 
 floor c; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
@@ -132,12 +168,17 @@ is "count done is zero"         "$(t count 001-a done)" "0"
 is "count is 0 with no ledger"  "$(t count 002-b)" "0"
 is "show one task gives its id" "$(t show 001-a 2 | jq -r '.id')" "2"
 is "show all gives the ledger"  "$(t show 001-a | jq -r '.tasks | length')" "3"
+# IMPLEMENT's step 1 is `show <slug> "$(next <slug>)"`: an empty id must print
+# nothing, not the whole ledger, or a finished plan reads as a task to take.
+is "show an empty id prints nothing" "$(t show 001-a "")" ""
 
 # --- refusals -------------------------------------------------------------
 
 floor r; state_slug 001-a PLAN
 err=$(terr next 001-a);  case "$err" in *"no ledger"*) got=yes ;; *) got=no ;; esac
 is "next refuses a missing ledger" "$got" "yes"
+err=$(terr dispatch 001-a); case "$err" in *"no ledger"*) got=yes ;; *) got=no ;; esac
+is "dispatch refuses a missing ledger" "$got" "yes"
 err=$(terr add 001-a '[]'); case "$err" in *"no ledger"*) got=yes ;; *) got=no ;; esac
 is "add refuses a missing ledger"  "$got" "yes"
 err=$(terr write); case "$err" in *usage*) got=yes ;; *) got=no ;; esac

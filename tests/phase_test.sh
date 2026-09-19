@@ -125,8 +125,20 @@ is "a hyphenated phase lowercases whole, not just its first word" "$(printf '%s\
 
 floor p_frontmatter_recover; dirty
 out="$(cd "$FIXTURE" && bash "$SCRIPTS/phase.sh")"
-is "RECOVER's slug field is empty" "$(printf '%s\n' "$out" | grep '^slug:')" "slug:"
+is "RECOVER's slug field is empty with no current" "$(printf '%s\n' "$out" | grep '^slug:')" "slug:"
 is "RECOVER's subagent is the janitor" "$(printf '%s\n' "$out" | grep '^subagent:')" "subagent:spectomat:recover"
+
+# state.json's `current` names the iteration that died, so a dirty-tree RECOVER
+# hands the janitor that slug. A clean-tree RECOVER is about the strike limit,
+# not a death, and names no slug whatever `current` holds.
+set_current() {
+  jq --arg p "$1" --arg s "$2" '.current = {phase: $p, slug: $s}' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" \
+    && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
+}
+floor p_recover_current; draft 001-a; draft 002-b; set_current SPECIFY 002-b; dirty
+pk "a dirty tree is RECOVER on the current slug" "RECOVER 002-b"
+floor p_recover_limit; draft 001-a; strike 001-a SPECIFY 3; set_current SPECIFY 001-a
+pk "a clean RECOVER names no slug" "RECOVER"
 
 # FINISH dispatches nothing: the Stop hook ends the flow on this verdict, so
 # the block names no agent and no brief. RECOVER, which does dispatch, keeps
