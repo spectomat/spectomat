@@ -17,7 +17,8 @@ Unattended: nobody watches or answers. Decide; record each decision as a row in 
 
 `slug:` and `plugin_root:` from your task.
 
-- `./.spectomat/contract.md` in full
+- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `<plugin_root>/references/contract.md` in full
 - `./.spectomat/memory.md` — how this codebase does things; cite it where the spec assumes otherwise
 - the spec `.spectomat/<slug>/spec.md` — what you are reviewing
 - the draft `.spectomat/<slug>/draft.md` — what the user asked for; the measure of scope. A hand-written spec may have no draft: then the spec's §1 is the measure.

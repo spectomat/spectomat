@@ -9,9 +9,8 @@ PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
 WISHLIST=".wishlist"   # the one entrance: raw ideas, one .md each; sits beside the floor, not in it
 STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
-CONTRACT="$FLOOR/contract.md"
-MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; gitignored, so one
-                            # memory is shared by every feat/<slug> branch instead of forking per branch
+MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; committed
+AMENDMENTS="$FLOOR/amendments.md"   # the operator's rules over the contract; committed
 GATES_SH="$FLOOR/gates.sh"   # the project's single gate command; committed, operator-editable
 
 # Move to the git root (or stay put outside a repo); sets ROOT.

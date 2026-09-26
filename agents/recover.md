@@ -18,7 +18,8 @@ Unattended: nobody watches or answers. Decide; report each decision as a ruling.
 
 Your task's `slug:` names the slug the last iteration died on — empty means `state.json` recorded no verdict, and you work the slug out from the changes. `jq -r '.current.phase' .spectomat/state.json` prints the phase it was doing: `<phase>` below.
 
-- `./.spectomat/contract.md` in full
+- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `<plugin_root>/references/contract.md` in full
 - `./.spectomat/memory.md` — how this codebase does things
 - `./.spectomat/log.md` — the last lines for `<slug>`: what the dead iteration was doing, and why earlier ones struck
 - `.spectomat/<slug>/ruling.md`, if it exists — the rulings that shaped the work you are inspecting

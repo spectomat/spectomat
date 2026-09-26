@@ -32,9 +32,9 @@ claude plugin install spectomat@spectomat
     done.md     written by ARCHIVE once REVIEW has passed the plan and the gates are green
     blocked.md  written instead, with the reason, when a phase fails three times
   log.md      one line per phase, gitignored
-  contract.md the rules, re-read every iteration
   gates.sh    the project's single gate command — generated once, yours to edit
-  memory.md   durable valuable facts about the codebase, accumulated all along the time
+  amendments.md your own rules over the contract — highest priority, never edited by the Flow
+  memory.md   durable facts about the codebase, accumulated all along the time
   state.json  the whole of the flow's state: every slug and its phase, task counters, strikes, iteration counter, cap, session, plugin copy, current phase and slug — gitignored
   work/       per-task briefs, reports and diffs, gitignored
 ```
@@ -62,14 +62,14 @@ Stop hook ──▶ feeds back the pointer prompt ──▶ picker (scripts/phas
 
 Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` outrank `IMPLEMENT`, which outranks `PLAN`, which outranks `REVIEW-SPEC`, which outranks a fresh `SPECIFY`. Drafts are read in alphabetical order of the file name, so the name is how you fix the order they are worked in.
 
-`contract.md`, `memory.md` and `gates.sh` are rendered from the plugin templates at the first run and committed. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the Flow believes about the codebase. Each is checked on its own, so a floor armed before `gates.sh` existed gets it on the next `run`.
+`amendments.md`, `memory.md` and `gates.sh` are rendered from the plugin templates at the first run. Next `run`s never overwrite them, so edit them in the project to change the rules, the gates or what the Flow believes about the codebase. Each is checked on its own, so a floor armed before `gates.sh` existed gets it on the next `run`. The contract itself stays in the plugin; a `contract.md` left on an older floor is no longer read, and `run` says so.
 
 > It is dark! Nobody is asked anything. Every open choice becomes an `assumed` row in the spec's Decisions table. Three failed attempts at a phase write `.spectomat/<slug>/blocked.md` with the reason and mark the slug `BLOCKED` in `state.json`, which takes it out of the flow.
 
 ## Operating it
 
 - **Feed it.** Drop a `.md` idea into `.wishlist/`. `run` moves each draft into its own `.spectomat/<slug>/draft.md` and commits it, leaving `.wishlist/` empty. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `.spectomat/<slug>/spec.md`; the Flow then starts at reviewing it.
-- **Steer it.** Edit a spec or a plan between iterations. Edit `contract.md` to change the rules, `memory.md` to correct what the Flow believes about the codebase.
+- **Steer it.** Edit a spec or a plan between iterations. Write your own rules in `.spectomat/amendments.md` — they win over the contract and every brief, and the Flow never edits them. Edit `memory.md` to correct what the Flow believes about the codebase.
 - **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every iteration reads before working and adds to before committing. Seed it by hand before the first run and the Flow starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
 - **Gate it.** The gates are always `./.spectomat/gates.sh`, run once per task in the `IMPLEMENT` phase, before its commit, and once in the `ARCHIVE` phase before archiving. The first `run` writes that script from your `package.json`: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `lint` and `test` script found, one line each in that order. Nothing was detected? You get the script anyway, with commented examples and an honest no-op. Edit the script — it is the one place gates are defined, and gates that are not npm scripts are just more lines in it. `set -e` stops at the first failure, so its exit code is the whole run's. An iteration may never weaken a gate to pass.
 - **Resume it.** After a cancel or the iteration cap, run `/spectomat:run` again. The filesystem is the ledger, so nothing is re-planned.

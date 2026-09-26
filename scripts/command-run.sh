@@ -3,7 +3,7 @@
 #
 #   command-run.sh [MAX_ITERATIONS]
 #
-# Creates .wishlist/, renders contract.md, memory.md and gates.sh when
+# Creates .wishlist/, renders amendments.md, memory.md and gates.sh when
 # absent, moves each wish into its own slug dir .spectomat/<slug>/draft.md,
 # commits what it created, and arms the Stop hook by writing state.json.
 # Default 100 iterations. Refuses when a flow is armed or no unfinished slug remains.
@@ -55,7 +55,6 @@ prepare_floor() {
   ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
   ensure_gitignored "$FLOOR/work/"
   ensure_gitignored "$FLOOR/log.md"
-  ensure_gitignored "$MEMORY"
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
 }
 
@@ -111,7 +110,7 @@ stage_ignore_entries() {
   git update-index --add --cacheinfo "100644,$blob,.gitignore"
 }
 
-# Commit what this run created — contract, memory, gates, ignore rules — plus
+# Commit what this run created — amendments, memory, gates, ignore rules — plus
 # every slug dir on the floor, so the flow starts on a clean tree. That covers
 # both sides of each intake move (.wishlist/ for the removal, the slug dir for
 # the new draft.md) and a spec or plan the operator wrote by hand, which is
@@ -132,18 +131,25 @@ commit_floor() {
   echo "committed: $(git log --oneline -1)"
 }
 
-# Render contract.md, memory.md and gates.sh from the templates once; never
+# Render amendments.md, memory.md and gates.sh from the templates once; never
 # overwrite what the project has edited. The gate commands compiled from
 # package.json are rendered into gates.sh, so a later package.json change is
 # edited into that script by hand. Each file is checked on its own, so a floor
-# armed before memory.md or gates.sh existed picks it up on the next run.
+# armed before one of them existed picks it up on the next run.
 render_factory() {
+  if [[ -f "$AMENDMENTS" ]]; then
+    echo "$AMENDMENTS: exists, kept"
+  else
+    render_template "$TEMPLATES/amendments.md" "$AMENDMENTS" REPO="$ROOT"
+    STAGE+=("$AMENDMENTS")
+    echo "$AMENDMENTS: written"
+  fi
+
   if [[ -f "$MEMORY" ]]; then
     echo "$MEMORY: exists, kept"
   else
     render_template "$TEMPLATES/memory.md" "$MEMORY" REPO="$ROOT"
-    # Not staged: prepare_floor gitignored it, so it stays a local file shared
-    # by every feat/<slug> branch rather than a per-branch copy.
+    STAGE+=("$MEMORY")
     echo "$MEMORY: written"
   fi
 
@@ -165,14 +171,9 @@ render_factory() {
     echo "$GATES_SH: written"
   fi
 
-  if [[ -f "$CONTRACT" ]]; then
-    echo "$CONTRACT: exists, kept"
-  else
-    render_template "$TEMPLATES/contract.md" "$CONTRACT" \
-      REPO="$ROOT" \
-      FLOOR_TEXT="$(cat "$PLUGIN_ROOT/references/floor.md")"
-    STAGE+=("$CONTRACT")
-    echo "$CONTRACT: written"
+  # The contract lives in the plugin now; a floor copy is a leftover nobody reads.
+  if [[ -f "$FLOOR/contract.md" ]]; then
+    echo "⚠️ $FLOOR/contract.md is no longer read: move your edits into $AMENDMENTS, then delete it"
   fi
 }
 

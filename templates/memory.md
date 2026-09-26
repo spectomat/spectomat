@@ -1,6 +1,6 @@
 # Factory Memory — `{{REPO}}`
 
-What the factory has learned about this codebase. Every iteration reads it before working and adds to it before committing. It is committed, so it is also the human's map of the project.
+What the factory has learned about this codebase. Every iteration reads it before working and adds to it before committing.
 
 **One line per entry**, in the section it belongs to, `- <the fact> — <why the next iteration cares>`, paths and commands in backticks. Newest last.
 

@@ -56,7 +56,7 @@ for a in specify review-spec implement review recover; do
   is "agents/$a.md finishes a blocked slug" "$(grep -q 'block_slug\.sh' "$AGENTS/$a.md" && echo yes || echo no)" "yes"
 done
 is "contract.md's three strikes finishes the slug" \
-  "$(grep -q 'block_slug\.sh' "$(dirname "$SCRIPTS")/templates/contract.md" && echo yes || echo no)" "yes"
+  "$(grep -q 'block_slug\.sh' "$(dirname "$SCRIPTS")/references/contract.md" && echo yes || echo no)" "yes"
 # archive.md is a thin wrapper (D21): the mutation stays in agent-archive.sh.
 # FINISH has no brief at all (D24) — the Stop hook ends the flow and composes
 # the report, so no agent can claim the floor is empty.

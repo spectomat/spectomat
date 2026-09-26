@@ -18,7 +18,7 @@ An agentic ledger, transient by nature. Durable knowledge lives in the files bel
 | Acceptance criteria, fixtures, the test suite; bash 3.2 vs 5.x in CI | `references/testing.md` §9, §10.3, §10.7, §10.8 |
 | The terms — flow, iteration, phase, task, floor, contract, slug, strike. Use these words, not synonyms | `references/glossary.md` |
 | What lives where in the plugin, the dispatch picture (§1.2, §6.1) | `references/file-structure.md` |
-| The floor's files in the user's project | `references/floor.md` |
+| The floor's files in the user's project | `references/contract.md` *The floor* |
 | Logo and social card: drawing, rendering, publishing | `references/assets.md` |
 | Phase procedures: brainstorm, gates, memorize, three strikes, log format | `references/` |
 | The user guide | `docs/guide.md` |

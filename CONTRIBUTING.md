@@ -81,7 +81,7 @@ These are enforced by review, not by a linter.
 - Placeholders in templates are `{{KEY}}`, substituted literally by `render_template`. A new placeholder needs a value in the matching `render_template` call in `scripts/command-run.sh`.
 - Verdicts are upper case (`SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`, `ARCHIVE`, `RECOVER`, `FINISH`). Agent types and brief files are lower case (`spectomat:review-spec`, `agents/review-spec.md`).
 - A change to the verdict grammar must keep `scripts/phase.sh`, `pointer_prompt` in `scripts/utils.sh`, `scripts/print.sh` and `scripts/agent-archive.sh` in step.
-- A rule that binds every phase belongs in `templates/contract.md`'s Constitution and nowhere else, under one of its five groups — Judgement, What you may write, Honest reporting, Ending a phase, Where you work. A brief's Rules list holds only what is true of that one phase. A rule that would read the same in two briefs is a contract rule: move it rather than repeating it.
+- A rule that binds every phase belongs in `references/contract.md`'s Constitution and nowhere else, under one of its five groups — Judgement, What you may write, Honest reporting, Ending a phase, Where you work. A brief's Rules list holds only what is true of that one phase. A rule that would read the same in two briefs is a contract rule: move it rather than repeating it.
 - A change to what a phase does belongs in its brief, not in the contract or the pointer.
 - Behaviour changes belong in `docs/specification.md` or the section of it kept under `references/`. `.claude/CLAUDE.md` is a transient ledger that only points at the docs: durable knowledge never lives there.
 

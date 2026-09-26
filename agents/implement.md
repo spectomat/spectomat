@@ -17,7 +17,8 @@ Unattended: nobody watches or answers. Decide; record each decision as a ruling.
 
 `slug:` and `plugin_root:` from your task. `NN` throughout is the task id zero-padded to two digits, matching the task filename (`1` → `task-01-*.md`, `Task 01`).
 
-- `./.spectomat/contract.md` in full
+- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `<plugin_root>/references/contract.md` in full
 - the ledger `.spectomat/<slug>/tasks.json` — the single source of truth for this plan's tasks: which exist, what each depends on, which are done and what each closed with. Read and written only through `bash <plugin_root>/scripts/tasks.sh`, never by hand.
 - the task file `.spectomat/<slug>/<file>` the ledger names — its `Files` are what you verify and commit against
 - `./.spectomat/memory.md` — read in step 8, to judge whether a proposed line is already covered

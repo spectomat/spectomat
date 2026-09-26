@@ -4,7 +4,7 @@
 
 ## 2. Domain Model
 
-The floor is `.spectomat/`, entered from `.wishlist/` beside it: one directory `<slug>/` per idea holding that idea's whole trail, `work/`, plus `log.md`, `contract.md`, `memory.md`, `gates.sh` and `state.json`. Membership in the flow is a `state.json` field and nothing else: a slug is finished when its `.slugs[<slug>].phase` is `DONE` or `BLOCKED`, and the `done.md` or `blocked.md` its dir carries is the committed human record, written and committed by `agent-archive.sh` but read by nothing (D27). The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
+The floor is `.spectomat/`, entered from `.wishlist/` beside it: one directory `<slug>/` per idea holding that idea's whole trail, `work/`, plus `log.md`, `memory.md`, `gates.sh` and `state.json`. Membership in the flow is a `state.json` field and nothing else: a slug is finished when its `.slugs[<slug>].phase` is `DONE` or `BLOCKED`, and the `done.md` or `blocked.md` its dir carries is the committed human record, written and committed by `agent-archive.sh` but read by nothing (D27). The contract's *The floor* section defines it and is not restated here. Three further entities are the system's own.
 
 ### 2.1 `verdict`
 

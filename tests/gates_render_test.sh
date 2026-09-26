@@ -50,10 +50,10 @@ repo green '{"name":"x","scripts":{"gates":"true"}}'
 is "a green floor arms"            "$(gate_lines)" "npm run gates|"
 is "it is committed executable"    "$(cd "$R" && git ls-files -s .spectomat/gates.sh | cut -d' ' -f1)" "100755"
 is "rendering leaves a clean tree" "$(cd "$R" && git status --porcelain)" ""
-is "the contract is committed"     "$(cd "$R" && git ls-files .spectomat/contract.md)" ".spectomat/contract.md"
-# memory.md is gitignored so one memory is shared by every feat/<slug> branch.
-is "memory.md is not committed"    "$(cd "$R" && git ls-files .spectomat/memory.md)" ""
-is "memory.md exists on disk"      "$([[ -f "$R/.spectomat/memory.md" ]] && echo yes || echo no)" "yes"
+# The contract ships with the plugin; the floor never gets a copy.
+is "the contract is not rendered"  "$([[ -e "$R/.spectomat/contract.md" ]] && echo yes || echo no)" "no"
+is "memory.md is committed"        "$(cd "$R" && git ls-files .spectomat/memory.md)" ".spectomat/memory.md"
+is "amendments.md is committed"    "$(cd "$R" && git ls-files .spectomat/amendments.md)" ".spectomat/amendments.md"
 # Arming cuts one branch per slug and leaves HEAD where it found it.
 is "the slug is branched"          "$(cd "$R" && git rev-parse --verify --quiet refs/heads/feat/001-thing >/dev/null && echo yes || echo no)" "yes"
 # Compared against the branch the repo was on before arming, not a hardcoded

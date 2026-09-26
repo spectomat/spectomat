@@ -29,7 +29,7 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
 
 - `scripts/`
   - `utils.sh` holds the shared paths and helpers every other script sources: `least_struck`, `strike_count`, `run_gates` (§5.2–§5.4), `cd_root`, `state_field`, `render_template`, `pointer_prompt`,
-  - `command-run.sh` sets up the floor `.spectomat/`, renders `contract.md`, `memory.md` and `gates.sh`, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
+  - `command-run.sh` sets up the floor `.spectomat/`, renders `amendments.md`, `memory.md` and `gates.sh`, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
   - `phase.sh` is the picker (§5.1): one verdict block per iteration, naming the phase and the subagent/brief to dispatch it to,
   - `agent-archive.sh` is the archiver (§5.6), the `ARCHIVE` phase end to end: ticks, gates, writes the slug's `done.md` (or `blocked.md`), commits, and records the terminal phase in `state.json`,
   - `command-status.sh` summarises flow and floor (§7); its sections live in `print.sh`,
@@ -69,14 +69,14 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
   - `decisions.md` (the design decisions, §8: what was decided, what was rejected, and why),
   - `testing.md` (acceptance criteria, fixtures, the gates and the suite, §9–§10),
   - `assets.md` (how the logo and the social card are drawn, rendered and published),
-  - `floor.md` (the floor layout, rendered into the project's `contract.md`),
+  - `contract.md` (the flow-level contract, floor layout included; read from the plugin by every phase agent, never rendered into the project),
   - `three-strikes.md` (the strike and blocked-slug procedure every phase follows when it is defeated),
   - `log-format.md` (the `log.md` message shape every writer of a log line follows),
   - `glossary.md` (the terms this repo uses consistently, printed by `/spectomat:help` alongside `guide.md`).
 
 - `templates/`
   - rendered into the project once, each checked on its own so an older floor picks up a newly added file, then owned by the project:
-    - `contract.md` (the flow-level contract),
+    - `amendments.md` (the operator's rules over the contract, highest priority, never written by a phase),
     - `memory.md` (the codebase facts every iteration reads and adds to, committed in the project),
     - `gates.sh` (the project's single gate command),
   - the shapes the `SPECIFY`, `REVIEW-SPEC` and `PLAN` phases fill in:

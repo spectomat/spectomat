@@ -2,7 +2,7 @@
 
 A Claude Code plugin that turns raw ideas into committed, tested code without anyone watching. The operator drops a Markdown draft into `.wishlist/` and runs `/spectomat:run`; a Stop hook then generates and feeds the session the same pointer prompt over and over, and each pass — an **iteration** — advances exactly one idea by exactly one phase.
 
-The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the project-owned contract holds only the invariants that outlive both.**
+The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the contract holds only the invariants that outlive both — amended by the operator in `.spectomat/amendments.md`.**
 
 Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPEC`** spec → reviewed spec, **`PLAN`** reviewed spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Every phase, plus `RECOVER`, is a subagent with its own brief, dispatched the same way by the pointer (D2); `FINISH` is the exception — the Stop hook ends the flow itself, dispatching nobody (D24). `ARCHIVE`'s brief does no archiving itself — it only invokes `scripts/agent-archive.sh` and relays its exit code, because a script that exits non-zero on a failing gate is still stronger evidence than an agent claiming the gate passed.
 
@@ -12,7 +12,7 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 
 | Actor | Is | Does |
 | --- | --- | --- |
-| Operator | the human | drops drafts in `.wishlist/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `contract.md` and `memory.md` |
+| Operator | the human | drops drafts in `.wishlist/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `amendments.md` (overrules the contract) and `memory.md` |
 | Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches exactly one subagent; does no factory work |
 | Picker | `scripts/phase.sh` | reads `state.json` and `git status`, and nothing else; prints one frontmatter block naming the phase and everything needed to dispatch it |
 | Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase and commits it |

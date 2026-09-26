@@ -1,16 +1,14 @@
 # Spectomat contract
 
-This is the project's authoritative contract. It is fixed for the whole flow: never edit it, in any phase.
+This is the flow's authoritative contract. It ships with the plugin and is fixed for the whole flow: never edit it, in any phase. The operator amends it in `.spectomat/amendments.md`.
 
-You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file is your only memory of intent, `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read this file in full before doing anything.
+You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file and `amendments.md` are your only memory of intent, `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read `amendments.md`, then this file, in full before doing anything.
 
 Your task is the picker's frontmatter block, verbatim: `phase:`, `slug:` and `plugin_root:` among its fields. When a brief names a plugin file, read `<plugin_root>/<that path>`. A brief holds how its phase is done; where it disagrees with this file, this file wins.
 
-Repository: `{{REPO}}`
-
 ## Constitution
 
-The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor, Phases - it wins anything else.
+This contract is **the single source of truth** about Flow, Floor, Phases — it wins anything else, save one: `.spectomat/amendments.md`, the operator's word, wins over this contract and every brief.
 
 ### Judgement
 
@@ -21,7 +19,7 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ### What you may write
 
-- ❌ DO NOT Edit this contract, `.spectomat/gates.sh`, anything under `.wishlist/`, or a slug dir carrying `done.md` or `blocked.md` — operator files and finished work.
+- ❌ DO NOT Edit this contract, `.spectomat/amendments.md`, `.spectomat/gates.sh`, anything under `.wishlist/`, or a slug dir carrying `done.md` or `blocked.md` — operator files and finished work.
 - ❌ DO NOT Delete a draft, spec or plan.
 - ❌ DO NOT Weaken a gate to pass.
 - ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
@@ -57,7 +55,37 @@ The `.spectomat/contract.md` is **the single source of truth** about Flow, Floor
 
 ## The floor
 
-{{FLOOR_TEXT}}
+Floor is the directories and files the Flow creates and works with in the user's project.
+
+```text
+.wishlist/     the one entrance: raw ideas, one .md each — the user drops them here, and /spectomat:run moves each into its own slug dir
+.spectomat/
+  <slug>/      everything of one idea, named after its draft — you write all of these
+    draft.md     the idea as the user wrote it, moved here when the flow arms; never edited afterwards
+    spec.md      the normative spec, written once from the draft, reviewed once, then never edited again
+    plan.md      the plan overview: goal, constraints, file map, task table
+    tasks/       one self-contained brief per task, written by PLAN
+      task-NN-<name>.md   zero-padded, in execution order
+    snippets/    the code a task's step names instead of inlining it
+      task-NN-stepM.<ext>.snippet   one per code-bearing step; the .snippet suffix keeps gates off it
+    ruling.md    decisions and defects that bind one task, one entry per task — created when the first one is earned
+    tasks.json   the task ledger: every task, its dependsOn and status, and the commits/tests/gates each closed with — committed, written only through scripts/tasks.sh
+    done.md      written by ARCHIVE when the plan ships: the committed record that the slug finished
+    blocked.md   written instead, with the reason, when a phase fails three times: the committed record that it was given up on
+  work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky — gitignored
+    <slug>/task-NN.gates.log   the task agent's whole gate run for one task, ending in `exit: N`; IMPLEMENT reads its numbers from here
+  log.md       append-only, one line per phase of work — gitignored, never committed
+  gates.sh     the project's single gate command — generated once from package.json, committed, yours to edit
+  amendments.md  the operator's rules over this contract — highest priority, committed, read every iteration, never written by a phase
+  memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit
+  state.json   the whole of the flow's state — every slug, its phase, task counters and strikes, the current phase and slug, and the plugin copy that armed the flow: gitignored, changed only through the Flow
+```
+
+> A `slug` is the draft's file name without `.md`. Everything of one idea lives under `.spectomat/<slug>/` for its whole life: nothing is moved when it finishes, so the trail of one idea is one directory.
+>
+> A slug whose `state.json` phase is `DONE` or `BLOCKED` is finished. It leaves the flow, keeps its files where they are, and is never picked, edited or re-archived. Its dir carries a matching `done.md` or `blocked.md` as the committed record of how it ended — `state.json` is gitignored, so the marker is the only trace that survives in git. The two markers never coexist, and nothing reads them back: the phase is what takes a slug out of the flow.
+>
+> The craft of each phase lives in its brief; the invariants live in the contract.
 
 ### Phase boundaries
 
@@ -95,7 +123,7 @@ A phase that defeats you is a strike, and the third strike blocks the slug. The 
 
 **Read it before you touch anything else** — each phase brief's own Orient step names this. Trust it over your assumptions about the project, and over a habit from another repository.
 
-**Add to it before the commit** — each phase brief's own Procedure names the step. It is gitignored, like `state.json` and `log.md`, so the entry enters no commit and never counts as dirt. That is what keeps one memory across every `feat/<slug>` branch: a lesson learned on one slug is there for the next, and no branch carries a copy of its own.
+**Add to it before the commit** — each phase brief's own Procedure names the step. It is committed, so the entry goes into that phase's own commit, on the slug's branch.
 
 Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only the phase agent handling this iteration writes the file: it applies the tests itself, so the file keeps one voice.
 
