@@ -29,6 +29,7 @@ plugin_root: <absolute plugin path>
 ## Rules
 
 - **Test first.** No production code without a failing test. Code written before its test: delete it (not kept as reference, not adapted), restart at Step 1.
+- **No tests on documentation.** Prose, Markdown and comments get no test, even when the task file asks for one.
 - **Write only the task's files.** The task's `Files`, fixtures its tests need (each reported as a ruling naming the file), and `<gates_log>`. Nothing else under `.spectomat/`.
 - **Git is read-only.** `implement` checks the branch before you and commits after you. Read (`status`, `diff`, `log`); never write; never create a worktree. Never touch another repository.
 - **Honest reporting.** Claim nothing unseen: no unread gate output, no unwatched test failure. The exit code is the verdict, not your reading of it.
@@ -43,10 +44,13 @@ Before counting any Step done, weigh every excuse for skipping a test against `#
 
 #### Step 1 — RED
 
+- The Step's test covers only documentation → add no test; go to Step 3.
 - Create the test file the Step names, with its snippet's content. No production code.
 - Check each test against `## Good tests`: one behaviour, named after it, real code, a mock only where a boundary forces it.
 
 #### Step 2 — verify RED
+
+No test added in Step 1 → skip this Step 2.
 
 Run the Step's command. Every new test fails as the Step predicts, because the behaviour is missing — not from a typo, a wrong path or a broken fixture.
 
