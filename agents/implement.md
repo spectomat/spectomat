@@ -65,7 +65,7 @@ Launch exactly one `spectomat:task` with the Agent tool, `run_in_background: fal
 
 ### 4. Read the report
 
-- `## Task NN — DONE` with `Tests`, `Gates`, `Rulings` and `Memory` lines → step 5
+- `## Task NN — DONE` with `Tests`, `Gates`, `Rulings` and `Memory` lines → step 5; a `Red` line is expected too, but a missing one does not make the report unreadable — step 5's RED check decides
 - `## Task NN — FAILED` with `Reason` and `Rulings` lines → `## When you cannot finish`
 - anything else → a report you cannot read: `## When you cannot finish`
 
@@ -76,8 +76,15 @@ Every one of these must hold, or the task failed and you go to `## When you cann
 - `git rev-parse HEAD` still prints BASE — the worker commits nothing
 - `git status --porcelain` names the task's `Files` — the worker's changes are in the tree, uncommitted
 - the gates log exists, its last line is `exit: 0`, and it is the run that backs the numbers you record: read the test count off the log, not off the report
+- RED, reproduced by you on every task that adds a test — the gates log holds only the green run and new test files are untracked, so neither the log, the diff nor the report can prove test-first:
+  1. `git stash push -u -m "RED check" -- <the task's non-test Files>`
+  2. run the task file's Step 2 command
+  3. `git stash pop`, then `git status --porcelain` lists the task's Files again — a pop that fails → `## When you cannot finish`
+  - the outcome matches what the task file's Step 2 predicts — a failing assertion, or an unresolved import or missing module of the code under test → holds; the command and its summary go into step 9's gates note as `red: <command> → <summary>`
+  - it passes where Step 2 predicts a failure → the tests prove nothing: the task failed
+  - the report's `Red` line is supporting detail: missing or unquoted, it is never a failure by itself
+  - no new test (`Red: none`, documentation only) → skip this check
 - the report and the diff show all of these:
-  - the test existed first and was seen failing for the right reason
   - minimal code made it pass; the whole suite is green and clean
   - tests use real code; edge cases and error paths are covered
   - the proving command ran in this dispatch; its output, not a memory of an earlier run, backs the claim
@@ -159,4 +166,5 @@ A task that did not close is a strike, not a retry: a `FAILED` report, a report 
 | "The diff looks right, skip the log" | Nobody reads this commit after you. The log is the only check this code gets today; read it whole. |
 | "One more dispatch would fix it" | A failed worker is a strike. The next dispatch is the next iteration's, after a strike the picker can count. |
 | "It is small, I will build it myself" | You verify; the worker builds. Code you wrote has no test seen failing, no gates log and no dispatch behind it. |
+| "No RED in the report or the log, so it is a strike" / "the worker says it saw RED, accept it" | Both judge a claim. Run the RED check: its outcome is the evidence, the same way on every task. |
 | "All tasks are done, set the phase to REVIEW" | `tasks.sh close` moves the phase when the last task closes. A hand-set phase leaves the ledger lying. |

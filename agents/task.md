@@ -57,6 +57,7 @@ Run the Step's command. Every new test fails as the Step predicts, because the b
 - Fails for another reason → fix the test until it fails for the right one.
 - Passes at once → it tests what exists: fix the test, rerun.
 - Not seen failing → you do not know it tests the right thing: do not go on.
+- Seen failing as predicted → keep the failing summary line: it is the report's `Red` line.
 
 #### Step 3 — GREEN
 
@@ -91,6 +92,7 @@ Only after `./.spectomat/gates.sh` exited 0 on the finished task, your changes l
 
 ```text
 ## Task NN — DONE
+- Red: <the Step 2 command> → <its failing summary, quoted> | none — documentation only
 - Tests: <passed>/<total> (<test files>)
 - Gates: passed (<what the log reported>)
 - Rulings: none | one line each, `<what you decided> — <why> — <what it costs if wrong>`

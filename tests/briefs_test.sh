@@ -64,5 +64,9 @@ is "archive.md invokes agent-archive.sh" "$(grep -q 'agent-archive.sh' "$AGENTS/
 is "archive.md never calls block_slug.sh itself" "$(grep -q 'block_slug\.sh' "$AGENTS/archive.md" && echo yes || echo no)" "no"
 is "there is no finish brief" "$([[ -e "$AGENTS/finish.md" ]] && echo yes || echo no)" "no"
 is "no brief mentions the retired promise" "$(grep -l 'FACTORY EMPTY' "$AGENTS"/*.md | wc -l | tr -d ' ')" "0"
+# Test-first is proven, not claimed (D35): the worker reports RED, and
+# implement reproduces it itself, so a missing report line is never a strike.
+is "task.md reports RED" "$(grep -q '^- Red: ' "$AGENTS/task.md" && echo yes || echo no)" "yes"
+is "implement.md reproduces RED itself" "$(grep -q 'RED check' "$AGENTS/implement.md" && echo yes || echo no)" "yes"
 
 finish
