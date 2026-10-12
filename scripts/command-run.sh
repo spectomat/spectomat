@@ -3,9 +3,9 @@
 #
 #   command-run.sh [MAX_ITERATIONS]
 #
-# Creates .wishlist/, renders amendments.md, memory.md and gates.sh when
-# absent, moves each wish into its own slug dir .spectomat/<slug>/draft.md,
-# commits what it created, and arms the Stop hook by writing state.json.
+# Creates .wishlist/, renders .gitignore, amendments.md, memory.md and gates.sh
+# when absent, moves each wish into its own slug dir .spectomat/<slug>/draft.md,
+# commits the operator's files, and arms the Stop hook by writing state.json.
 # Default 100 iterations. Refuses when a flow is armed or no unfinished slug remains.
 
 set -euo pipefail
@@ -15,9 +15,8 @@ source "$PLUGIN_ROOT/scripts/gates.sh"
 cd_root
 TEMPLATES="$PLUGIN_ROOT/templates"
 MAX_ITERATIONS=100
-STAGE=()     # files prepare.sh created this run, committed by commit_floor
-IGNORED=()   # .gitignore lines prepare.sh appended this run, staged by commit_floor
-INTAKEN=()   # slug dirs intake_wishes filled this run, committed by commit_floor
+STAGE=()     # tracked floor files rendered this run, committed by commit_floor
+INTAKEN=()   # slug dirs intake_wishes filled this run, counted in the commit message
 
 # --- helpers ---
 
@@ -26,7 +25,7 @@ usage() { sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 # --- phases ---
 
 require_git_repo() {
-  [[ -d .git ]] || die "Not a git repository. The factory commits every phase; run 'git init' first."
+  [[ -d .git ]] || die "Not a git repository. The factory commits every task; run 'git init' first."
 }
 
 # Refuse to arm on a repo whose own gates are red. Only checks a gates.sh
@@ -36,25 +35,10 @@ require_gates_passed() {
   run_gates || die "$GATE_FAILED failed. Fix the gates, then run /spectomat:run again."
 }
 
-# Add a line to .gitignore unless it is already present verbatim.
-ensure_gitignored() {
-  local entry="$1"
-  if ! { [[ -f .gitignore ]] && grep -qxF "$entry" .gitignore; }; then
-    printf '%s\n' "$entry" >> .gitignore
-    echo ".gitignore: added $entry"
-    IGNORED+=("$entry")
-  fi
-}
-
-# The inbox, the floor's ignore rules and the log file. Idempotent.
+# The inbox, the floor and the log file. Idempotent.
 # .wishlist/ sits beside the floor, not in it: it is the operator's inbox.
-# The log, the state file and work/ stay local: never committed.
 prepare_floor() {
   mkdir -p "$FLOOR" "$WISHLIST"
-  ensure_gitignored "$STATE_FILE"
-  ensure_gitignored "$STATE_FILE.tmp.*"   # stop-hook.sh writes the counter through it
-  ensure_gitignored "$FLOOR/work/"
-  ensure_gitignored "$FLOOR/log.md"
   [[ -f "$FLOOR/log.md" ]] || printf '# Spectomat factory log\n\n' > "$FLOOR/log.md"
 }
 
@@ -81,10 +65,10 @@ slug_dirs() {
 # <slug>/draft.md: the floor is slug-major, and .wishlist/ is a pure inbox that
 # arming empties. The slug is the draft's file name without .md, unchanged.
 #
-# A draft may be tracked or untracked, so this uses a plain mv and lets
-# commit_floor stage both sides with `git add -A`; `git mv` would fail on the
-# untracked case. Runs before commit_floor, so the move lands in the same
-# commit as the floor setup and the tree is clean when the flow arms.
+# A draft may be tracked or untracked, so this uses a plain mv; `git mv` would
+# fail on the untracked case, and the target is gitignored anyway. A tracked
+# draft leaves a deletion behind, which commit_floor stages with `git add -A`,
+# so the tree is clean when the flow arms.
 #
 # A slug dir that already exists is the operator re-dropping a name that is
 # already in the flow: refuse rather than overwrite a draft mid-flight.
@@ -101,28 +85,11 @@ intake_wishes() {
   done
 }
 
-# Stage .gitignore as "what the index had + the lines prepare.sh appended", leaving
-# any other working-tree edit of the user unstaged.
-stage_ignore_entries() {
-  local base blob
-  base="$(git show :.gitignore 2>/dev/null || true)"
-  blob=$({ [[ -n "$base" ]] && printf '%s\n' "$base"; printf '%s\n' "${IGNORED[@]}"; } | git hash-object -w --stdin)
-  git update-index --add --cacheinfo "100644,$blob,.gitignore"
-}
-
-# Commit what this run created — amendments, memory, gates, ignore rules — plus
-# every slug dir on the floor, so the flow starts on a clean tree. That covers
-# both sides of each intake move (.wishlist/ for the removal, the slug dir for
-# the new draft.md) and a spec or plan the operator wrote by hand, which is
-# floor content just as a draft is. Nothing but the inbox and the floor is staged.
+# Commit what this run rendered on the tracked side of the floor — .gitignore,
+# amendments.md, gates.sh — and the inbox's removals, so the flow starts on a
+# clean tree. Slug dirs and memory.md are gitignored (D36): nothing to stage.
 commit_floor() {
-  local d
-  git add -A "$WISHLIST" ${INTAKEN[@]+"${INTAKEN[@]}"} ${STAGE[@]+"${STAGE[@]}"}
-  while IFS= read -r d; do
-    [[ -n "$d" ]] || continue
-    git add -A "$FLOOR/$d"
-  done < <(slug_dirs)
-  [[ ${#IGNORED[@]} -eq 0 ]] || stage_ignore_entries
+  git add -A "$WISHLIST" ${STAGE[@]+"${STAGE[@]}"}
   git diff --cached --quiet && return 0
   local n msg="chore(spectomat): floor setup"
   n=${#INTAKEN[@]}
@@ -131,12 +98,20 @@ commit_floor() {
   echo "committed: $(git log --oneline -1)"
 }
 
-# Render amendments.md, memory.md and gates.sh from the templates once; never
-# overwrite what the project has edited. The gate commands compiled from
+# Render .gitignore, amendments.md, memory.md and gates.sh from the templates
+# once; never overwrite what the project has edited. The gate commands compiled from
 # package.json are rendered into gates.sh, so a later package.json change is
 # edited into that script by hand. Each file is checked on its own, so a floor
 # armed before one of them existed picks it up on the next run.
 render_factory() {
+  if [[ -f "$FLOOR_IGNORE" ]]; then
+    echo "$FLOOR_IGNORE: exists, kept"
+  else
+    cp "$TEMPLATES/gitignore" "$FLOOR_IGNORE"
+    STAGE+=("$FLOOR_IGNORE")
+    echo "$FLOOR_IGNORE: written"
+  fi
+
   if [[ -f "$AMENDMENTS" ]]; then
     echo "$AMENDMENTS: exists, kept"
   else
@@ -149,7 +124,6 @@ render_factory() {
     echo "$MEMORY: exists, kept"
   else
     render_template "$TEMPLATES/memory.md" "$MEMORY" REPO="$ROOT"
-    STAGE+=("$MEMORY")
     echo "$MEMORY: written"
   fi
 
@@ -175,6 +149,25 @@ render_factory() {
   if [[ -f "$FLOOR/contract.md" ]]; then
     echo "⚠️ $FLOOR/contract.md is no longer read: move your edits into $AMENDMENTS, then delete it"
   fi
+}
+
+# Refuse a floor that git still tracks beyond its three operator files: an
+# older flow committed it. Checking out a branch that tracks a now-ignored file
+# silently overwrites the local copy, and leaving one deletes it. Checks HEAD
+# and every feat/* branch, since the phases check those out.
+require_untracked_floor() {
+  local ref tracked
+  tracked=$(
+    for ref in HEAD $(git for-each-ref --format='%(refname:short)' 'refs/heads/feat/'); do
+      git rev-parse --verify --quiet "$ref^{commit}" >/dev/null || continue
+      git ls-tree -r --name-only "$ref" -- "$FLOOR" \
+        | { grep -vxF -e "$FLOOR_IGNORE" -e "$AMENDMENTS" -e "$GATES_SH" || true; } \
+        | sed "s|^|$ref: |"
+    done
+  )
+  [[ -z "$tracked" ]] && return 0
+  printf '%s\n' "$tracked" | head -5 >&2
+  die "Not starting: git still tracks floor files, and the floor is now local (D36). Merge or delete the feat/* branches listed, then on your branch: git rm -r -q --cached $FLOOR && git add $FLOOR && git commit -m 'chore(spectomat): untrack the floor'"
 }
 
 # Print floor counts and a short git status; sets ACTIVE. Runs after
@@ -237,7 +230,7 @@ seed_state() {
     elif [[ -f "$FLOOR/$s/spec.md" && ! -f "$FLOOR/$s/plan.md" ]]; then
       slug_add "$s" REVIEW-SPEC
     elif [[ -f "$(tasks_file "$s")" ]]; then
-      # A planned slug re-entering the flow: the ledger is committed, so it
+      # A planned slug re-entering the flow: the ledger is on the floor, so it
       # says by itself how far the plan got. Pending tasks left means
       # IMPLEMENT; none left means the plan is built and owed a REVIEW.
       if [[ "$(tasks_pending "$s")" == "0" ]]; then
@@ -248,13 +241,6 @@ seed_state() {
     else
       printf '# %s — blocked\n\nArming could not classify this slug dir: its files match no phase.\n' \
         "$s" > "$FLOOR/$s/blocked.md"
-      # commit_floor has already run, and arming must end on a clean tree or
-      # the picker answers RECOVER to every iteration. A failure here is fatal
-      # rather than skipped: require_startable would refuse on the dirt anyway,
-      # and an uncommitted marker with a BLOCKED entry is the one state the
-      # migration must never leave behind.
-      git add -A "$FLOOR/$s" || die "could not stage $FLOOR/$s"
-      git commit -q -m "chore($s): blocked, files match no phase" || die "could not commit $FLOOR/$s"
       slug_add "$s" BLOCKED
       echo "$FLOOR/$s: files match no phase, blocked"
     fi
@@ -265,8 +251,9 @@ seed_state() {
 # is the only place a branch is created: the phase agents check theirs out and
 # never branch, and the operator merges finished work by hand.
 #
-# Runs after commit_floor and seed_state, so every branch carries the floor and
-# every slug has a state entry to be judged unfinished by. Idempotent — a slug
+# Runs after commit_floor and seed_state, so every branch carries the
+# operator's floor files and every slug has a state entry to be judged
+# unfinished by. The rest of the floor is gitignored and shared by them all. Idempotent — a slug
 # already branched by an earlier arming keeps its branch and whatever work is on
 # it, so re-arming a floor mid-flight never rewinds a slug.
 #
@@ -290,6 +277,7 @@ main() {
   require_git_repo
   prepare_floor
   render_factory
+  require_untracked_floor
   require_gates_passed
   intake_wishes
   commit_floor

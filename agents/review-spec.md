@@ -75,7 +75,7 @@ One line of counts, written once, before the spec is planned:
 
 `N` may be 0; the line is written either way. There is one round, because you fix rather than send back.
 
-### 4. Check before the commit
+### 4. Check before you advance
 
 Read the revised spec once more, as the planner will:
 
@@ -86,12 +86,13 @@ Read the revised spec once more, as the planner will:
 
 A failed item → fix it, and when the fix is material, its row.
 
-### 5. Memory, commit, advance, log
+### 5. Memory, advance, log
+
+The floor is local: nothing this phase writes is committed.
 
 1. Follow `<plugin_root>/references/memorize.md` inline. Zero lines is normal.
-2. Commit everything in one commit, the memory edit included: `docs(<slug>): review spec`.
-3. `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN`.
-4. `bash <plugin_root>/scripts/log.sh REVIEW-SPEC <slug> <message>` per `<plugin_root>/references/log-format.md`, after the commit — the log is gitignored and never enters it.
+2. `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN`.
+3. `bash <plugin_root>/scripts/log.sh REVIEW-SPEC <slug> <message>` per `<plugin_root>/references/log-format.md`.
 
 ### 6. Report
 
@@ -100,7 +101,6 @@ A failed item → fix it, and when the fix is material, its row.
 - Round 1 — N issues (completeness C, consistency S, clarity L, scope P, shape H)
 - Sections changed: §a, §b, … | none
 - Decisions added: D (§10 rows N–M) | none
-- Commit: <hash>
 - Memory: none | one line each, `<Map|Commands|Patterns|Traps>: <fact>`
 ```
 
@@ -118,4 +118,4 @@ A failed item → fix it, and when the fix is material, its row.
 
 ## When you cannot finish
 
-A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+A spec you cannot make ready is a strike, not a guess: a spec you cannot read, one whose draft asks for two independent systems that cannot share one plan, one where a whole section is missing and the draft gives nothing to fill it from. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after writing `blocked.md` — never a strike recorded without that call.

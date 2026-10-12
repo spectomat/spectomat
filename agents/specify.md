@@ -23,7 +23,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a row in 
 - `.spectomat/<slug>/draft.md` in full — what the user asked for; the measure of scope
 - `./docs/*.md`, when present — the project's own functional specifications and architecture documents; a constraint stated there binds the spec
 - `<plugin_root>/templates/spec.md` — the shape the spec must keep
-- `<plugin_root>/references/memorize.md` — the memory step, followed inline before the commit; `<plugin_root>/references/log-format.md` — the log line; `<plugin_root>/references/three-strikes.md` — when the draft defeats you
+- `<plugin_root>/references/memorize.md` — the memory step, followed inline before the phase ends; `<plugin_root>/references/log-format.md` — the log line; `<plugin_root>/references/three-strikes.md` — when the draft defeats you
 
 ## Rules
 
@@ -61,12 +61,13 @@ Read the spec once, cold, against the table above.
 - A hedge from the draft survives — "should", "ideally", "consider", an alternative carried in unresolved → a normative sentence and a §10 row.
 - Template text or `TBD` remains → fill it or, when nothing in the inputs fills it, `## When you cannot finish`.
 
-### 3. Memory, commit, advance, log
+### 3. Memory, advance, log
+
+The floor is local: nothing this phase writes is committed.
 
 1. Follow `<plugin_root>/references/memorize.md` inline. Zero lines is normal: this phase writes no code.
-2. Commit `<type>(<slug>): …` — the memory edit rides inside, never a commit of its own.
-3. `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC`.
-4. `bash <plugin_root>/scripts/log.sh SPECIFY <slug> <message>` per `<plugin_root>/references/log-format.md`, after the commit — the log is gitignored and never enters it.
+2. `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC`.
+3. `bash <plugin_root>/scripts/log.sh SPECIFY <slug> <message>` per `<plugin_root>/references/log-format.md`.
 
 ### 4. Report
 
@@ -74,7 +75,6 @@ Read the spec once, cold, against the table above.
 ## SPECIFY <slug> — DONE
 - Spec: .spectomat/<slug>/spec.md — <N> sections, <C> criteria, <B> boundaries
 - Decisions: <D> rows in §10 marked `assumed` | none
-- Commit: <hash>
 - Memory: none | one line each, `<Map|Commands|Patterns|Traps>: <fact>`
 ```
 
@@ -91,4 +91,4 @@ Read the spec once, cold, against the table above.
 
 A spec you cannot write is **a strike, not a guess**: a draft you cannot read, a draft that asks for two independent systems that cannot share one spec, a draft so thin that a whole section has nothing to fill it from and no reasonable assumption fills the gap.
 
-Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after writing `blocked.md` — never a strike recorded without that call.

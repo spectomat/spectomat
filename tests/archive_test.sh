@@ -17,8 +17,8 @@ ready() {
   floor "arc-$1"; spec "$2"; plan "$2" 2 0; gates_block "$3"
   printf '{"active": true, "iteration": 1, "max_iterations": 5, "session_id": "test", "started_at": "t", "slugs": {"%s": {"phase": "ARCHIVE", "strikes": {}}}}\n' "$2" > "$FIXTURE/.spectomat/state.json"
   fixture_commit
-  # Arming cuts one branch per slug and ARCHIVE commits on it, so the fixture
-  # has to stand where a real floor stands: on feat/<slug>.
+  # Arming cuts one branch per slug and ARCHIVE gates it, so the fixture has
+  # to stand where a real floor stands: on feat/<slug>.
   ( cd "$FIXTURE" && git checkout -q -B "feat/$2" )
 }
 arc()   { ( cd "$FIXTURE" && bash "$SCRIPTS/agent-archive.sh" "$1" >/dev/null 2>&1 ); }
@@ -32,12 +32,9 @@ is "no blocked.md is written"        "$(there 001-a/blocked.md)" "no"
 is "the spec stays put"              "$(there 001-a/spec.md)"    "yes"
 is "the plan stays put"              "$(there 001-a/plan.md)"    "yes"
 is "the task files stay put"         "$(there 001-a/tasks/task-01-x.md)" "yes"
-is "exactly one commit" "$(( $(commits) - n0 ))"     "1"
+is "archiving commits nothing" "$(( $(commits) - n0 ))" "0"
 is "the tree is clean" "$(cd "$FIXTURE" && git status --porcelain)" ""
 is "the log names the gate result" "$(grep -c 'gates passed' "$FIXTURE/.spectomat/log.md")" "1"
-# ARCHIVE owns the floor: it must not stage a project file.
-is "the commit touches only the floor" \
-  "$(cd "$FIXTURE" && git show --name-only --format= HEAD | grep -cv '^.spectomat/')" "0"
 is "archiving records the slug DONE" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"].phase' .spectomat/state.json)" "DONE"
 is "the DONE entry carries the gate result" "$(cd "$FIXTURE" && jq -r '.slugs["001-a"].reason' .spectomat/state.json)" "gates passed"
 
@@ -64,8 +61,8 @@ is "nothing is marked on a dirty tree" "$(there 001-a/done.md)" "no"
 ready nosuch 001-a 'true'
 arc 002-b; is "an unknown slug is refused" "$?" "1"
 
-# A slug at a terminal phase is out of the flow: archiving it again would write
-# a second commit over finished work, and (for a blocked slug) would silently
+# A slug at a terminal phase is out of the flow: archiving it again would
+# rewrite its marker over finished work, and (for a blocked slug) would silently
 # promote it to shipped. The refusal comes from the phase, not the marker — a
 # marker written by hand is a floor file the flow no longer reads.
 echo "agent-archive.sh: a finished slug is refused"

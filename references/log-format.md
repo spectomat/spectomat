@@ -12,4 +12,4 @@ The message is numbers, never adjectives — `Task 2/6 done · tests 41/41`, not
 strike ends the message `(strike N: <reason>)`, N from `slug_strike`'s own
 output, not counted by hand — see [Three strikes](./three-strikes.md).
 
-`log.md` is gitignored: the line enters no commit and never counts as dirt.
+`log.md` is on the local floor: the line enters no commit and never counts as dirt.

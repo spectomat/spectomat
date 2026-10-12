@@ -13,6 +13,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # t SLUG ARGS... — run tasks.sh in the fixture and print its stdout.
 t() { (cd "$FIXTURE" && bash "$SCRIPTS/tasks.sh" "$@" 2>/dev/null); }
+# t_init SLUG JSON — a planned slug: the ledger written, the phase at IMPLEMENT.
+t_init() { t write "$1" "$2" && t start "$1"; }
 # terr SLUG ARGS... — the same, capturing stderr and swallowing stdout.
 terr() { (cd "$FIXTURE" && bash "$SCRIPTS/tasks.sh" "$@" 2>&1 1>/dev/null); }
 # phase SLUG — the slug's phase in the fixture's state.json.
@@ -27,7 +29,7 @@ THREE='[{"id":1,"name":"a","file":"tasks/task-01-a.md","component":"A","covers":
 
 echo "tasks"
 
-# --- write and init -------------------------------------------------------
+# --- write and start ------------------------------------------------------
 
 floor w; state_slug 001-a PLAN
 out=$(t write 001-a "$THREE")
@@ -47,17 +49,13 @@ t write 001-a '[{"id":1,"file":"f.md","dependsOn":[],"status":"done","commits":"
 is "write forces status to pending"  "$(field 001-a 1 status)" "pending"
 is "write discards a passed commits" "$(field 001-a 1 commits)" "null"
 
-floor i; state_slug 001-a PLAN
-t init 001-a "$THREE" >/dev/null
-is "init moves the phase to IMPLEMENT" "$(phase 001-a)" "IMPLEMENT"
-
 floor s; state_slug 001-a PLAN; t write 001-a "$THREE" >/dev/null
 t start 001-a >/dev/null
 is "start moves the phase to IMPLEMENT" "$(phase 001-a)" "IMPLEMENT"
 
 # --- next -----------------------------------------------------------------
 
-floor n; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
+floor n; state_slug 001-a PLAN; t_init 001-a "$THREE" >/dev/null
 is "next is the first task"            "$(t next 001-a)" "1"
 t close 001-a 1 "aaaaaaa..bbbbbbb" "2/2 (x)" "passed" >/dev/null
 is "next is the lowest ready task"     "$(t next 001-a)" "2"
@@ -68,7 +66,7 @@ is "next is empty when all are done"   "$(t next 001-a)" ""
 
 # A pending task whose dependency is not done is not ready, however low its id.
 floor dep; state_slug 001-a PLAN
-t init 001-a '[{"id":1,"file":"a.md","dependsOn":[3]},
+t_init 001-a '[{"id":1,"file":"a.md","dependsOn":[3]},
                {"id":2,"file":"b.md","dependsOn":[3]},
                {"id":3,"file":"c.md","dependsOn":[]}]' >/dev/null
 is "next skips a task whose dep is pending" "$(t next 001-a)" "3"
@@ -76,7 +74,7 @@ is "next skips a task whose dep is pending" "$(t next 001-a)" "3"
 # A cycle leaves every task pending and nothing ready — the one case the
 # IMPLEMENT brief turns into a strike rather than a guessed order.
 floor cyc; state_slug 001-a PLAN
-t init 001-a '[{"id":1,"file":"a.md","dependsOn":[2]},{"id":2,"file":"b.md","dependsOn":[1]}]' >/dev/null
+t_init 001-a '[{"id":1,"file":"a.md","dependsOn":[2]},{"id":2,"file":"b.md","dependsOn":[1]}]' >/dev/null
 is "next is empty on a cycle"          "$(t next 001-a)" ""
 is "count still reports them pending"  "$(t count 001-a pending)" "2"
 
@@ -85,7 +83,7 @@ is "count still reports them pending"  "$(t count 001-a pending)" "2"
 # The five lines IMPLEMENT sends the task agent, byte for byte: the worker reads
 # them by key, so the shape is part of the contract, not a formatting choice.
 ROOT_OF_SCRIPTS="$(cd "$SCRIPTS/.." && pwd)"
-floor d; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
+floor d; state_slug 001-a PLAN; t_init 001-a "$THREE" >/dev/null
 is "dispatch prints the next task's five lines" "$(t dispatch 001-a)" "slug: 001-a
 task: 01
 task_file: .spectomat/001-a/tasks/task-01-a.md
@@ -104,21 +102,21 @@ t close 001-a 3 "c..d" "1/1" "passed" >/dev/null
 is "dispatch is empty when all are done" "$(t dispatch 001-a)" ""
 
 floor d12; state_slug 001-a PLAN
-t init 001-a '[{"id":12,"name":"x","file":"tasks/task-12-x.md","dependsOn":[]}]' >/dev/null
+t_init 001-a '[{"id":12,"name":"x","file":"tasks/task-12-x.md","dependsOn":[]}]' >/dev/null
 is "dispatch keeps a two-digit id"      "$(t dispatch 001-a | sed -n 4p)" "gates_log: .spectomat/work/001-a/task-12.gates.log"
 
 floor dcyc; state_slug 001-a PLAN
-t init 001-a '[{"id":1,"file":"a.md","dependsOn":[2]},{"id":2,"file":"b.md","dependsOn":[1]}]' >/dev/null
+t_init 001-a '[{"id":1,"file":"a.md","dependsOn":[2]},{"id":2,"file":"b.md","dependsOn":[1]}]' >/dev/null
 is "dispatch is empty on a cycle"      "$(t dispatch 001-a)" ""
 
 floor dnofile; state_slug 001-a PLAN
-t init 001-a '[{"id":1,"name":"x","dependsOn":[]}]' >/dev/null
+t_init 001-a '[{"id":1,"name":"x","dependsOn":[]}]' >/dev/null
 err=$(terr dispatch 001-a); case "$err" in *"no file"*) got=yes ;; *) got=no ;; esac
 is "dispatch refuses a task with no file" "$got" "yes"
 
 # --- close ----------------------------------------------------------------
 
-floor c; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
+floor c; state_slug 001-a PLAN; t_init 001-a "$THREE" >/dev/null
 t close 001-a 1 "aaaaaaa..bbbbbbb" "4/4 (a.test.js)" "passed (lint, test)" >/dev/null
 is "close marks the task done"     "$(field 001-a 1 status)" "done"
 is "close records the commits"     "$(field 001-a 1 commits)" "aaaaaaa..bbbbbbb"
@@ -134,7 +132,7 @@ is "no task is left pending"        "$(t count 001-a pending)" "0"
 
 # One task closes once: a repeated call would double-count the work and, on the
 # last task, move an already-reviewing slug again.
-floor twice; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
+floor twice; state_slug 001-a PLAN; t_init 001-a "$THREE" >/dev/null
 t close 001-a 1 "a..b" "1/1" "passed" >/dev/null
 err=$(terr close 001-a 1 "a..b" "1/1" "passed")
 case "$err" in *"already closed"*) got=yes ;; *) got=no ;; esac
@@ -145,7 +143,7 @@ is "close refuses an unknown task"        "$got" "yes"
 
 # --- add ------------------------------------------------------------------
 
-floor a; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
+floor a; state_slug 001-a PLAN; t_init 001-a "$THREE" >/dev/null
 t close 001-a 1 "a..b" "1/1" "passed" >/dev/null
 t close 001-a 2 "b..c" "1/1" "passed" >/dev/null
 t close 001-a 3 "c..d" "1/1" "passed" >/dev/null
@@ -161,7 +159,7 @@ is "closing it returns to REVIEW" "$(phase 001-a)" "REVIEW"
 
 # --- count and show -------------------------------------------------------
 
-floor q; state_slug 001-a PLAN; t init 001-a "$THREE" >/dev/null
+floor q; state_slug 001-a PLAN; t_init 001-a "$THREE" >/dev/null
 is "count is every task"        "$(t count 001-a)" "3"
 is "count pending"              "$(t count 001-a pending)" "3"
 is "count done is zero"         "$(t count 001-a done)" "0"

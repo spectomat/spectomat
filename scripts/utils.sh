@@ -8,10 +8,11 @@
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
 WISHLIST=".wishlist"   # the one entrance: raw ideas, one .md each; sits beside the floor, not in it
-STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; gitignored
-MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; committed
+STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; local, like all the floor but the three below
+MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; local, shared by every branch
 AMENDMENTS="$FLOOR/amendments.md"   # the operator's rules over the contract; committed
 GATES_SH="$FLOOR/gates.sh"   # the project's single gate command; committed, operator-editable
+FLOOR_IGNORE="$FLOOR/.gitignore"   # tracks only itself, amendments.md and gates.sh; committed
 
 # Move to the git root (or stay put outside a repo); sets ROOT.
 cd_root() {
@@ -231,9 +232,9 @@ slug_set_phase() {
 #
 # .spectomat/<slug>/tasks.json is the single source of truth for one slug's
 # tasks: the list PLAN writes, the dependencies IMPLEMENT picks by, and the
-# per-task record it closes with. Unlike state.json it is committed, so the
-# commit range of every task survives in git (D31). state.json keeps only
-# flow-level state — phase, strikes, iteration — and no task counters.
+# per-task record it closes with, including the commit range REVIEW rebuilds
+# the diff from (D31). Local like the rest of the floor (D36). state.json keeps
+# only flow-level state — phase, strikes, iteration — and no task counters.
 #
 #   {"slug": "<slug>",
 #    "tasks": [{"id": 1, "name": "<name>", "file": "tasks/task-01-<name>.md",
@@ -266,9 +267,8 @@ TASK_SHAPE='{
   status: "pending", commits: null, tests: null, gates: null }'
 
 # tasks_write SLUG JSON — write the ledger from a JSON array of tasks. Moves no
-# phase: PLAN writes the ledger before its commit, since the file is committed,
-# and calls tasks_start after. JSON is read from the argument, or from stdin
-# when it is "-".
+# phase: PLAN checks the ledger against its task files first, and calls
+# tasks_start after. JSON is read from the argument, or from stdin when it is "-".
 tasks_write() {
   local slug="$1" json="${2:--}" f; f="$(tasks_file "$slug")"
   [[ "$json" != "-" ]] || json="$(cat)"
@@ -276,15 +276,11 @@ tasks_write() {
   printf '%s' "$json" | jq --arg s "$slug" "{slug: \$s, tasks: [ .[] | $TASK_SHAPE ]}" > "$f"
 }
 
-# tasks_start SLUG — PLAN -> IMPLEMENT, the ledger already written and committed.
+# tasks_start SLUG — PLAN -> IMPLEMENT, the ledger already written and checked.
 tasks_start() { slug_set_phase "$1" IMPLEMENT; }
 
-# tasks_init SLUG JSON — both at once, for a caller not building a commit
-# around the file.
-tasks_init() { tasks_write "$@" && tasks_start "$1"; }
-
 # tasks_add SLUG JSON — REVIEW: append fix tasks to the ledger and send the
-# slug back to IMPLEMENT. Same task shape as tasks_init.
+# slug back to IMPLEMENT. Same task shape as tasks_write.
 tasks_add() {
   local slug="$1" json="${2:--}"
   [[ "$json" != "-" ]] || json="$(cat)"

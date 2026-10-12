@@ -4,7 +4,6 @@
 # utils.sh, for a brief's `!` block or an agent's own Bash calls:
 #
 #   scripts/tasks.sh write <slug> '<json array>'   PLAN: write the ledger, no phase move
-#   scripts/tasks.sh init  <slug> '<json array>'   the same, then -> IMPLEMENT
 #   scripts/tasks.sh start <slug>                  -> IMPLEMENT, ledger already written
 #   scripts/tasks.sh add   <slug> '<json array>'   REVIEW: append fix tasks, -> IMPLEMENT
 #   scripts/tasks.sh next  <slug>                  the next ready task's id, or empty
@@ -17,12 +16,11 @@
 #   scripts/tasks.sh close <slug> <id> <commits> <tests> <gates>
 #                                                  record the evidence, -> REVIEW when last
 #
-# The ledger is committed, so PLAN writes it before its commit and moves the
-# phase after: `write` then `start`. `init` does both at once, for RECOVER and
-# for anything that is not building a commit around the file.
+# PLAN writes the ledger, checks it against its task files, and only then moves
+# the phase: `write`, then `start`.
 #
-# `write`, `init` and `add` read their JSON from stdin when the argument is `-`
-# or absent. The task shape is documented above tasks_init in utils.sh.
+# `write` and `add` read their JSON from stdin when the argument is `-` or
+# absent. The task shape is documented in the ledger section of utils.sh.
 
 set -uo pipefail
 
@@ -30,7 +28,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 cd_root
 
 usage() {
-  die "usage: tasks.sh write|init|start|add|next|dispatch|show|count|close <slug> [args]"
+  die "usage: tasks.sh write|start|add|next|dispatch|show|count|close <slug> [args]"
 }
 
 require_ledger() {
@@ -47,10 +45,6 @@ main() {
     write)
       tasks_write "$slug" "${1:--}" || die "could not write $(tasks_file "$slug")"
       echo "$(tasks_file "$slug"): $(tasks_count "$slug") tasks"
-      ;;
-    init)
-      tasks_init "$slug" "${1:--}" || die "could not write $(tasks_file "$slug")"
-      echo "$slug -> IMPLEMENT, $(tasks_count "$slug") tasks"
       ;;
     start)
       require_ledger "$slug"

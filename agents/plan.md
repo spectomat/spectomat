@@ -38,7 +38,8 @@ Unattended: nobody watches or answers. Decide; write each decision into the over
 
 - **A task file is the whole brief.** The task agent opens only that file, its snippets and the repository — not the plan, the spec, the contract or `memory.md`. Whatever it needs from those goes into `## Context`, quoted, not cited: an id, a section number or a file name is a pointer, and pointers are what it cannot follow.
 - **Code lives in snippets, never in placeholders.** A code-bearing step names `.spectomat/<slug>/snippets/task-NN-stepM.<ext>.snippet` — `<ext>` matching the target file's, the `.snippet` suffix so gates neither format nor lint it — holding exactly what the step writes. Never TBD, TODO, "implement later", "add error handling", "handle edge cases", "write tests for the above" without the test code, "similar to Task N" instead of the code, or a type or function no task defines.
-- **The ledger is the count.** `IMPLEMENT` finds its work in `tasks.json`, not in the task files' text and not in `state.json`. It is committed, so it is written before the commit and the phase moves after.
+- **The ledger is the count.** `IMPLEMENT` finds its work in `tasks.json`, not in the task files' text and not in `state.json`. It is written first, checked against the task files, and only then does the phase move.
+- **Leftovers go.** A task file or snippet a dead iteration left that your plan does not name → remove it, so `tasks/` and the ledger agree.
 - **Write no code and run no gates.** One task per iteration, in dependency order, is how `IMPLEMENT` runs; there is no execution mode to choose. DRY, YAGNI, TDD.
 
 ## Procedure
@@ -55,7 +56,7 @@ Unattended: nobody watches or answers. Decide; write each decision into the over
 ### 1. Shape the plan
 
 1. Fill the file map: which files are created or modified, and the one responsibility of each. Small focused files over large ones; files that change together live together; follow the codebase's existing patterns.
-2. Right-size: a task is the smallest unit with its own test cycle and its own commit. Fold setup and docs into the task that needs them; split only where the `REVIEW` phase could reject one half and pass the other.
+2. Right-size: a task is the largest coherent unit one fresh agent can build and gate in one iteration — a whole component, or a run of adjacent build-sequence steps, with their tests. Merge by default: setup, docs, glue and tests ride with the code they serve, and steps that share a file, a component or a test cycle are one task. Split only where the merged task would no longer fit one iteration. Every task costs a brief, a handoff, an iteration and a commit — fewer, wider tasks.
 3. Make every task an independent piece of work. The `IMPLEMENT` phase executes tasks one at a time in dependency order, one per iteration, so each must be executable alone when its turn comes. The ledger's `dependsOn` names every task under this task's `From previous tasks`, and may name only **lower-numbered** tasks — number the tasks so that dependency order is numeric order. Every file has exactly one owning task: if two tasks need the same file, give it to one of them or make the later one depend on the earlier.
 4. Write the overview `.spectomat/<slug>/plan.md` from `<plugin_root>/templates/plan.md`: header, Global Constraints, file map, the task table, and the coverage table mapping every criterion id to a task.
 
@@ -68,7 +69,7 @@ Follow `<plugin_root>/templates/task.md` exactly. A task file is read by an agen
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths.
 - **Covers** — the criterion ids this task's tests name.
-- **Procedure** — four numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass. No commit step: the `IMPLEMENT` phase commits the task. Each is one action of a few minutes. A code-bearing step never inlines its code: it names the file it creates or modifies and points to its snippet file. Number the steps 1–4; the ledger, not the task files, is what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
+- **Procedure** — four numbered steps: failing test, run and see it fail, minimal implementation, run and see it pass. No commit step: the `IMPLEMENT` phase commits the task. Each is one action, however many files it touches. A code-bearing step never inlines its code: it names the file it creates or modifies and points to its snippet file. Number the steps 1–4; the ledger, not the task files, is what the `IMPLEMENT` and `ARCHIVE` phases read to know how many tasks exist and how many are done.
 
 ### 3. Write the ledger
 
@@ -100,21 +101,23 @@ The script sets `status`, `commits`, `tests` and `gates` itself — never pass t
 
 Check every file against the spec, and fix inline:
 
-1. **Coverage** — every criterion id in the spec is in the coverage table and in some task's `Covers`. A criterion with no task → write it one.
-2. **Placeholders** — search every task file and every snippet for the patterns in `## Rules`. A hit → the real code, or the real test.
-3. **Consistency** — a name, signature or type consumed in a later task is produced, spelled the same, by a task it depends on. A mismatch → fix the consumer to the producer's spelling.
-4. **Ownership** — no file appears in the `Files` of two tasks unless the later depends on the earlier, and no `dependsOn` names a higher id. A clash → give the file to one task, or add the dependency.
-5. **Self-containment** — read one task file alone, as the task agent will: only this file, its snippets and the code. Every `Covers` id quoted in full under `Excerpts from Spec`? Every consumed signature under `From existing codebase` or `From previous tasks`? Every `memory.md` fact it needs copied under `From Memory`? Missing → copy it in.
-6. **Snippets exist** — every snippet path a task file names under `.spectomat/<slug>/snippets/` is a file you actually wrote. Missing → write it.
-7. **No pointers in Scope or Context** — `## Scope` and the four `## Context` subsections contain no "see §N", "see plan", "as in memory.md". A pointer → replace it with the text.
-8. **The ledger matches** — `bash <plugin_root>/scripts/tasks.sh show <slug>` lists one task per task file, with the same ids, `file` paths and `covers` as the overview's table; every `dependsOn` id exists, is lower than its own, and no cycle: reading the ids in order, every dependency is already behind you. `bash <plugin_root>/scripts/tasks.sh next <slug>` prints `1`. Anything else → rewrite the ledger with `tasks.sh write`.
+1. **Size** — no two tasks could merge and still fit one iteration. They could → merge them, before any other check.
+2. **Coverage** — every criterion id in the spec is in the coverage table and in some task's `Covers`. A criterion with no task → add it to the task that owns its component.
+3. **Placeholders** — search every task file and every snippet for the patterns in `## Rules`. A hit → the real code, or the real test.
+4. **Consistency** — a name, signature or type consumed in a later task is produced, spelled the same, by a task it depends on. A mismatch → fix the consumer to the producer's spelling.
+5. **Ownership** — no file appears in the `Files` of two tasks unless the later depends on the earlier, and no `dependsOn` names a higher id. A clash → give the file to one task, or add the dependency.
+6. **Self-containment** — read one task file alone, as the task agent will: only this file, its snippets and the code. Every `Covers` id quoted in full under `Excerpts from Spec`? Every consumed signature under `From existing codebase` or `From previous tasks`? Every `memory.md` fact it needs copied under `From Memory`? Missing → copy it in.
+7. **Snippets exist** — every snippet path a task file names under `.spectomat/<slug>/snippets/` is a file you actually wrote. Missing → write it.
+8. **No pointers in Scope or Context** — `## Scope` and the four `## Context` subsections contain no "see §N", "see plan", "as in memory.md". A pointer → replace it with the text.
+9. **The ledger matches** — `bash <plugin_root>/scripts/tasks.sh show <slug>` lists one task per task file, with the same ids, `file` paths and `covers` as the overview's table; every `dependsOn` id exists, is lower than its own, and no cycle: reading the ids in order, every dependency is already behind you. `bash <plugin_root>/scripts/tasks.sh next <slug>` prints `1`. Anything else → rewrite the ledger with `tasks.sh write`.
 
-### 5. Memory, commit, advance, log
+### 5. Memory, advance, log
+
+The floor is local: nothing this phase writes is committed.
 
 1. Follow `<plugin_root>/references/memorize.md` inline. Zero lines is normal: this phase writes no code.
-2. Commit `<type>(<slug>): …` — the ledger and the memory edit ride inside this commit, never a commit of their own.
-3. `bash <plugin_root>/scripts/tasks.sh start <slug>`.
-4. `bash <plugin_root>/scripts/log.sh PLAN <slug> <message>` per `<plugin_root>/references/log-format.md`, after the commit — the log is gitignored and never enters it.
+2. `bash <plugin_root>/scripts/tasks.sh start <slug>`.
+3. `bash <plugin_root>/scripts/log.sh PLAN <slug> <message>` per `<plugin_root>/references/log-format.md`.
 
 ### 6. Report
 
@@ -123,7 +126,6 @@ Check every file against the spec, and fix inline:
 - Tasks: <N> — task-01-<name> … task-NN-<name>
 - Coverage: <C>/<C> criteria mapped
 - Ledger: <N> pending, `tasks.sh next` → 1
-- Commit: <hash>
 - Memory: none | one line each, `<Map|Commands|Patterns|Traps>: <fact>`
 ```
 
@@ -133,9 +135,9 @@ Check every file against the spec, and fix inline:
 | --- | --- |
 | "The task agent can open the spec" | It cannot: it sees the task file, its snippets and the code. What is not in `## Context` does not exist for it. |
 | "The snippet is obvious from the step" | Obvious to you, with the spec open. The worker writes what the snippet holds; an absent snippet is a guess. |
-| "Too small for its own task" | Then fold it into the task that needs it. A task is the smallest unit with its own test cycle and commit — not smaller, not larger. |
+| "Each step deserves its own task" | Each task costs a brief, a handoff, an iteration and a commit. Merge until the next merge would not fit one iteration — not smaller, not larger. |
 | "Similar to Task N" | A pointer. Copy the code and spell the signature; the worker for Task M never reads Task N. |
 
 ## When you cannot finish
 
-A spec you cannot plan is a strike, not a guess: a spec you cannot read, a build sequence naming a component the spec never defines, a criterion no test could observe. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+A spec you cannot plan is a strike, not a guess: a spec you cannot read, a build sequence naming a component the spec never defines, a criterion no test could observe. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after writing `blocked.md` — never a strike recorded without that call.

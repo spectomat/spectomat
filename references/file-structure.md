@@ -29,9 +29,9 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
 
 - `scripts/`
   - `utils.sh` holds the shared paths and helpers every other script sources: `least_struck`, `strike_count`, `run_gates` (§5.2–§5.4), `cd_root`, `state_field`, `render_template`, `pointer_prompt`,
-  - `command-run.sh` sets up the floor `.spectomat/`, renders `amendments.md`, `memory.md` and `gates.sh`, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
+  - `command-run.sh` sets up the floor `.spectomat/`, renders `.gitignore`, `amendments.md`, `memory.md` and `gates.sh`, refuses a floor git still tracks, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
   - `phase.sh` is the picker (§5.1): one verdict block per iteration, naming the phase and the subagent/brief to dispatch it to,
-  - `agent-archive.sh` is the archiver (§5.6), the `ARCHIVE` phase end to end: ticks, gates, writes the slug's `done.md` (or `blocked.md`), commits, and records the terminal phase in `state.json`,
+  - `agent-archive.sh` is the archiver (§5.6), the `ARCHIVE` phase end to end: ticks, gates, writes the slug's `done.md` (or `blocked.md`), and records the terminal phase in `state.json`,
   - `command-status.sh` summarises flow and floor (§7); its sections live in `print.sh`,
   - `command-cancel.sh` disarms the flow and reports the iteration it was at,
   - `command-help.sh` prints `docs/guide.md` and `references/glossary.md` verbatim,
@@ -60,7 +60,7 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
 - `references/`
   - `brainstorm.md` (the `REVIEW-SPEC` phase's brainstorming procedure, cited, not inlined, by `agents/review-spec.md` for when the spec and the draft are both silent),
   - `gates.md` (how the task agent reads the gates log and debugs a red gate, cited by `agents/task.md` — the one plugin file the worker reads, which is why its task carries `plugin_root` as the fifth line),
-  - `memorize.md` (the memory-writing procedure `IMPLEMENT` and `REVIEW-SPEC` each follow inline before their own commit),
+  - `memorize.md` (the memory-writing procedure `IMPLEMENT` and `REVIEW-SPEC` each follow inline before their phase ends),
   - `file-structure.md` (this file),
   - `domain-model.md` (the domain model, §2: the verdict, the strike ledger, the gates),
   - `behaviour.md` (the behaviour, §3: the iteration, dispatch, the failure path, completion),
@@ -76,8 +76,9 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
 
 - `templates/`
   - rendered into the project once, each checked on its own so an older floor picks up a newly added file, then owned by the project:
+    - `gitignore` (rendered as `.spectomat/.gitignore`: tracks only itself, `amendments.md` and `gates.sh` — D36),
     - `amendments.md` (the operator's rules over the contract, highest priority, never written by a phase),
-    - `memory.md` (the codebase facts every iteration reads and adds to, committed in the project),
+    - `memory.md` (the codebase facts every iteration reads and adds to, local to the project's floor),
     - `gates.sh` (the project's single gate command),
   - the shapes the `SPECIFY`, `REVIEW-SPEC` and `PLAN` phases fill in:
     - `spec.md` (the skeleton for the `spec` document),

@@ -1,6 +1,7 @@
 #!/bin/bash
-# command-run.sh — arms and refuses to arm the floor; commits wishes; arm writes
-# state.json, cancel marks it inactive without touching the floor.
+# command-run.sh — arms and refuses to arm the floor; commits the operator's
+# floor files; arm writes state.json, cancel marks it inactive without touching
+# the floor.
 #
 #   tests/prepare_test.sh              tests ../scripts
 #   tests/prepare_test.sh DIR          tests the scripts in DIR
@@ -11,8 +12,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 # Arming a floor must leave a clean tree. The picker reads `git status` and
 # answers RECOVER to any dirt, so a draft the user dropped into .wishlist/ must be
-# moved into its slug dir and committed by command-run.sh, or iteration 1 burns on
-# the janitor.
+# moved into its slug dir — gitignored, like all the floor but the operator's
+# files (D36) — or iteration 1 burns on the janitor.
 echo "command-run.sh wishlist"
 
 # One `git init` for every case below, copied like floor() does.
@@ -28,7 +29,7 @@ mkdir -p "$REPO_TEMPLATE"
   git commit -qm init
 ) >/dev/null 2>&1
 
-# Drop an untracked draft on the floor: command-run.sh commits it and arms.
+# Drop an untracked draft on the floor: command-run.sh moves it and arms.
 DROP="$TMP/drop"
 mkdir -p "$DROP"
 cp -R "$REPO_TEMPLATE/." "$DROP"
@@ -38,11 +39,13 @@ printf 'idea\n' > "$DROP/.wishlist/001-thing.md"
 is "a dropped draft leaves a clean tree" "$(cd "$DROP" && git status --porcelain)" ""
 is "the draft moves into its slug dir" "$([[ -f "$DROP/.spectomat/001-thing/draft.md" ]] && echo yes || echo no)" "yes"
 is ".wishlist/ is emptied by arming"   "$(ls "$DROP/.wishlist" | wc -l | tr -d ' ')" "0"
-is "the draft is committed at its new path" "$(cd "$DROP" && git log -1 --name-only --format= | grep -c '001-thing/draft.md')" "1"
+is "only the operator's floor files are tracked" "$(cd "$DROP" && git ls-files .spectomat | tr '\n' ' ')" \
+  ".spectomat/.gitignore .spectomat/amendments.md .spectomat/gates.sh "
+is "the root .gitignore is not touched" "$([[ -e "$DROP/.gitignore" ]] && echo yes || echo no)" "no"
 is "iteration 1 is SPECIFY"     "$(verdict "$DROP" "$SCRIPTS")" "SPECIFY 001-thing"
 
-# A draft the user already committed leaves nothing to stage; arming must still
-# succeed and reach SPECIFY.
+# A draft the user already committed leaves its removal to stage; arming
+# commits it and reaches SPECIFY.
 DROP2="$TMP/drop-committed"
 mkdir -p "$DROP2"
 cp -R "$REPO_TEMPLATE/." "$DROP2"
@@ -55,6 +58,7 @@ mkdir -p "$DROP2/.wishlist"
 ) >/dev/null 2>&1
 (cd "$DROP2" && bash "$SCRIPTS/command-run.sh" 3) >/dev/null 2>&1
 is "a committed draft arms cleanly" "$(cd "$DROP2" && git status --porcelain)" ""
+is "its removal from .wishlist/ is committed" "$(cd "$DROP2" && git ls-files .wishlist)" ""
 is "a committed draft reaches SPECIFY" "$(verdict "$DROP2" "$SCRIPTS")" "SPECIFY 001-thing"
 
 # A spec the operator wrote by hand has no draft to arm from, so arming must
@@ -135,7 +139,6 @@ printf 'spec\n' > "$RE/.spectomat/001-old/spec.md"
 printf 'plan\n' > "$RE/.spectomat/001-old/plan.md"
 printf 'archived\n' > "$RE/.spectomat/001-old/done.md"
 printf 'idea\n' > "$RE/.wishlist/002-new.md"
-(cd "$RE" && git add -A && git commit -qm seed) >/dev/null 2>&1
 out=$( (cd "$RE" && bash "$SCRIPTS/command-run.sh" 7) 2>&1 )
 is "a pre-D27 finished slug is seeded DONE" "$(cd "$RE" && jq -r '.slugs["001-old"].phase' .spectomat/state.json)" "DONE"
 is "the finished slug is not counted as active" "$(printf '%s\n' "$out" | grep -c 'active: 1   done: 1')" "1"
@@ -144,5 +147,36 @@ is "the new draft still arms" "$(cd "$RE" && jq -r '.slugs["002-new"].phase' .sp
 (cd "$RE" && bash "$SCRIPTS/command-run.sh" 7) >/dev/null 2>&1
 is "a second arming leaves the finished slug alone" "$(cd "$RE" && jq -r '.slugs["001-old"].phase' .spectomat/state.json)" "DONE"
 is "re-arming leaves a clean tree" "$(cd "$RE" && git status --porcelain)" ""
+
+# A floor an older flow committed must be untracked before arming: checking out
+# a branch that tracks a now-ignored file silently overwrites the local copy.
+echo "arming over a tracked floor"
+OLD="$TMP/tracked"
+mkdir -p "$OLD/.spectomat/001-old"
+cp -R "$REPO_TEMPLATE/." "$OLD"
+printf 'spec\n' > "$OLD/.spectomat/001-old/spec.md"
+(cd "$OLD" && git add -A && git commit -qm old) >/dev/null 2>&1
+out=$(cd "$OLD" && bash "$SCRIPTS/command-run.sh" 3 2>&1); rc=$?
+is "a tracked floor refuses to arm" "$rc" "1"
+is "the refusal names the file" "$(printf '%s\n' "$out" | grep -c 'HEAD: .spectomat/001-old/spec.md')" "1"
+is "the refusal arms nothing" "$(cd "$OLD" && jq -r '.active // "unarmed"' .spectomat/state.json 2>/dev/null || echo unarmed)" "unarmed"
+# The recipe the refusal prints untracks the floor and arms.
+(cd "$OLD" && git rm -r -q --cached .spectomat && git add .spectomat && git commit -qm untrack) >/dev/null 2>&1
+(cd "$OLD" && bash "$SCRIPTS/command-run.sh" 3) >/dev/null 2>&1
+is "the recipe lets it arm" "$(cd "$OLD" && jq -r .active .spectomat/state.json)" "true"
+
+OLDB="$TMP/tracked-branch"
+mkdir -p "$OLDB"
+cp -R "$REPO_TEMPLATE/." "$OLDB"
+(
+  cd "$OLDB" || exit 1
+  git checkout -q -b feat/001-old
+  mkdir -p .spectomat/001-old && printf 'spec\n' > .spectomat/001-old/spec.md
+  git add -A && git commit -qm old
+  git checkout -q -
+) >/dev/null 2>&1
+out=$(cd "$OLDB" && bash "$SCRIPTS/command-run.sh" 3 2>&1); rc=$?
+is "a feat branch tracking the floor refuses to arm" "$rc" "1"
+is "the refusal names the branch" "$(printf '%s\n' "$out" | grep -c 'feat/001-old: .spectomat/001-old/spec.md')" "1"
 
 finish

@@ -1,11 +1,11 @@
 ---
 name: memorize
-description: A reference brief for the memory-writing step every phase brief runs inline, before its own commit. Read this file's body in place of duplicating its prose.
+description: A reference brief for the memory-writing step every phase brief runs inline, before its phase ends. Read this file's body in place of duplicating its prose.
 ---
 
 # MEMORIZE
 
-This is not a phase and nothing dispatches it. `SPECIFY`, `PLAN`, `REVIEW` and `ARCHIVE` write no code and earn no entries most iterations; `IMPLEMENT` and `REVIEW-SPEC` are the two phases with a "Memory" step in their own Procedure (step 8 and step 5), and that step says: apply this brief, inline, in your own context, before your own commit. Nobody reads `memory.md`'s findings back from you — you fold them into the commit you were already making.
+This is not a phase and nothing dispatches it. `SPECIFY`, `PLAN`, `REVIEW` and `ARCHIVE` write no code and earn no entries most iterations; `IMPLEMENT` and `REVIEW-SPEC` are the two phases with a "Memory" step in their own Procedure (step 8 and step 5), and that step says: apply this brief, inline, in your own context, before your phase ends. Nobody reads `memory.md`'s findings back from you — you edit the file and move on.
 
 ## Procedure
 
@@ -17,6 +17,6 @@ This is not a phase and nothing dispatches it. `SPECIFY`, `PLAN`, `REVIEW` and `
 
 ## Rules
 
-- The edit rides inside the phase's own commit — never a separate commit, never a separate iteration.
+- The edit belongs to the phase that earned it — never a separate iteration. `memory.md` is local and shared by every branch, so it is never committed and never conflicts.
 - A trap that cost you a strike or a review round this iteration is the entry most worth having; anything true only of this task or this spec never is.
 - Do not log narration — a fact, not what happened. What happened is `log.md`.

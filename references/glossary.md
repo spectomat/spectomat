@@ -12,7 +12,7 @@
 
 - **Flow** is one unattended run that turns drafts into committed code: the sequence of iterations from arming to `FINISH`.
 
-- **Iteration** is one step of the flow: one verdict, one phase, one commit.
+- **Iteration** is one step of the flow: one verdict, one phase, and at most one commit.
 
 - **Phase** is one kind of work on a slug: `SPECIFY`, `REVIEW-SPEC`, `PLAN`, `IMPLEMENT`, `REVIEW`, `ARCHIVE`. It is also the slug's position in `state.json`, where `DONE` and `BLOCKED` are the two terminal values.
 
@@ -26,7 +26,7 @@
 
 - **Task** is one independent piece of work in a plan, with its own file, tests and commit.
 
-- **Task ledger** is `<slug>/tasks.json`: the committed list of the slug's tasks with their dependencies, status and closing evidence.
+- **Task ledger** is `<slug>/tasks.json`: the list of the slug's tasks with their dependencies, status and closing evidence.
 
 - **Strike** is one failed attempt at a phase for a slug. Three strikes make the slug `BLOCKED`.
 
@@ -44,7 +44,7 @@
 
 - **State file** is `.spectomat/state.json`: the flow's live state — each slug's phase and strikes, the iteration counter, and `current`. It is not committed.
 
-- **Marker** is `<slug>/done.md` or `<slug>/blocked.md`: the committed record of how a slug finished.
+- **Marker** is `<slug>/done.md` or `<slug>/blocked.md`: the record, on the floor, of how a slug finished.
 
 ## Machinery
 

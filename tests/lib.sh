@@ -28,10 +28,10 @@ floor_template() {
     git init -q .
     git config user.email t@example.com
     git config user.name t
-    printf '%s\n' '.spectomat/state.json' '.spectomat/work/' '.spectomat/log.md' > .gitignore
+    cp "$PLUGIN_ROOT/templates/gitignore" .spectomat/.gitignore
     printf '# Spectomat factory log\n\n' > .spectomat/log.md
     printf '{"slugs": {}}\n' > .spectomat/state.json
-    git add .gitignore
+    git add .spectomat/.gitignore
     git commit -qm init
   )
 }

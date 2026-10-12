@@ -15,9 +15,9 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 | Operator | the human | drops drafts in `.wishlist/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `amendments.md` (overrules the contract) and `memory.md` |
 | Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches exactly one subagent; does no factory work |
 | Picker | `scripts/phase.sh` | reads `state.json` and `git status`, and nothing else; prints one frontmatter block naming the phase and everything needed to dispatch it |
-| Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase and commits it |
+| Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase — only `IMPLEMENT` commits, one `feat` commit per task (D36) |
 | Task agent | `spectomat:task` | one fresh subagent per task, dispatched by the `IMPLEMENT` phase agent; builds and gates that task from its task file alone; never writes to git and touches no floor state (D30) |
-| Archiver | `spectomat:archive`, wrapping `scripts/agent-archive.sh` | the brief invokes the script and relays its result unchanged; the script performs the `ARCHIVE` phase: gates, moves, commit, log |
+| Archiver | `spectomat:archive`, wrapping `scripts/agent-archive.sh` | the brief invokes the script and relays its result unchanged; the script performs the `ARCHIVE` phase: gates, marker, state, log |
 | Janitor | `spectomat:recover` | recovers a dirty tree, or a floor the picker cannot classify |
 
 ### 1.2 The system in one picture
@@ -56,9 +56,9 @@ Each is an interface the design depends on and does not own.
 | Boundary | Interface used | Fake used in tests |
 | --- | --- | --- |
 | git | `status --porcelain`, `rev-parse --show-toplevel`, `mv`, `add`, `commit`, `log` | a real throwaway repo under `mktemp -d` (§10.3) |
-| filesystem | the floor tree, read as flow state by `command-run.sh` alone — its intake scan is the system's only directory listing (D27) | a fabricated floor under `mktemp -d` (§10.3) |
+| filesystem | the floor tree — local, git tracks only the operator's `.gitignore`, `gates.sh` and `amendments.md` (D36) — read as flow state by `command-run.sh` alone — its intake scan is the system's only directory listing (D27) | a fabricated floor under `mktemp -d` (§10.3) |
 | `log.md` | append-only text, written only through `log.sh`'s `<PHASE> <slug> <message>` CLI — never hand-formatted — by phase agents, `agent-archive.sh` and `recover.md`, for audit trail | a fabricated log file (§10.3) |
-| `state.json` | JSON; written by every phase's brief/`agent-archive.sh` after their commit; read by `phase.sh`, `print.sh`, `stop-hook.sh`; the flow's entire state — which slugs exist, which phase each is at, terminal ones included, their task counters and their strike ledger (D27) | a fabricated state file (§10.3) |
+| `state.json` | JSON; written by every phase's brief/`agent-archive.sh` as their last write; read by `phase.sh`, `print.sh`, `stop-hook.sh`; the flow's entire state — which slugs exist, which phase each is at, terminal ones included, their task counters and their strike ledger (D27) | a fabricated state file (§10.3) |
 | Claude Code agent runtime | plugin agent types `spectomat:<name>` from `agents/*.md` frontmatter | none; verified out-of-band per §10.5 |
 | the operator's gate commands | `.spectomat/gates.sh`, run as a script | fabricated `gates.sh` scripts, including a failing one (§10.3) |
 
@@ -76,7 +76,7 @@ The component map (§6.1), the contract (§6.2), the briefs (§6.3), and the sta
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares the floor, commits the wishes it finds, arms the Stop hook for `n` iterations (default 100), starts iteration 1; resumes an inactive flow if one exists, else refuses when a flow is armed, no unfinished slug remains, or the tree is dirty |
+| `/spectomat:run [n]` | prepares the floor, moves the wishes it finds onto it, arms the Stop hook for `n` iterations (default 100), starts iteration 1; resumes an inactive flow if one exists, else refuses when a flow is armed, no unfinished slug remains, the tree is dirty, or git still tracks the floor |
 | `/spectomat:status` | the next verdict, the current iteration, the current phase and slug (`current`) and the plugin copy that armed the flow, floor counts, per-slug progress including finished slugs, blocked files, log tail — every count from `state.json` |
 | `/spectomat:cancel` | marks the flow inactive and removes the pointer; keeps `state.json` so `/spectomat:run` can resume it |
 | `/spectomat:help` | prints `docs/guide.md` and `references/glossary.md` |

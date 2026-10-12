@@ -3,8 +3,9 @@
 #
 #   agent-archive.sh <slug>
 #
-# Runs the contract's gates, marks the slug finished, makes one commit, records
-# the terminal phase in state.json and writes one log line. Nothing moves: the
+# Runs the contract's gates, marks the slug finished, records the terminal
+# phase in state.json and writes one log line. It commits nothing: the floor is
+# gitignored (D36), so the marker is local like the rest of the slug's trail. Nothing moves: the
 # slug's trail stays in .spectomat/<slug>/ and ARCHIVE writes done.md beside it.
 # A failing gate writes nothing and exits 1, until the third strike: then
 # blocked.md is written instead, carrying the reason, so the floor can move on.
@@ -38,7 +39,7 @@ require_ready() {
 }
 
 # Log one ARCHIVE strike for this slug and print the new count. Shared by
-# every way ARCHIVE can fail - a red gate and a failed move or commit both
+# every way ARCHIVE can fail - a red gate and a missing branch both
 # count against the same STRIKE_LIMIT for this slug, so a slug that keeps
 # failing archival for any reason eventually drops out of the picker's ARCHIVE
 # candidates instead of burning every remaining iteration.
@@ -68,10 +69,9 @@ gate_or_strike() {
 
 # Mark the slug finished: one new file in its own dir, and nothing else on the
 # floor changes. done.md says it shipped; blocked.md says the third strike
-# landed and carries the reason. These are the committed human record — the
-# only trace of how a slug ended that survives in git, since state.json is
-# gitignored — and nothing reads them back: finish_slug below is what takes the
-# slug out of the flow.
+# landed and carries the reason. These are the human record beside the slug's
+# trail, and nothing reads them back: finish_slug below is what takes the slug
+# out of the flow.
 write_marker() {
   if [[ -n "$BLOCK" ]]; then
     printf '# %s — blocked\n\nBlocked after %s strikes on %s · gate failed: %s\n' \
@@ -79,21 +79,6 @@ write_marker() {
   else
     printf '# %s — done\n\nArchived %s · gates %s\n' \
       "$SLUG" "$(now)" "$GATE_RESULT" > "$FLOOR/$SLUG/done.md"
-  fi
-}
-
-commit_archive() {
-  local msg
-  if [[ -n "$BLOCK" ]]; then
-    msg="chore($SLUG): blocked after $STRIKE_LIMIT strikes"
-  else
-    msg="chore($SLUG): archived"
-  fi
-  git add -A "$FLOOR/$SLUG"
-  if ! git commit -q -m "$msg"; then
-    strike "commit failed" >/dev/null
-    echo "❌ commit failed after marking $SLUG finished" >&2
-    exit 1
   fi
 }
 
@@ -106,8 +91,8 @@ log_result() {
 }
 
 # Record the terminal phase. This is what takes the slug out of the flow, and
-# it runs last on purpose: a failed commit exits above with a strike and no
-# terminal entry, so the picker hands ARCHIVE back next iteration.
+# it runs last on purpose: a run that dies before it leaves no terminal entry,
+# so the picker hands ARCHIVE back next iteration and the marker is rewritten.
 finish_slug() {
   if [[ -n "$BLOCK" ]]; then
     bash "$PLUGIN_ROOT/scripts/block_slug.sh" "$SLUG" "gate failed: ${GATE_FAILED:-$GATES_SH}"
@@ -118,8 +103,8 @@ finish_slug() {
 
 main() {
   require_ready
-  # Before the gates: they must run against the slug's own work, and done.md
-  # must land on its branch. A missing branch is a strike, never a new branch.
+  # Before the gates: they must run against the slug's own work. A missing
+  # branch is a strike, never a new branch.
   if ! slug_checkout "$SLUG"; then
     strike "branch $(slug_branch "$SLUG") missing" >/dev/null
     echo "❌ cannot check out $(slug_branch "$SLUG")" >&2
@@ -127,7 +112,6 @@ main() {
   fi
   gate_or_strike
   write_marker
-  commit_archive
   finish_slug
   log_result
   echo "ARCHIVE $SLUG · gates $GATE_RESULT${BLOCK:+ · BLOCKED}"

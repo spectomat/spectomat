@@ -28,11 +28,11 @@
 | AC-3.1 | `agent-archive.sh` with a failing gate writes no marker, commits nothing and exits non-zero | selftest |
 | AC-3.2 | `agent-archive.sh` logs `(strike N)` with N one higher than the log showed | selftest |
 | AC-3.3 | At the third strike `agent-archive.sh` writes `<slug>/blocked.md` and no `done.md`, records the slug `BLOCKED` in `state.json`, and `print_blocked` lists that slug | selftest |
-| AC-3.4 | `agent-archive.sh` makes exactly one commit, touches no file outside the floor, and refuses a slug not at phase `ARCHIVE` | selftest |
+| AC-3.4 | `agent-archive.sh` commits nothing, touches no file outside the floor, and refuses a slug not at phase `ARCHIVE` | selftest |
 | AC-4.1 | `command-status.sh` prints the picker's verdict verbatim | manual, scratch repo |
 | AC-4.2 | Arming writes a valid `state.json` with `active: true`, `iteration: 1`, numeric `max_iterations`, `session_id`, `started_at`, `plugin_root` naming the plugin copy that armed it, `current` holding the first iteration's verdict, and one `slugs` entry per slug dir | selftest |
 | AC-4.3 | `/spectomat:cancel` sets `active: false` and keeps `state.json` and the floor | selftest |
-| AC-4.4 | `command-run.sh` moves a draft dropped into `.wishlist/` to `<slug>/draft.md`, tracked or not, commits it and leaves a clean tree; a hand-written `<slug>/spec.md` arms at `REVIEW-SPEC` | selftest |
+| AC-4.4 | `command-run.sh` moves a draft dropped into `.wishlist/` to `<slug>/draft.md`, tracked or not, commits only the operator's floor files and the inbox's removals, and leaves a clean tree; a hand-written `<slug>/spec.md` arms at `REVIEW-SPEC` | selftest |
 | AC-4.6 | `command-run.sh` refuses to arm when anything outside the floor is uncommitted | selftest |
 | AC-4.7 | The Stop hook blocks the exit for the owning session, bumps `iteration`, records the next working verdict as `current` (a `RECOVER` leaves it unchanged), and feeds back the pointer prompt verbatim | selftest |
 | AC-4.8 | A session that did not arm the flow neither advances nor ends it, and an unreadable state file is left in place for `/spectomat:cancel` | selftest |
@@ -41,6 +41,7 @@
 | AC-4.10 | `pointer_prompt()` resolves `PLUGIN_ROOT` with no unresolved `{{KEY}}` placeholder left in its output | selftest |
 | AC-4.5 | Drafts are taken in alphabetical order of the file name, whatever their modification times | selftest |
 | AC-4.12 | Re-arming over a `state.json` holding terminal entries neither resurrects them nor counts them as active; a slug dir carrying a marker but no entry is seeded at its terminal phase, and a dir whose files match no phase is blocked and committed | selftest |
+| AC-4.13 | The floor is local: arming tracks only `.spectomat/.gitignore`, `amendments.md` and `gates.sh`, never edits the root `.gitignore`, and refuses while HEAD or a `feat/*` branch tracks another floor file; a floor-only write is not dirt | selftest |
 | AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
 | AC-5.2 | Both plugin manifests validate `--strict` | manual |
 | AC-5.3 | `agents/task.md` exists, is named `task`, and never calls a `slug_*` helper, `slug_set_phase.sh`, `tasks.sh` or `log.sh` | selftest |
@@ -144,7 +145,7 @@ Nested `claude -p` must always be given `--model opus`; the CLI rejects the defa
 | the picker mutates nothing | it is called by `status` on demand and by every iteration; a stray write would corrupt the floor silently |
 | `ARCHIVE` never fires on a plan with no task files | the failure archives unbuilt work and is invisible until someone reads the slug dir |
 | a blocked slug is still listed by `print_blocked` | a blocked slug that nothing reports is a silently dropped idea |
-| a slug at a terminal phase is never archived again | a second `ARCHIVE` would commit over finished work, and would promote a blocked slug to shipped |
+| a slug at a terminal phase is never archived again | a second `ARCHIVE` would rewrite finished work, and would promote a blocked slug to shipped |
 | the picker reads no directory | one stat of a slug dir brings back the two-authority reconciliation D27 deleted, and no behavioural test would catch it; enforceable by grepping `scripts/phase.sh` for floor access |
 | no brief carries a `{{KEY}}` placeholder | briefs are never rendered, so a placeholder would reach an agent literally |
 | the task agent touches no floor state | a worker that advanced `state.json` or logged would make one task two entries, and the phase agent's close would count it twice; enforceable by grepping `agents/task.md` for `slug_` and `log.sh` |

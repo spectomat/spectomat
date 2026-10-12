@@ -4,7 +4,7 @@
 #
 #   scripts/block_slug.sh <slug> <reason>
 #
-# Only marks the state; it does not write blocked.md or commit it — the
+# Only marks the state; it does not write blocked.md — the
 # caller does that itself first, per the contract.
 
 set -uo pipefail

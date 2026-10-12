@@ -78,6 +78,14 @@ pk "a dirty tree is RECOVER" "RECOVER"
 floor p_dirty_empty; dirty
 pk "a dirty tree beats FINISH" "RECOVER"
 
+# The floor is gitignored but for the operator's files (D36): a phase that died
+# after writing its spec leaves no dirt, and is simply handed out again.
+floor p_floor_write; draft 001-a; printf 'half a spec\n' > "$FIXTURE/.spectomat/001-a/spec.md"
+pk "a floor-only write is not dirt" "SPECIFY 001-a"
+
+floor p_operator_edit; draft 001-a; printf 'exit 0\n' >> "$FIXTURE/.spectomat/gates.sh"
+pk "a change to an operator file is dirt" "RECOVER"
+
 floor p_strike; draft 001-a; draft 002-b
 strike 001-a SPECIFY 1
 pk "the less-struck draft wins" "SPECIFY 002-b"

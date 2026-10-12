@@ -30,7 +30,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a ruling.
 - **Dispatch the code, verify the evidence.** One task per iteration is one dispatch of `spectomat:task`, with the five lines `tasks.sh dispatch` printed and nothing else: never a second dispatch, never a retry, never production code written by you. A worker that failed is a strike. Nothing is batched and nothing runs in parallel; the ledger's dependency order is the execution order.
 - **Git is yours.** The worker never writes to git: the branch check before the dispatch, the `feat` commit, the stash of leftovers and every restore are yours alone.
 - **The ledger counts the work.** Task files carry no checkboxes and `state.json` no task counters: `tasks.json` holds every task's `status`, `dependsOn` and result, and `tasks.sh` is the only thing that reads or writes it — never `Write`, `Edit` or `jq`. The close and the phase move ride in one call, so they cannot disagree.
-- **One task is two commits, both yours.** The `feat` commit of the worker's changes, then the `chore` commit of the close. The `REVIEW` phase reconstructs the plan's whole diff from the `commits` range each task closed with, so a task whose range is missing or wrong is a task nobody can review: never fold two tasks into one commit, never leave a file the task touched out of one.
+- **One task is one commit, yours.** The `feat` commit of the worker's changes; the close is a ledger write on the local floor, never a commit. The `REVIEW` phase reconstructs the plan's whole diff from the `commits` range each task closed with, so a task whose range is missing or wrong is a task nobody can review: never fold two tasks into one commit, never leave a file the task touched out of one.
 - **Nobody reads this `feat` commit after you.** `REVIEW` is iterations away; the gates log is the only check this code gets today, so read it whole and record its numbers.
 - **Write only the floor's records.** `ruling.md`, `memory.md`, the ledger through `tasks.sh`, and a task file plus its overview row for a task you add. Never the spec, another task's file, the plan's task table beyond that row, or the overview's `## Review` section, which belongs to the `REVIEW` phase.
 
@@ -116,19 +116,15 @@ bash <plugin_root>/scripts/tasks.sh close <slug> <id> "<base7>..<head7>" "<n>/<n
 
 It records the commit range and the numbers you read off the gates log, sets that task's `status` to `done`, and — once no task is left pending — moves the slug to `REVIEW`, which is the only thing that sends this plan on. Call it exactly once per task, with a range you read off git, and never `slug_set_phase <slug> REVIEW` by hand: a hand-set phase leaves tasks pending in the ledger and every later reader is lied to. It refuses a task that is already `done`, so a repeated call is caught rather than silently doubled.
 
-### 10. Commit the close
+### 10. Log
 
-`tasks.json`, `ruling.md`, the memory edit and any task file you added, together: `chore(<slug>): Task NN closed`. The ledger is committed, so this commit is what puts the close on record in git; leaving it out leaves the tree dirty and the next iteration goes to the janitor. `git status --porcelain` must now be silent.
+`bash <plugin_root>/scripts/log.sh IMPLEMENT <slug> <message>` per `<plugin_root>/references/log-format.md`. `git status --porcelain` must still be silent: `tasks.json`, `ruling.md`, `memory.md` and any task file you added live on the local floor and are never committed. A ruling that affects other tasks is already in `ruling.md`, not a second place to write it.
 
-### 11. Log
-
-`bash <plugin_root>/scripts/log.sh IMPLEMENT <slug> <message>` per `<plugin_root>/references/log-format.md`; the log is gitignored and never committed. A ruling that affects other tasks is already in `ruling.md`, not a second place to write it.
-
-### 12. Report
+### 11. Report
 
 ```text
 ## IMPLEMENT <slug> — Task NN closed
-- Commits: <base7>..<head7> (feat), <chore7> (chore)
+- Commit: <base7>..<head7> (feat)
 - Tests: <n>/<n> (<files>) — off the gates log
 - Gates: passed (<what the log reported>)
 - Pending: <count> | none — slug moved to REVIEW
@@ -138,7 +134,7 @@ It records the commit range and the numbers you read off the gates log, sets tha
 
 ## A task the plan lacks
 
-When the task reveals work no task covers, add a new task file with the next number and a row in the overview, and add it to the ledger with `bash <plugin_root>/scripts/tasks.sh add <slug> '[{"id": <next>, "name": "…", "file": "tasks/task-<NN>-….md", "component": "…", "covers": [], "dependsOn": [<ids>]}]'`, so the slug is not sent to `REVIEW` with a task nobody built; do not absorb it into this one. Fill its `## Context` as the `PLAN` brief requires: the task agent that builds it sees nothing but that file. It rides in the `chore` commit of step 10.
+When the task reveals work no task covers, add a new task file with the next number and a row in the overview, and add it to the ledger with `bash <plugin_root>/scripts/tasks.sh add <slug> '[{"id": <next>, "name": "…", "file": "tasks/task-<NN>-….md", "component": "…", "covers": [], "dependsOn": [<ids>]}]'`, so the slug is not sent to `REVIEW` with a task nobody built; do not absorb it into this one. Fill its `## Context` as the `PLAN` brief requires: the task agent that builds it sees nothing but that file. Like the ledger, it stays on the local floor, uncommitted.
 
 ## Rulings
 
@@ -155,8 +151,8 @@ The spec binds; the plan argues from it; a ruling settles what neither answers. 
 A task that did not close is a strike, not a retry: a `FAILED` report, a report you cannot read, a wrong branch, evidence that failed step 5's or step 6's checks, a dependency that does not exist. Never dispatch a second task agent for it in this iteration, and never build it yourself.
 
 1. Write what defeated the task to the plan's `ruling.md`, tagged with this task's number, along with every ruling the report carried.
-2. Restore BASE: `git reset <BASE>` if a commit landed — it keeps the changes in the tree — then `git stash push -u -m "IMPLEMENT <slug> Task NN failed" -- <the task's Files and anything else the worker left>` so `git status --porcelain` is silent, without deleting what the worker produced. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
-3. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+2. Restore BASE: `git reset <BASE>` if a commit landed — it keeps the changes in the tree — then `git stash push -u -m "IMPLEMENT <slug> Task NN failed" -- <the task's Files and anything else the worker left>` so `git status --porcelain` is silent, without deleting what the worker produced. The floor is gitignored and never counts as dirt.
+3. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after writing `blocked.md` — never a strike recorded without that call.
 
 ## Rationalizations
 

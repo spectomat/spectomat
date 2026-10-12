@@ -107,7 +107,7 @@ Then append to the overview's `## Review`:
 - Round R — N findings (C critical, I important, M minor) — tasks NN–MM added
 ```
 
-### 4. Advance, commit, log
+### 4. Advance, log
 
 Every round ends in exactly one of these three:
 
@@ -119,9 +119,10 @@ Every round ends in exactly one of these three:
 
 `tasks.sh add` takes the same task fields the `PLAN` brief's ledger table gives — `id`, `name`, `file`, `component`, `covers`, `dependsOn` — with ids continuing from the last task in the ledger, and `dependsOn` naming whichever tasks a fix builds on. Never edit `tasks.json` by hand.
 
-1. When the change is `tasks.sh add`, apply it **before** the commit: the ledger is a committed file, so it belongs in this round's commit. For the two `ARCHIVE` rows, order does not matter — `state.json` is gitignored.
-2. Commit everything you wrote in one commit: `chore(<slug>): review round R`.
-3. `bash <plugin_root>/scripts/log.sh REVIEW <slug> <message>` per `<plugin_root>/references/log-format.md`; the log is gitignored and never committed.
+The floor is local: the fix task files, `ruling.md`, the overview and the ledger are never committed.
+
+1. Apply the change, last of everything you write.
+2. `bash <plugin_root>/scripts/log.sh REVIEW <slug> <message>` per `<plugin_root>/references/log-format.md`.
 
 ### 5. Report
 
@@ -131,7 +132,6 @@ Every round ends in exactly one of these three:
 - Tasks added: NN–MM | none
 - Rulings: <M> written to ruling.md | none
 - Phase: ARCHIVE | IMPLEMENT (fix tasks pending)
-- Commit: <hash>
 ```
 
 ## Rationalizations
@@ -145,4 +145,4 @@ Every round ends in exactly one of these three:
 
 ## When you cannot finish
 
-A plan you cannot review is a strike, not a guess: a ledger entry with no `commits` range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, then follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after a committed `blocked.md` — never a strike recorded without that call.
+A plan you cannot review is a strike, not a guess: a ledger entry with no `commits` range, a range that does not resolve, a task file you cannot read. Record what defeated you in `ruling.md`, then follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after writing `blocked.md` — never a strike recorded without that call.

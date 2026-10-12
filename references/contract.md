@@ -39,15 +39,17 @@ This contract is **the single source of truth** about Flow, Floor, Phases — it
 ### Where you work
 
 - ❌ DO NOT Spawn a subagent — this phase is your fresh context; do the work yourself. The one exception is `IMPLEMENT`, which dispatches `spectomat:task` for the single task it took and stays answerable for verifying, recording and closing it; the worker touches no floor state.
-- ✅ DO Work on your slug's own branch, `feat/<slug>`, created by arming: `git checkout feat/<slug>` before you touch anything, and commit every phase of that slug there. Committing to another branch is a strike.
+- ✅ DO Work on your slug's own branch, `feat/<slug>`, created by arming: `git checkout feat/<slug>` before you touch anything, and make every commit of that slug there. Committing to another branch is a strike.
 - ❌ DO NOT Create, rename or delete a branch — arming created yours. A missing `feat/<slug>` is a strike, not something to fix by branching.
-- ❌ DO NOT Merge, rebase or cherry-pick between branches — the operator merges finished work by hand. `ARCHIVE` commits `done.md` on the slug's branch and leaves it there.
+- ❌ DO NOT Merge, rebase or cherry-pick between branches — the operator merges finished work by hand.
 - ❌ DO NOT Create a worktree — that checkout is the whole mechanism.
 - ❌ DO NOT Touch any repository but the one under flow — `git stash`, commit or checkout elsewhere destroys work no phase owns. A script refusing over a dirty tree there is the correct outcome.
 
 ### Before iteration
 
-**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git stash push -u -- <the paths you own>` to clear it without deleting it. `state.json`, `log.md` and `work/` are gitignored and never count as dirt.
+**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git stash push -u -- <the paths you own>` to clear it without deleting it. The floor is gitignored but for `amendments.md`, `gates.sh` and its own `.gitignore`, so the rest of it never counts as dirt.
+
+**❌ Never trust a leftover:** a phase that dies on the floor leaves no dirt, and the picker hands it out again. Whatever output of your phase already exists — a spec, a plan, task files, snippets — is a dead iteration's draft: redo it and overwrite it; never build on it unread.
 
 **❌ Never touch `.wishlist/`:** arming emptied it, and anything the operator drops there afterwards is for the next run.
 
@@ -55,7 +57,7 @@ This contract is **the single source of truth** about Flow, Floor, Phases — it
 
 ## The floor
 
-Floor is the directories and files the Flow creates and works with in the user's project.
+Floor is the directories and files the Flow creates and works with in the user's project. It is local: `.spectomat/.gitignore` tracks only the operator's files — itself, `amendments.md`, `gates.sh` — so everything else lives in this working tree alone, shared by every `feat/<slug>` branch, and never enters a commit.
 
 ```text
 .wishlist/     the one entrance: raw ideas, one .md each — the user drops them here, and /spectomat:run moves each into its own slug dir
@@ -69,21 +71,22 @@ Floor is the directories and files the Flow creates and works with in the user's
     snippets/    the code a task's step names instead of inlining it
       task-NN-stepM.<ext>.snippet   one per code-bearing step; the .snippet suffix keeps gates off it
     ruling.md    decisions and defects that bind one task, one entry per task — created when the first one is earned
-    tasks.json   the task ledger: every task, its dependsOn and status, and the commits/tests/gates each closed with — committed, written only through scripts/tasks.sh
-    done.md      written by ARCHIVE when the plan ships: the committed record that the slug finished
-    blocked.md   written instead, with the reason, when a phase fails three times: the committed record that it was given up on
-  work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky — gitignored
+    tasks.json   the task ledger: every task, its dependsOn and status, and the commits/tests/gates each closed with — written only through scripts/tasks.sh
+    done.md      written by ARCHIVE when the plan ships: the record that the slug finished
+    blocked.md   written instead, with the reason, when a phase fails three times: the record that it was given up on
+  work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky
     <slug>/task-NN.gates.log   the task agent's whole gate run for one task, ending in `exit: N`; IMPLEMENT reads its numbers from here
-  log.md       append-only, one line per phase of work — gitignored, never committed
-  gates.sh     the project's single gate command — generated once from package.json, committed, yours to edit
+  log.md       append-only, one line per phase of work
+  memory.md    what the factory has learned about this codebase — read every iteration, added to before a phase ends
+  state.json   the whole of the flow's state — every slug, its phase, task counters and strikes, the current phase and slug, and the plugin copy that armed the flow: changed only through the Flow
+  .gitignore     tracks only itself and the two operator files below — committed
+  gates.sh       the project's single gate command — generated once from package.json, committed, yours to edit
   amendments.md  the operator's rules over this contract — highest priority, committed, read every iteration, never written by a phase
-  memory.md    what the factory has learned about this codebase — committed, read every iteration, added to before every commit
-  state.json   the whole of the flow's state — every slug, its phase, task counters and strikes, the current phase and slug, and the plugin copy that armed the flow: gitignored, changed only through the Flow
 ```
 
 > A `slug` is the draft's file name without `.md`. Everything of one idea lives under `.spectomat/<slug>/` for its whole life: nothing is moved when it finishes, so the trail of one idea is one directory.
 >
-> A slug whose `state.json` phase is `DONE` or `BLOCKED` is finished. It leaves the flow, keeps its files where they are, and is never picked, edited or re-archived. Its dir carries a matching `done.md` or `blocked.md` as the committed record of how it ended — `state.json` is gitignored, so the marker is the only trace that survives in git. The two markers never coexist, and nothing reads them back: the phase is what takes a slug out of the flow.
+> A slug whose `state.json` phase is `DONE` or `BLOCKED` is finished. It leaves the flow, keeps its files where they are, and is never picked, edited or re-archived. Its dir carries a matching `done.md` or `blocked.md` as the human record of how it ended, beside its trail. The two markers never coexist, and nothing reads them back: the phase is what takes a slug out of the flow.
 >
 > The craft of each phase lives in its brief; the invariants live in the contract.
 
@@ -93,16 +96,16 @@ Every iteration does the phase it was handed and nothing else — the picker cho
 
 The flow's state lives in two files, and a phase that changes neither is handed to you again next iteration, on the same slug, forever.
 
-- `state.json` — gitignored, flow-level: every slug's phase, its strikes, the iteration count, and `current` — the phase and slug being worked, recorded by the Stop hook. Changed through `<plugin_root>/scripts/slug_set_phase.sh` and the other helpers in the plugin's `scripts/utils.sh`, never by editing the file.
-- `.spectomat/<slug>/tasks.json` — committed, the slug's task ledger and the single source of truth for its tasks: the list, each one's `dependsOn` and `status`, and the `commits`, `tests` and `gates` it closed with. Changed only through `<plugin_root>/scripts/tasks.sh`, never by editing the file, and never with `jq`.
+- `state.json` — flow-level: every slug's phase, its strikes, the iteration count, and `current` — the phase and slug being worked, recorded by the Stop hook. Changed through `<plugin_root>/scripts/slug_set_phase.sh` and the other helpers in the plugin's `scripts/utils.sh`, never by editing the file.
+- `.spectomat/<slug>/tasks.json` — the slug's task ledger and the single source of truth for its tasks: the list, each one's `dependsOn` and `status`, and the `commits`, `tests` and `gates` it closed with. Changed only through `<plugin_root>/scripts/tasks.sh`, never by editing the file, and never with `jq`.
 
-Every phase ends in exactly one of these changes, applied after its commit — except where the change writes `tasks.json`, which is committed and so belongs *inside* that phase's commit.
+Every phase ends in exactly one of these changes, as its last write — `IMPLEMENT` makes it after its one commit.
 
 | Phase | Outcome | The change |
 | --- | --- | --- |
 | `SPECIFY` | spec written | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> REVIEW-SPEC` |
 | `REVIEW-SPEC` | spec ready to plan | `bash <plugin_root>/scripts/slug_set_phase.sh <slug> PLAN` |
-| `PLAN` | N task files written | `tasks.sh write <slug> '[…]'` before the commit, then `tasks.sh start <slug>` — the ledger, then phase `IMPLEMENT` |
+| `PLAN` | N task files written | `tasks.sh write <slug> '[…]'`, checked, then `tasks.sh start <slug>` — the ledger, then phase `IMPLEMENT` |
 | `IMPLEMENT` | one task closed | `tasks.sh close <slug> <id> <commits> <tests> <gates>` — marks it `done`, and moves to `REVIEW` once none is left pending |
 | `IMPLEMENT` | a task the plan lacked added | `tasks.sh add <slug> '[…]'` — appends it pending, so the slug is not released early |
 | `REVIEW` | fix tasks added, rounds remain | `tasks.sh add <slug> '[…]'` — back to `IMPLEMENT` with the fix tasks pending |
@@ -123,7 +126,7 @@ A phase that defeats you is a strike, and the third strike blocks the slug. The 
 
 **Read it before you touch anything else** — each phase brief's own Orient step names this. Trust it over your assumptions about the project, and over a habit from another repository.
 
-**Add to it before the commit** — each phase brief's own Procedure names the step. It is committed, so the entry goes into that phase's own commit, on the slug's branch.
+**Add to it before the phase ends** — each phase brief's own Procedure names the step. It is local and shared by every branch, so what one slug learns the next one reads at once.
 
 Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only the phase agent handling this iteration writes the file: it applies the tests itself, so the file keeps one voice.
 

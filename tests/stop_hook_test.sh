@@ -26,8 +26,8 @@ hook_floor() {
 }
 
 # empty_floor — remove the unfinished slug and its state entry, so the picker
-# says FINISH. The removal is committed, or the tree is dirty and the answer is
-# RECOVER instead. Slugs archived() marked are finished and stay put: the
+# says FINISH. The floor is gitignored, so the removal leaves no dirt that
+# would turn the answer into RECOVER. Slugs archived() marked are finished and stay put: the
 # closing report counts them.
 empty_floor() {
   rm -rf "$FIXTURE/.spectomat/001-a"

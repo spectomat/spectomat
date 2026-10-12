@@ -4,7 +4,7 @@
 
 | Command | Does |
 | --- | --- |
-| `/spectomat:run [n]` | prepares the floor, commits the wishes it finds, arms the Stop hook for `n` iterations (default 100) and starts iteration 1; refuses on a dirty tree |
+| `/spectomat:run [n]` | prepares the floor, moves the wishes it finds onto it, arms the Stop hook for `n` iterations (default 100) and starts iteration 1; refuses on a dirty tree |
 | `/spectomat:status` | shows the current iteration, floor counts, per-plan step progress, blocked files and the log tail |
 | `/spectomat:cancel` | disarms the flow; the floor stays, `run` resumes from it |
 | `/spectomat:help` | shows this guide |
@@ -22,7 +22,7 @@ claude plugin install spectomat@spectomat
 
 ```text
 .wishlist/    the inbox: ideas, one .md each; the file name is the slug. `run` moves each into its own slug dir
-.spectomat/
+.spectomat/   local: git tracks only .gitignore, gates.sh and amendments.md
   <slug>/     everything of one idea, for its whole life — nothing is moved when it finishes
     draft.md    the idea as you wrote it
     spec.md     written by SPECIFY from the draft, then revised once by REVIEW-SPEC; or put a finished spec here yourself
@@ -31,17 +31,17 @@ claude plugin install spectomat@spectomat
     ruling.md   decisions and defects that bind one task; tasks.json is the task ledger, holding each task's status, dependsOn and closing commits
     done.md     written by ARCHIVE once REVIEW has passed the plan and the gates are green
     blocked.md  written instead, with the reason, when a phase fails three times
-  log.md      one line per phase, gitignored
-  gates.sh    the project's single gate command — generated once, yours to edit
-  amendments.md your own rules over the contract — highest priority, never edited by the Flow
+  log.md      one line per phase
+  gates.sh    the project's single gate command — generated once, yours to edit, committed
+  amendments.md your own rules over the contract — highest priority, never edited by the Flow, committed
   memory.md   durable facts about the codebase, accumulated all along the time
-  state.json  the whole of the flow's state: every slug and its phase, task counters, strikes, iteration counter, cap, session, plugin copy, current phase and slug — gitignored
-  work/       per-task briefs, reports and diffs, gitignored
+  state.json  the whole of the flow's state: every slug and its phase, task counters, strikes, iteration counter, cap, session, plugin copy, current phase and slug
+  work/       per-task briefs, reports and diffs
 ```
 
 ## The Flow
 
-The flow is a sequence of iterations. Each one asks the picker for a verdict and dispatches on it — a fresh phase agent, the archiver, or the janitor — then commits, logs, and stops for the Stop hook to feed the next iteration in; `FINISH` is the exception, where the Stop hook itself ends the flow instead of dispatching anyone.
+The flow is a sequence of iterations. Each one asks the picker for a verdict and dispatches on it — a fresh phase agent, the archiver, or the janitor — then logs and stops for the Stop hook to feed the next iteration in; `FINISH` is the exception, where the Stop hook itself ends the flow instead of dispatching anyone.
 
 ```text
 Stop hook ──▶ feeds back the pointer prompt ──▶ picker (scripts/phase.sh) ──▶ one verdict per iteration
@@ -68,9 +68,10 @@ Work in progress is finished before a new draft is read: `ARCHIVE` and `REVIEW` 
 
 ## Operating it
 
-- **Feed it.** Drop a `.md` idea into `.wishlist/`. `run` moves each draft into its own `.spectomat/<slug>/draft.md` and commits it, leaving `.wishlist/` empty. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `.spectomat/<slug>/spec.md`; the Flow then starts at reviewing it.
+- **Feed it.** Drop a `.md` idea into `.wishlist/`. `run` moves each draft into its own `.spectomat/<slug>/draft.md`, leaving `.wishlist/` empty. Drafts are worked in alphabetical order of the file name, so name them to get the order you want. A finished spec can go straight into `.spectomat/<slug>/spec.md`; the Flow then starts at reviewing it.
 - **Steer it.** Edit a spec or a plan between iterations. Write your own rules in `.spectomat/amendments.md` — they win over the contract and every brief, and the Flow never edits them. Edit `memory.md` to correct what the Flow believes about the codebase.
-- **Read what it learned.** `memory.md` is committed: the map, commands, patterns and traps every iteration reads before working and adds to before committing. Seed it by hand before the first run and the Flow starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
+- **Read what it learned.** `memory.md` is the map, commands, patterns and traps every iteration reads before working and adds to before it ends — one copy, shared by every `feat/<slug>` branch. Seed it by hand before the first run and the Flow starts informed; it keeps itself under ~40 lines and deletes what the code contradicts.
 - **Gate it.** The gates are always `./.spectomat/gates.sh`, run once per task in the `IMPLEMENT` phase, before its commit, and once in the `ARCHIVE` phase before archiving. The first `run` writes that script from your `package.json`: a `gates` script, if present, is the single gate; otherwise every `typecheck`, `lint` and `test` script found, one line each in that order. Nothing was detected? You get the script anyway, with commented examples and an honest no-op. Edit the script — it is the one place gates are defined, and gates that are not npm scripts are just more lines in it. `set -e` stops at the first failure, so its exit code is the whole run's. An iteration may never weaken a gate to pass.
 - **Resume it.** After a cancel or the iteration cap, run `/spectomat:run` again. The filesystem is the ledger, so nothing is re-planned.
+- **Keep the floor.** Only the code is committed — one `feat` commit per task on `feat/<slug>`; specs, plans, ledgers, markers and `memory.md` live in your working tree alone. ⚠️ A fresh clone does not have them and `git clean -fdx` deletes them: back `.spectomat/` up if you want them kept. A floor an older Spectomat committed is refused at `run`, with the commands that untrack it.
 - **Start clean.** `run` refuses to arm while anything outside the floor is uncommitted: the picker answers `RECOVER` to any dirt, so a flow armed over work in progress would send every iteration to the janitor. Commit or stash first.
