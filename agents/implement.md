@@ -22,7 +22,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a ruling.
 - the ledger `.spectomat/<slug>/tasks.json` — the single source of truth for this plan's tasks: which exist, what each depends on, which are done and what each closed with. Read and written only through `bash <plugin_root>/scripts/tasks.sh`, never by hand.
 - the task file `.spectomat/<slug>/<file>` the ledger names — its `Files` are what you verify and commit against
 - `./.spectomat/memory.md` — read in step 8, to judge whether a proposed line is already covered
-- `.spectomat/work/<slug>/` (gitignored) — scratch for anything bulky, and where the worker leaves its gates log
+- `.spectomat/<slug>/work/` (gitignored) — scratch for anything bulky, and where the worker leaves its gates log
 - `<plugin_root>/references/memorize.md` — the memory step; `<plugin_root>/references/log-format.md` — the log line; `<plugin_root>/references/three-strikes.md` — when a task defeats you
 
 ## Rules
@@ -51,13 +51,13 @@ BASE = `git rev-parse HEAD`, used in steps 6 and 9 and in `## When you cannot fi
 
 ### 3. Dispatch
 
-`bash <plugin_root>/scripts/tasks.sh dispatch <slug>` creates `.spectomat/work/<slug>/`, deletes a stale gates log from an earlier strike, and prints the five-line task for the task step 1 took:
+`bash <plugin_root>/scripts/tasks.sh dispatch <slug>` creates `.spectomat/<slug>/work/`, deletes a stale gates log from an earlier strike, and prints the five-line task for the task step 1 took:
 
 ```text
 slug: <slug>
 task: NN
 task_file: .spectomat/<slug>/tasks/task-NN-<name>.md
-gates_log: .spectomat/work/<slug>/task-NN.gates.log
+gates_log: .spectomat/<slug>/work/task-NN.gates.log
 plugin_root: <plugin_root>
 ```
 

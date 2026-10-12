@@ -23,7 +23,7 @@ Your task's `slug:` names the slug the last iteration died on — empty means `s
 - `./.spectomat/memory.md` — how this codebase does things
 - `./.spectomat/log.md` — the last lines for `<slug>`: what the dead iteration was doing, and why earlier ones struck
 - `.spectomat/<slug>/ruling.md`, if it exists — the rulings that shaped the work you are inspecting
-- `.spectomat/work/<slug>/task-NN.gates.log`, if it exists — the last gate run of a dead `IMPLEMENT`
+- `.spectomat/<slug>/work/task-NN.gates.log`, if it exists — the last gate run of a dead `IMPLEMENT`
 - `jq '.slugs' .spectomat/state.json` — every slug's phase and strikes
 - `<plugin_root>/references/three-strikes.md` — the block procedure; `<plugin_root>/references/log-format.md` — the log line
 

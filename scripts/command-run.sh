@@ -44,8 +44,7 @@ prepare_floor() {
 
 # The floor is slug-major: everything of one idea lives in .spectomat/<slug>/,
 # named after the draft it came from. A directory directly under the floor is a
-# slug dir when it holds at least one of draft.md, spec.md or plan.md — which
-# work/ never does, so no reserved-name list is needed here.
+# slug dir when it holds at least one of draft.md, spec.md or plan.md.
 #
 # This is the flow's only directory scan (D27). It lives here rather than in
 # utils.sh because prepare.sh is the intake boundary: after arming, every

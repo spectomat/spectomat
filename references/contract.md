@@ -74,8 +74,8 @@ Floor is the directories and files the Flow creates and works with in the user's
     tasks.json   the task ledger: every task, its dependsOn and status, and the commits/tests/gates each closed with — written only through scripts/tasks.sh
     done.md      written by ARCHIVE when the plan ships: the record that the slug finished
     blocked.md   written instead, with the reason, when a phase fails three times: the record that it was given up on
-  work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky
-    <slug>/task-NN.gates.log   the task agent's whole gate run for one task, ending in `exit: N`; IMPLEMENT reads its numbers from here
+    work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky
+      task-NN.gates.log   the task agent's whole gate run for one task, ending in `exit: N`; IMPLEMENT reads its numbers from here
   log.md       append-only, one line per phase of work
   memory.md    what the factory has learned about this codebase — read every iteration, added to before a phase ends
   state.json   the whole of the flow's state — every slug, its phase, task counters and strikes, the current phase and slug, and the plugin copy that armed the flow: changed only through the Flow

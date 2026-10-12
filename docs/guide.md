@@ -31,12 +31,12 @@ claude plugin install spectomat@spectomat
     ruling.md   decisions and defects that bind one task; tasks.json is the task ledger, holding each task's status, dependsOn and closing commits
     done.md     written by ARCHIVE once REVIEW has passed the plan and the gates are green
     blocked.md  written instead, with the reason, when a phase fails three times
+    work/       scratch: per-task gate logs, review stats and diffs
   log.md      one line per phase
   gates.sh    the project's single gate command — generated once, yours to edit, committed
   amendments.md your own rules over the contract — highest priority, never edited by the Flow, committed
   memory.md   durable facts about the codebase, accumulated all along the time
   state.json  the whole of the flow's state: every slug and its phase, task counters, strikes, iteration counter, cap, session, plugin copy, current phase and slug
-  work/       per-task briefs, reports and diffs
 ```
 
 ## The Flow

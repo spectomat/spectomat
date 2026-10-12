@@ -26,7 +26,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a ruling.
 - every task file `.spectomat/<slug>/tasks/task-NN-*.md` — its Goal, Constraints, Files, From previous tasks, Covers and Procedure are the requirements it was built against
 - the spec `.spectomat/<slug>/spec.md` — the criteria the Coverage table claims to have covered
 - `.spectomat/memory.md` — how this codebase does things. Context, not a requirement: cite it when the diff departs from a pattern it records.
-- `.spectomat/work/<slug>/` (gitignored) — scratch for the stat and anything else you do not want in your context twice
+- `.spectomat/<slug>/work/` (gitignored) — scratch for the stat and anything else you do not want in your context twice
 - `<plugin_root>/templates/task.md` — the shape of a fix task; `<plugin_root>/references/log-format.md` — the log line; `<plugin_root>/references/three-strikes.md` — when the plan defeats you
 
 ## Rules
@@ -54,8 +54,8 @@ plan + tasks + tasks.json ──▶ [ REVIEW ] ──┬──▶ critical/impor
 The plan's range runs from the first task's base to the last task's head, both read off the `commits` field of each task in the ledger — `bash <plugin_root>/scripts/tasks.sh show <slug>` prints them all.
 
 ```bash
-mkdir -p .spectomat/work/<slug>
-git diff --stat <base>..<head> > .spectomat/work/<slug>/review.stat
+mkdir -p .spectomat/<slug>/work
+git diff --stat <base>..<head> > .spectomat/<slug>/work/review.stat
 ```
 
 Read the stat first and let it set your order: the largest file in the plan, and any file no task's `Files` section names, are where defects hide. Then read per file — `git diff <base>..<head> -- <path>` — never the whole range at once.

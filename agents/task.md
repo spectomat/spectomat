@@ -22,7 +22,7 @@ Your prompt is five lines:
 slug: <slug>
 task: NN
 task_file: .spectomat/<slug>/tasks/task-NN-<name>.md
-gates_log: .spectomat/work/<slug>/task-NN.gates.log
+gates_log: .spectomat/<slug>/work/task-NN.gates.log
 plugin_root: <absolute plugin path>
 ```
 

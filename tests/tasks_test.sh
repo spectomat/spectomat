@@ -87,13 +87,13 @@ floor d; state_slug 001-a PLAN; t_init 001-a "$THREE" >/dev/null
 is "dispatch prints the next task's five lines" "$(t dispatch 001-a)" "slug: 001-a
 task: 01
 task_file: .spectomat/001-a/tasks/task-01-a.md
-gates_log: .spectomat/work/001-a/task-01.gates.log
+gates_log: .spectomat/001-a/work/task-01.gates.log
 plugin_root: $ROOT_OF_SCRIPTS"
-is "dispatch creates the scratch dir"  "$([[ -d "$FIXTURE/.spectomat/work/001-a" ]] && echo yes || echo no)" "yes"
+is "dispatch creates the scratch dir"  "$([[ -d "$FIXTURE/.spectomat/001-a/work" ]] && echo yes || echo no)" "yes"
 # A log left by an earlier strike must not pass for this dispatch's run.
-echo "exit: 0" > "$FIXTURE/.spectomat/work/001-a/task-01.gates.log"
+echo "exit: 0" > "$FIXTURE/.spectomat/001-a/work/task-01.gates.log"
 t dispatch 001-a >/dev/null
-is "dispatch deletes a stale gates log" "$([[ -e "$FIXTURE/.spectomat/work/001-a/task-01.gates.log" ]] && echo yes || echo no)" "no"
+is "dispatch deletes a stale gates log" "$([[ -e "$FIXTURE/.spectomat/001-a/work/task-01.gates.log" ]] && echo yes || echo no)" "no"
 t close 001-a 1 "a..b" "1/1" "passed" >/dev/null
 is "dispatch follows next"             "$(t dispatch 001-a | sed -n 2,3p)" "task: 02
 task_file: .spectomat/001-a/tasks/task-02-b.md"
@@ -103,7 +103,7 @@ is "dispatch is empty when all are done" "$(t dispatch 001-a)" ""
 
 floor d12; state_slug 001-a PLAN
 t_init 001-a '[{"id":12,"name":"x","file":"tasks/task-12-x.md","dependsOn":[]}]' >/dev/null
-is "dispatch keeps a two-digit id"      "$(t dispatch 001-a | sed -n 4p)" "gates_log: .spectomat/work/001-a/task-12.gates.log"
+is "dispatch keeps a two-digit id"      "$(t dispatch 001-a | sed -n 4p)" "gates_log: .spectomat/001-a/work/task-12.gates.log"
 
 floor dcyc; state_slug 001-a PLAN
 t_init 001-a '[{"id":1,"file":"a.md","dependsOn":[2]},{"id":2,"file":"b.md","dependsOn":[1]}]' >/dev/null

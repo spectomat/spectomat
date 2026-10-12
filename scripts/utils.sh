@@ -313,8 +313,8 @@ task_dispatch() {
     "$(tasks_file "$slug")" 2>/dev/null)"
   [[ -n "$file" ]] || return 1
   nn="$(printf '%02d' "$id")"
-  log="$FLOOR/work/$slug/task-$nn.gates.log"
-  mkdir -p "$FLOOR/work/$slug" && rm -f "$log" || return 1
+  log="$FLOOR/$slug/work/task-$nn.gates.log"
+  mkdir -p "$FLOOR/$slug/work" && rm -f "$log" || return 1
   printf 'slug: %s\ntask: %s\ntask_file: %s/%s/%s\ngates_log: %s\nplugin_root: %s\n' \
     "$slug" "$nn" "$FLOOR" "$slug" "$file" "$log" "$PLUGIN_ROOT"
 }
