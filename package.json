@@ -1,0 +1,8 @@
+{
+  "name": "spectomat",
+  "version": "0.13.0",
+  "private": true,
+  "description": "Spec-driven code development flow for Claude Code, installable as a git dependency",
+  "license": "MIT",
+  "repository": "github:spectomat/spectomat"
+}
