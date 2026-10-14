@@ -31,7 +31,7 @@ log_line() { bash "$PLUGIN_ROOT/scripts/log.sh" ARCHIVE "$SLUG" "$1"; }
 require_ready() {
   local phase
   [[ -n "$SLUG" ]] || die "usage: agent-archive.sh <slug>"
-  [[ -z "$(git status --porcelain)" ]] || die "tree is dirty: the janitor runs before ARCHIVE"
+  [[ -z "$(dirt)" ]] || die "tree is dirty: the janitor runs before ARCHIVE"
   phase="$(slug_phase "$SLUG")"
   [[ -n "$phase" ]] || die "$SLUG is not tracked in $STATE_FILE"
   [[ "$phase" == ARCHIVE ]] || die "$SLUG is at $phase, not ARCHIVE"

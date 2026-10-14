@@ -1,8 +1,9 @@
 # Spectomat floor: only the operator's files are tracked; the rest stays local.
 #
-# Rendered once by /spectomat:run. Specs, plans, ledgers, memory.md, the log and
-# state.json live in this working tree only, shared by every feat/<slug> branch.
+# Rendered once by /spectomat:run. Specs, plans, ledgers, the log and state.json
+# live in this working tree only, shared by every feat/<slug> branch. memory.md
+# is tracked, but the flow never commits it: its edits are yours to review and commit.
 *
 !.gitignore
-!amendments.md
+!memory.md
 !gates.sh

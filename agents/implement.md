@@ -17,7 +17,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a ruling.
 
 `slug:` and `plugin_root:` from your task. `NN` throughout is the task id zero-padded to two digits, matching the task filename (`1` → `task-01-*.md`, `Task 01`).
 
-- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `./.spectomat/memory.md`'s `## Rules` in full — the operator's rules; they win over everything below
 - `<plugin_root>/references/contract.md` in full
 - the ledger `.spectomat/<slug>/tasks.json` — the single source of truth for this plan's tasks: which exist, what each depends on, which are done and what each closed with. Read and written only through `bash <plugin_root>/scripts/tasks.sh`, never by hand.
 - the task file `.spectomat/<slug>/<file>` the ledger names — its `Files` are what you verify and commit against
@@ -47,7 +47,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a ruling.
 BASE = `git rev-parse HEAD`, used in steps 6 and 9 and in `## When you cannot finish`.
 
 - `git branch --show-current` does not print `feat/<slug>` → `## When you cannot finish`; never create or switch a branch to fix it.
-- `git status --porcelain` is not silent → `## When you cannot finish`.
+- `git status --porcelain -- . ':!.spectomat/memory.md'` is not silent → `## When you cannot finish`.
 
 ### 3. Dispatch
 
@@ -91,10 +91,10 @@ Every one of these must hold, or the task failed and you go to `## When you cann
 
 ### 6. Commit the work
 
-`git add` exactly the task's `Files` plus the fixtures the report's `Rulings` name. Commit as `feat(<slug>): Task NN <name>`, `<name>` being the ledger's. What is still in `git status --porcelain` belongs to nobody: inspect it, then `git stash push -u -m "IMPLEMENT <slug> Task NN leftovers" -- <those paths>` rather than deleting it.
+`git add` exactly the task's `Files` plus the fixtures the report's `Rulings` name. Commit as `feat(<slug>): Task NN <name>`, `<name>` being the ledger's. What is still in `git status --porcelain -- . ':!.spectomat/memory.md'` belongs to nobody: inspect it, then `git stash push -u -m "IMPLEMENT <slug> Task NN leftovers" -- <those paths>` rather than deleting it.
 
 - `git diff --cached --name-only` names a file outside the task's `Files` and the named fixtures → unstage it; it is a leftover.
-- after the stash, `git status --porcelain` is not silent, or `git rev-list --count <BASE>..HEAD` does not print `1` → `## When you cannot finish`.
+- after the stash, `git status --porcelain -- . ':!.spectomat/memory.md'` is not silent, or `git rev-list --count <BASE>..HEAD` does not print `1` → `## When you cannot finish`.
 
 ### 7. Record the rulings
 
@@ -118,7 +118,7 @@ It records the commit range and the numbers you read off the gates log, sets tha
 
 ### 10. Log
 
-`bash <plugin_root>/scripts/log.sh IMPLEMENT <slug> <message>` per `<plugin_root>/references/log-format.md`. `git status --porcelain` must still be silent: `tasks.json`, `ruling.md`, `memory.md` and any task file you added live on the local floor and are never committed. A ruling that affects other tasks is already in `ruling.md`, not a second place to write it.
+`bash <plugin_root>/scripts/log.sh IMPLEMENT <slug> <message>` per `<plugin_root>/references/log-format.md`. `git status --porcelain -- . ':!.spectomat/memory.md'` must still be silent: `tasks.json`, `ruling.md` and any task file you added live on the local floor and are never committed, and `memory.md` is the operator's to commit. A ruling that affects other tasks is already in `ruling.md`, not a second place to write it.
 
 ### 11. Report
 
@@ -151,7 +151,7 @@ The spec binds; the plan argues from it; a ruling settles what neither answers. 
 A task that did not close is a strike, not a retry: a `FAILED` report, a report you cannot read, a wrong branch, evidence that failed step 5's or step 6's checks, a dependency that does not exist. Never dispatch a second task agent for it in this iteration, and never build it yourself.
 
 1. Write what defeated the task to the plan's `ruling.md`, tagged with this task's number, along with every ruling the report carried.
-2. Restore BASE: `git reset <BASE>` if a commit landed — it keeps the changes in the tree — then `git stash push -u -m "IMPLEMENT <slug> Task NN failed" -- <the task's Files and anything else the worker left>` so `git status --porcelain` is silent, without deleting what the worker produced. The floor is gitignored and never counts as dirt.
+2. Restore BASE: `git reset <BASE>` if a commit landed — it keeps the changes in the tree — then `git stash push -u -m "IMPLEMENT <slug> Task NN failed" -- <the task's Files and anything else the worker left>` so `git status --porcelain -- . ':!.spectomat/memory.md'` is silent, without deleting what the worker produced. The floor is gitignored or, for `memory.md`, the operator's, and never counts as dirt.
 3. Follow `<plugin_root>/references/three-strikes.md` for this phase — it covers the strike, the log line and what the third strike does. It ends, on the third strike, in `<plugin_root>/scripts/block_slug.sh <slug> "<reason>"` after writing `blocked.md` — never a strike recorded without that call.
 
 ## Rationalizations

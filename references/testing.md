@@ -41,7 +41,7 @@
 | AC-4.10 | `pointer_prompt()` resolves `PLUGIN_ROOT` with no unresolved `{{KEY}}` placeholder left in its output | selftest |
 | AC-4.5 | Drafts are taken in alphabetical order of the file name, whatever their modification times | selftest |
 | AC-4.12 | Re-arming over a `state.json` holding terminal entries neither resurrects them nor counts them as active; a slug dir carrying a marker but no entry is seeded at its terminal phase, and a dir whose files match no phase is blocked and committed | selftest |
-| AC-4.13 | The floor is local: arming tracks only `.spectomat/.gitignore`, `amendments.md` and `gates.sh`, never edits the root `.gitignore`, and refuses while HEAD or a `feat/*` branch tracks another floor file; a floor-only write is not dirt | selftest |
+| AC-4.13 | The floor is local: arming tracks only `.spectomat/.gitignore`, `memory.md` and `gates.sh`, never edits the root `.gitignore`, and refuses while HEAD or a `feat/*` branch tracks another floor file; a floor-only write is not dirt | selftest |
 | AC-5.1 | The plugin loads `AGENT_COUNT` agents | `--debug-file` grep, §10.5 |
 | AC-5.2 | Both plugin manifests validate `--strict` | manual |
 | AC-5.3 | `agents/task.md` exists, is named `task`, and never calls a `slug_*` helper, `slug_set_phase.sh`, `tasks.sh` or `log.sh` | selftest |
@@ -78,7 +78,7 @@ bash 3.2, `jq`, no build, no package manager, no network. `scripts/utils.sh` is 
 | Placeholder | Rendered into | Value |
 | --- | --- | --- |
 | `{{PLUGIN_ROOT}}` | `pointer_prompt()` in `scripts/utils.sh` (in memory, never a file) | absolute plugin path; locates `scripts/phase.sh`, `scripts/agent-archive.sh` and `agents/*.md` |
-| `{{REPO}}` | `amendments.md`, `memory.md` | the repository root, substituted at the one and only render |
+| `{{REPO}}` | `memory.md` | the repository root, substituted at the one and only render |
 | `{{GATES}}` | `.spectomat/gates.sh` | the gate lines compiled by `detect_gates` (§5.5), or `GATES_NONE` when none were detected, substituted at the one and only render |
 
 A new placeholder requires a matching value in the `render_template` call in `command-run.sh`. Substitution is literal, and literally means literally: a value carrying `&`, `\`, `$` or `{{X}}` lands as written, and `tests/render_template_test.sh` holds a case for each. `{{GATES}}` lands under the rendered script's `set -e`, so every line must be a real command whose exit code means what it says (§5.5). `state.json` has no template: `arm_flow` writes its seven fields inline (`active`, `iteration`, `max_iterations`, `session_id`, `started_at`, `plugin_root`, `current`) over the `slugs` that `seed_state` filled, with `max_iterations` and `iteration` unquoted, so `parse_args` must keep requiring `^[0-9]+$` for the iteration cap.
@@ -134,7 +134,7 @@ claude plugin validate .claude-plugin/marketplace.json --strict
 | whether the runtime loads `AGENT_COUNT` agents | `claude -p … --debug-file <f> --model opus`, then grep `<f>` for `Loaded 8 agents from plugin`; a `-p` prompt asking Claude to list agent types reports NONE even when they are loaded, so it must not be used |
 | whether a full flow reaches `FINISH` | `claude -p "/spectomat:run 25" --plugin-dir . --model opus` in a scratch repo with two drafts |
 | whether the Stop hook releases against the real runtime | the selftest drives it with a fabricated payload; only a live session proves Claude Code honours the `block` decision |
-| whether `command-run.sh` keeps an edited `amendments.md` | arming twice in a scratch repo, editing `.spectomat/amendments.md` between runs |
+| whether `command-run.sh` keeps an edited `memory.md` | arming twice in a scratch repo, editing `.spectomat/memory.md`'s Rules between runs |
 
 Nested `claude -p` must always be given `--model opus`; the CLI rejects the default model.
 

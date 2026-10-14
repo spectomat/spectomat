@@ -18,7 +18,7 @@ Unattended: nobody watches or answers. Decide; report each decision as a ruling.
 
 Your task's `slug:` names the slug the last iteration died on — empty means `state.json` recorded no verdict, and you work the slug out from the changes. `jq -r '.current.phase' .spectomat/state.json` prints the phase it was doing: `<phase>` below.
 
-- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `./.spectomat/memory.md`'s `## Rules` in full — the operator's rules; they win over everything below
 - `<plugin_root>/references/contract.md` in full
 - `./.spectomat/memory.md` — how this codebase does things
 - `./.spectomat/log.md` — the last lines for `<slug>`: what the dead iteration was doing, and why earlier ones struck
@@ -30,8 +30,8 @@ Your task's `slug:` names the slug the last iteration died on — empty means `s
 ## Rules
 
 - **Do no phase work.** A phase all but finished you complete; a phase half done you stash. Writing a spec, a plan or code is the next iteration's job.
-- **Stash, never delete.** `git stash push -u` clears the tree and keeps the work: the operator can `git stash show -p` and recover what turns out to matter. A change outside the paths the task files name is not yours to move — `amendments.md` and `gates.sh` included, the operator's — report it and stop.
-- **The floor is not dirt.** It is gitignored but for the operator's files, so a phase that died there left nothing in `git status` and is simply handed out again. Dirt is code a dead `IMPLEMENT` left behind.
+- **Stash, never delete.** `git stash push -u` clears the tree and keeps the work: the operator can `git stash show -p` and recover what turns out to matter. A change outside the paths the task files name is not yours to move — `gates.sh` included, the operator's — report it and stop.
+- **The floor is not dirt.** It is gitignored but for `.gitignore`, `gates.sh` and `memory.md`, and `git status --porcelain -- . ':!.spectomat/memory.md'` leaves `memory.md` out, so a phase that died there left no dirt and is simply handed out again. Dirt is code a dead `IMPLEMENT` left behind.
 - **Finish through the phase's own helper.** `tasks.sh close|add`, the same call the `IMPLEMENT` brief would have made, so the ledger and the phase never disagree.
 - **A block is a marker, then a state call.** The state call is what takes the slug out of the flow; a marker alone leaves it at its phase, and the picker answers `RECOVER` again next iteration.
 
@@ -41,13 +41,13 @@ Find which of the two cases you are in, and handle only that one.
 
 ### 1. A dirty tree
 
-`git status --porcelain` is not silent: the last iteration died mid-phase — in practice a dead `IMPLEMENT`.
+`git status --porcelain -- . ':!.spectomat/memory.md'` is not silent: the last iteration died mid-phase — in practice a dead `IMPLEMENT`.
 
-1. Inspect the changes: `git status --porcelain`, `git diff`, and the log's last lines for `<slug>`.
+1. Inspect the changes: `git status --porcelain -- . ':!.spectomat/memory.md'`, `git diff`, and the log's last lines for `<slug>`.
 2. Decide which of the two they are:
    - **All but finished** → commit them under the phase's own message, apply its transition with the helper its brief names, then `bash <plugin_root>/scripts/log.sh RECOVER <slug> finished <phase> left mid-iteration`.
    - **Partial, or you cannot tell what they were for** → `git stash push -u -m "RECOVER <slug> <phase>" -- <task file paths>`, then `bash <plugin_root>/scripts/log.sh RECOVER <slug> stashed a partial <phase>` (`floor` in place of `<slug>` when you cannot tell which slug it was).
-3. `git status --porcelain` must now be silent. Still names a file → it is outside what you may move: report it under `STOPPED` and stop.
+3. `git status --porcelain -- . ':!.spectomat/memory.md'` must now be silent. Still names a file → it is outside what you may move: report it under `STOPPED` and stop.
 
 ### 2. A slug at the strike limit
 

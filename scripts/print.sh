@@ -34,10 +34,10 @@ print_floor() {
 }
 
 # Entries in memory.md: list items, which is what the contract asks a memory to be.
-# grep -c exits 1 on no match, so the file check comes first and the count stands alone.
+# The operator's ## Rules are not the factory's memory, so their items are skipped.
 memory_entries() {
   [[ -f "$MEMORY" ]] || { echo 0; return; }
-  grep -c '^- ' "$MEMORY" | tr -d ' '
+  awk '/^## /{r=($0=="## Rules")} !r && /^- /{n++} END{print n+0}' "$MEMORY"
 }
 
 # One line per slug state.json tracks, finished ones included: a slug at DONE or

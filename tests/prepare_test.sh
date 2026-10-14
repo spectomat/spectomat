@@ -40,7 +40,7 @@ is "a dropped draft leaves a clean tree" "$(cd "$DROP" && git status --porcelain
 is "the draft moves into its slug dir" "$([[ -f "$DROP/.spectomat/001-thing/draft.md" ]] && echo yes || echo no)" "yes"
 is ".wishlist/ is emptied by arming"   "$(ls "$DROP/.wishlist" | wc -l | tr -d ' ')" "0"
 is "only the operator's floor files are tracked" "$(cd "$DROP" && git ls-files .spectomat | tr '\n' ' ')" \
-  ".spectomat/.gitignore .spectomat/amendments.md .spectomat/gates.sh "
+  ".spectomat/.gitignore .spectomat/gates.sh .spectomat/memory.md "
 is "the root .gitignore is not touched" "$([[ -e "$DROP/.gitignore" ]] && echo yes || echo no)" "no"
 is "iteration 1 is SPECIFY"     "$(verdict "$DROP" "$SCRIPTS")" "SPECIFY 001-thing"
 

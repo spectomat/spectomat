@@ -21,7 +21,7 @@ Named constants, each defined once here and nowhere else in the system:
 pick_phase():
   cd_root()
   if not exists(STATE_FILE):                 emit('FINISH'); return 0
-  if `git status --porcelain` is non-empty:  emit('RECOVER', current.slug); return 0
+  if dirt() is non-empty:                    emit('RECOVER', current.slug); return 0
 
   for phase in [ 'ARCHIVE', 'REVIEW', 'IMPLEMENT', 'PLAN', 'REVIEW-SPEC', 'SPECIFY' ]:
       pick = least_struck(phase, slugs_at_phase(phase))
@@ -39,7 +39,7 @@ Normative notes, each of which a naive reading would get wrong:
 3. **Slugs enter state at arm time and only there.** `command-run.sh` moves each `.wishlist/*.md` to `<slug>/draft.md` on the local floor, commits the inbox's removals, and `seed_state` calls `slug_add` for every slug dir with no entry yet — `SPECIFY` for a dir holding only a draft, `REVIEW-SPEC` for a hand-written `spec.md`, `IMPLEMENT` or `REVIEW` for a dir with a `tasks.json`, depending on whether any task is still pending (D31), `DONE`/`BLOCKED` for a dir already carrying a marker, `BLOCKED` for one the files place nowhere, which it writes a `blocked.md` for. That scan is the only directory listing in the system: after arming, every script reads `state.json` and nothing walks the floor again (D27). Arming must end on a clean tree: the picker answers `RECOVER` to any dirt, so an unstaged leftover costs the flow its first iteration. Before any of it, arming refuses while HEAD or a `feat/*` branch still tracks a floor file beyond the operator's three (D36).
 4. **`ARCHIVE` and `REVIEW` are split by phase** (`state.json.slugs[slug].phase` is `ARCHIVE` or `REVIEW`), not by a line in the plan. The `REVIEW` phase advances a slug from `IMPLEMENT` to `REVIEW`; only `REVIEW` returning a verdict advances it to `ARCHIVE`.
 5. **The fall-through `RECOVER` now means exactly one thing:** every unfinished slug is at `STRIKE_LIMIT` in its current phase, which is the only way `least_struck` skips a candidate. Nothing else reaches that branch — a slug dir with no state entry is not in the flow, and the picker cannot see it to call it an anomaly.
-6. **`RECOVER` precedes every stage test**; only the state-file guard runs before it. Dirt is code or an operator file: the rest of the floor is gitignored (D36), so a phase that died on the floor leaves none, stays at its phase, and is handed out again to redo its leftovers. A dirty tree with no unfinished slug is an `IMPLEMENT` having died between the worker's writes and its commit. A dirty-tree `RECOVER` carries `current.slug` — the last working verdict, which the Stop hook and arming record and a `RECOVER` never replaces (D33); a clean-tree `RECOVER` carries no slug.
+6. **`RECOVER` precedes every stage test**; only the state-file guard runs before it. Dirt is `dirt()` in `scripts/utils.sh`: `git status --porcelain` with `memory.md` left out, so it is code, `.gitignore` or `gates.sh`. The rest of the floor is gitignored, and `memory.md` is the operator's to commit (D36), so a phase that died on the floor leaves none, stays at its phase, and is handed out again to redo its leftovers. A dirty tree with no unfinished slug is an `IMPLEMENT` having died between the worker's writes and its commit. A dirty-tree `RECOVER` carries `current.slug` — the last working verdict, which the Stop hook and arming record and a `RECOVER` never replaces (D33); a clean-tree `RECOVER` carries no slug.
 7. The picker **never mutates** anything. It is safe to run from `/spectomat:status`.
 
 ### 5.2 `least_struck` — `scripts/utils.sh`
@@ -98,7 +98,7 @@ Invoked by the `spectomat:archive` subagent (`agents/archive.md`), which relays 
 ```text
 archive(slug):
   cd_root()
-  require `git status --porcelain` silent                            else exit 1
+  require dirt() silent                                              else exit 1
   require state.slugs[slug].phase == 'ARCHIVE'                       else exit 1
 
   if run_gates() != 0:

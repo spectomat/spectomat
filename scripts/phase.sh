@@ -66,10 +66,11 @@ main() {
   local phase
   [[ -f "$STATE_FILE" ]] || { emit FINISH; exit 0; }
   # Dirt is an iteration that died mid-phase, and `current` still names it:
-  # the Stop hook records working verdicts only, never a RECOVER. Only code and
-  # the operator's floor files can be dirt; the rest of the floor is gitignored
-  # (D36), and a phase that died there is simply handed out again.
-  [[ -z "$(git status --porcelain 2>/dev/null)" ]] || { emit RECOVER "$(current_field slug)"; exit 0; }
+  # the Stop hook records working verdicts only, never a RECOVER. Only code,
+  # .gitignore and gates.sh can be dirt; the rest of the floor is gitignored or,
+  # for memory.md, left to the operator to commit (D36), and a phase that died
+  # there is simply handed out again.
+  [[ -z "$(dirt)" ]] || { emit RECOVER "$(current_field slug)"; exit 0; }
 
   for phase in ARCHIVE REVIEW IMPLEMENT PLAN REVIEW-SPEC SPECIFY; do try_phase "$phase"; done
 

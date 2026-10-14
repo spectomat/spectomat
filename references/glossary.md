@@ -36,11 +36,10 @@
 
 - **Floor** is `.spectomat/`: the directory the flow keeps in the user's project.
 
-- **Contract** is the plugin's `references/contract.md`: the rules that bind every phase. The operator amends it in `.spectomat/amendments.md`, which wins over it.
+- **Contract** is the plugin's `references/contract.md`: the rules that bind every phase. The operator amends it in the Rules of `.spectomat/memory.md`, which win over it.
 
-- **Amendments** is `.spectomat/amendments.md`: the operator's own rules, which win over the contract and every brief. No phase writes it.
 
-- **Memory** is `.spectomat/memory.md`: durable facts about the user's codebase — map, commands, patterns, traps.
+- **Memory** is `.spectomat/memory.md`, tracked and committed by the operator only: first the operator's **Rules**, which win over the contract and every brief and which no phase writes; then durable facts about the user's codebase — map, commands, patterns, traps.
 
 - **State file** is `.spectomat/state.json`: the flow's live state — each slug's phase and strikes, the iteration counter, and `current`. It is not committed.
 

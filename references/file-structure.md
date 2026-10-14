@@ -29,7 +29,7 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
 
 - `scripts/`
   - `utils.sh` holds the shared paths and helpers every other script sources: `least_struck`, `strike_count`, `run_gates` (§5.2–§5.4), `cd_root`, `state_field`, `render_template`, `pointer_prompt`,
-  - `command-run.sh` sets up the floor `.spectomat/`, renders `.gitignore`, `amendments.md`, `memory.md` and `gates.sh`, refuses a floor git still tracks, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
+  - `command-run.sh` sets up the floor `.spectomat/`, renders `.gitignore`, `memory.md` and `gates.sh`, refuses a floor git still tracks, moves each draft into its own slug dir, and arms the flow by writing `state.json`,
   - `phase.sh` is the picker (§5.1): one verdict block per iteration, naming the phase and the subagent/brief to dispatch it to,
   - `agent-archive.sh` is the archiver (§5.6), the `ARCHIVE` phase end to end: ticks, gates, writes the slug's `done.md` (or `blocked.md`), and records the terminal phase in `state.json`,
   - `command-status.sh` summarises flow and floor (§7); its sections live in `print.sh`,
@@ -76,9 +76,8 @@ What lives where in the plugin, and how the pieces dispatch. This is §6.1 of [t
 
 - `templates/`
   - rendered into the project once, each checked on its own so an older floor picks up a newly added file, then owned by the project:
-    - `gitignore` (rendered as `.spectomat/.gitignore`: tracks only itself, `amendments.md` and `gates.sh` — D36),
-    - `amendments.md` (the operator's rules over the contract, highest priority, never written by a phase),
-    - `memory.md` (the codebase facts every iteration reads and adds to, local to the project's floor),
+    - `gitignore` (rendered as `.spectomat/.gitignore`: tracks only itself, `memory.md` and `gates.sh` — D36),
+    - `memory.md` (the operator's Rules over the contract, which no phase writes, then the codebase facts every iteration reads and adds to; tracked, committed by the operator only),
     - `gates.sh` (the project's single gate command),
   - the shapes the `SPECIFY`, `REVIEW-SPEC` and `PLAN` phases fill in:
     - `spec.md` (the skeleton for the `spec` document),

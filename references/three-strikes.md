@@ -11,8 +11,8 @@ second time in the same iteration.
 1. Bump the slug's strike count for this phase with `scripts/utils.sh`'s
    `slug_strike <slug> <PHASE>`. It prints the new count — N below is that
    number, never one you counted by hand.
-2. Leave the tree clean. The floor is gitignored but for the operator's files,
-   and never counts as dirt.
+2. Leave the tree clean. The floor is gitignored but for `.gitignore`, `gates.sh`
+   and `memory.md`, which the operator commits, and never counts as dirt.
 3. Run `log.sh <PHASE> <slug> <reason> (strike N)` — see
    [Log Format](./log-format.md).
 4. Stop. Do not advance the slug's phase in `state.json`: a strike changes

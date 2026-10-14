@@ -9,10 +9,9 @@ PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FLOOR=".spectomat"
 WISHLIST=".wishlist"   # the one entrance: raw ideas, one .md each; sits beside the floor, not in it
 STATE_FILE="$FLOOR/state.json"   # the flow's mutable state; local, like all the floor but the three below
-MEMORY="$FLOOR/memory.md"   # what the factory has learned about the codebase; local, shared by every branch
-AMENDMENTS="$FLOOR/amendments.md"   # the operator's rules over the contract; committed
+MEMORY="$FLOOR/memory.md"   # the operator's rules and what the factory learned; tracked, committed by the operator only
 GATES_SH="$FLOOR/gates.sh"   # the project's single gate command; committed, operator-editable
-FLOOR_IGNORE="$FLOOR/.gitignore"   # tracks only itself, amendments.md and gates.sh; committed
+FLOOR_IGNORE="$FLOOR/.gitignore"   # tracks only itself, memory.md and gates.sh; committed
 
 # Move to the git root (or stay put outside a repo); sets ROOT.
 cd_root() {
@@ -24,6 +23,10 @@ cd_root() {
 disarm() { rm -f "$STATE_FILE"; }
 
 die() { echo "❌ $*" >&2; exit 1; }
+
+# The tree's dirt: `git status --porcelain` but for memory.md, which every phase
+# edits and only the operator commits (D36). Empty means clean. Run from the root.
+dirt() { git status --porcelain -- . ":(exclude)$MEMORY" 2>/dev/null; }
 
 # Number of files matching GLOB (default '*.md') directly inside a directory,
 # 0 when it is missing. The glob is passed to find -name, so it must be

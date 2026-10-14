@@ -17,7 +17,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a row in 
 
 `slug:` and `plugin_root:` from your task.
 
-- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `./.spectomat/memory.md`'s `## Rules` in full — the operator's rules; they win over everything below
 - `<plugin_root>/references/contract.md` in full
 - `./.spectomat/memory.md` — how this codebase does things; cite it where the spec assumes otherwise
 - the spec `.spectomat/<slug>/spec.md` — what you are reviewing

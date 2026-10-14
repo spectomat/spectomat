@@ -17,7 +17,7 @@ Unattended: nobody watches or answers. Decide; write each decision into the over
 
 `slug:` and `plugin_root:` from your task.
 
-- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `./.spectomat/memory.md`'s `## Rules` in full — the operator's rules; they win over everything below
 - `<plugin_root>/references/contract.md` in full
 - `./.spectomat/memory.md` — how this codebase does things; every line a task needs is copied into that task's `From Memory`
 - `.spectomat/<slug>/spec.md` in full — its build sequence orders the tasks, its criteria fill the coverage table
@@ -65,7 +65,7 @@ Unattended: nobody watches or answers. Decide; write each decision into the over
 Follow `<plugin_root>/templates/task.md` exactly. A task file is read by an agent that sees nothing else, so it repeats what it needs:
 
 - **Scope** — the plan's goal and the architecture this task sits in, in your own words; **Goal** — what exists when this task is done that did not before.
-- **Context** — fill the template's four subsections: `Excerpts from Spec` quotes the full text of every criterion in `Covers` and every spec rule, constant and message the task implements; `From Memory` copies every `amendments.md` rule and `memory.md` line that applies; `From existing codebase` copies the existing signatures the task touches, the exemplar path to copy and the test command; `From previous tasks` names each earlier task this one consumes from, with the exact names and signatures it consumes.
+- **Context** — fill the template's four subsections: `Excerpts from Spec` quotes the full text of every criterion in `Covers` and every spec rule, constant and message the task implements; `From Memory` copies every `memory.md` rule and line that applies; `From existing codebase` copies the existing signatures the task touches, the exemplar path to copy and the test command; `From previous tasks` names each earlier task this one consumes from, with the exact names and signatures it consumes.
 - **Constraints** — every Global Constraint that binds it, copied verbatim, plus the exact values from the spec it uses.
 - **Files** with exact paths.
 - **Covers** — the criterion ids this task's tests name.

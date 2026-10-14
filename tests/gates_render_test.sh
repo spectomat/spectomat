@@ -53,9 +53,9 @@ is "rendering leaves a clean tree" "$(cd "$R" && git status --porcelain)" ""
 # The contract ships with the plugin; the floor never gets a copy.
 is "the contract is not rendered"  "$([[ -e "$R/.spectomat/contract.md" ]] && echo yes || echo no)" "no"
 is "memory.md is written"          "$([[ -f "$R/.spectomat/memory.md" ]] && echo yes || echo no)" "yes"
-is "memory.md stays local"         "$(cd "$R" && git ls-files .spectomat/memory.md)" ""
+is "memory.md is committed"        "$(cd "$R" && git ls-files .spectomat/memory.md)" ".spectomat/memory.md"
 is ".gitignore is committed"       "$(cd "$R" && git ls-files .spectomat/.gitignore)" ".spectomat/.gitignore"
-is "amendments.md is committed"    "$(cd "$R" && git ls-files .spectomat/amendments.md)" ".spectomat/amendments.md"
+is "amendments.md is not rendered" "$([[ -e "$R/.spectomat/amendments.md" ]] && echo yes || echo no)" "no"
 # Arming cuts one branch per slug and leaves HEAD where it found it.
 is "the slug is branched"          "$(cd "$R" && git rev-parse --verify --quiet refs/heads/feat/001-thing >/dev/null && echo yes || echo no)" "yes"
 # Compared against the branch the repo was on before arming, not a hardcoded
@@ -73,5 +73,19 @@ is "no package.json is an honest no-op" "$(gate_lines)" 'echo "ok: no gates yet 
 printf '#!/bin/bash\nset -e\necho mine\n' > "$R/.spectomat/gates.sh"
 ( cd "$R" && git commit -qam edit && bash "$SCRIPTS/command-run.sh" 3 ) >/dev/null 2>&1
 is "an edited gates.sh is kept" "$(gate_lines)" "echo mine|"
+
+# A floor armed before memory.md was tracked: its .gitignore lacks the line, and
+# its amendments.md is still tracked. The next run tracks memory.md, accepts the
+# leftover rather than refusing the floor, and says where the rules go now.
+printf '*\n!.gitignore\n!amendments.md\n!gates.sh\n' > "$R/.spectomat/.gitignore"
+printf '# rules\n' > "$R/.spectomat/amendments.md"
+( cd "$R" && git rm -q --cached .spectomat/memory.md && git add -f .spectomat/.gitignore .spectomat/amendments.md && git commit -qm old-floor ) >/dev/null 2>&1
+out="$(cd "$R" && bash "$SCRIPTS/command-run.sh" 3 2>&1)"
+is "an old floor tracks memory.md" "$(cd "$R" && git ls-files .spectomat/memory.md)" ".spectomat/memory.md"
+is "an old .gitignore gains the line" "$(grep -cxF '!memory.md' "$R/.spectomat/.gitignore")" "1"
+case "$out" in *"amendments.md is no longer read"*) got=yes ;; *) got=no ;; esac
+is "a leftover amendments.md is flagged" "$got" "yes"
+case "$out" in *"still tracks floor files"*) got=yes ;; *) got=no ;; esac
+is "a tracked amendments.md is not refused" "$got" "no"
 
 finish

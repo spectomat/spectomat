@@ -3,7 +3,7 @@
 #
 #   command-run.sh [MAX_ITERATIONS]
 #
-# Creates .wishlist/, renders .gitignore, amendments.md, memory.md and gates.sh
+# Creates .wishlist/, renders .gitignore, memory.md and gates.sh
 # when absent, moves each wish into its own slug dir .spectomat/<slug>/draft.md,
 # commits the operator's files, and arms the Stop hook by writing state.json.
 # Default 100 iterations. Refuses when a flow is armed or no unfinished slug remains.
@@ -85,8 +85,9 @@ intake_wishes() {
 }
 
 # Commit what this run rendered on the tracked side of the floor — .gitignore,
-# amendments.md, gates.sh — and the inbox's removals, so the flow starts on a
-# clean tree. Slug dirs and memory.md are gitignored (D36): nothing to stage.
+# memory.md, gates.sh — and the inbox's removals, so the flow starts on a clean
+# tree. Slug dirs are gitignored (D36): nothing to stage. An edit to an already
+# tracked memory.md is the operator's to commit, so it is never staged here.
 commit_floor() {
   git add -A "$WISHLIST" ${STAGE[@]+"${STAGE[@]}"}
   git diff --cached --quiet && return 0
@@ -97,26 +98,23 @@ commit_floor() {
   echo "committed: $(git log --oneline -1)"
 }
 
-# Render .gitignore, amendments.md, memory.md and gates.sh from the templates
+# Render .gitignore, memory.md and gates.sh from the templates
 # once; never overwrite what the project has edited. The gate commands compiled from
 # package.json are rendered into gates.sh, so a later package.json change is
 # edited into that script by hand. Each file is checked on its own, so a floor
 # armed before one of them existed picks it up on the next run.
 render_factory() {
-  if [[ -f "$FLOOR_IGNORE" ]]; then
-    echo "$FLOOR_IGNORE: exists, kept"
-  else
+  if [[ ! -f "$FLOOR_IGNORE" ]]; then
     cp "$TEMPLATES/gitignore" "$FLOOR_IGNORE"
     STAGE+=("$FLOOR_IGNORE")
     echo "$FLOOR_IGNORE: written"
-  fi
-
-  if [[ -f "$AMENDMENTS" ]]; then
-    echo "$AMENDMENTS: exists, kept"
+  elif ! grep -qxF '!memory.md' "$FLOOR_IGNORE"; then
+    # A floor armed while memory.md was local: track it from now on.
+    printf '!memory.md\n' >> "$FLOOR_IGNORE"
+    STAGE+=("$FLOOR_IGNORE")
+    echo "$FLOOR_IGNORE: now tracks memory.md"
   else
-    render_template "$TEMPLATES/amendments.md" "$AMENDMENTS" REPO="$ROOT"
-    STAGE+=("$AMENDMENTS")
-    echo "$AMENDMENTS: written"
+    echo "$FLOOR_IGNORE: exists, kept"
   fi
 
   if [[ -f "$MEMORY" ]]; then
@@ -125,6 +123,8 @@ render_factory() {
     render_template "$TEMPLATES/memory.md" "$MEMORY" REPO="$ROOT"
     echo "$MEMORY: written"
   fi
+  # Committed once, when git does not know it yet; later edits are the operator's.
+  git ls-files --error-unmatch "$MEMORY" >/dev/null 2>&1 || STAGE+=("$MEMORY")
 
   if [[ -f "$GATES_SH" ]]; then
     echo "$GATES_SH: exists, kept"
@@ -146,12 +146,17 @@ render_factory() {
 
   # The contract lives in the plugin now; a floor copy is a leftover nobody reads.
   if [[ -f "$FLOOR/contract.md" ]]; then
-    echo "⚠️ $FLOOR/contract.md is no longer read: move your edits into $AMENDMENTS, then delete it"
+    echo "⚠️ $FLOOR/contract.md is no longer read: move your edits into $MEMORY's ## Rules, then delete it"
+  fi
+  # The operator's rules moved into memory.md's ## Rules section.
+  if [[ -f "$FLOOR/amendments.md" ]]; then
+    echo "⚠️ $FLOOR/amendments.md is no longer read: move its rules into $MEMORY's ## Rules, then delete it"
   fi
 }
 
-# Refuse a floor that git still tracks beyond its three operator files: an
-# older flow committed it. Checking out a branch that tracks a now-ignored file
+# Refuse a floor that git still tracks beyond .gitignore, memory.md and gates.sh: an
+# older flow committed it. A tracked amendments.md is let through: the older
+# floor's .gitignore tracked it, and render_factory flags it for removal. Checking out a branch that tracks a now-ignored file
 # silently overwrites the local copy, and leaving one deletes it. Checks HEAD
 # and every feat/* branch, since the phases check those out.
 require_untracked_floor() {
@@ -160,7 +165,7 @@ require_untracked_floor() {
     for ref in HEAD $(git for-each-ref --format='%(refname:short)' 'refs/heads/feat/'); do
       git rev-parse --verify --quiet "$ref^{commit}" >/dev/null || continue
       git ls-tree -r --name-only "$ref" -- "$FLOOR" \
-        | { grep -vxF -e "$FLOOR_IGNORE" -e "$AMENDMENTS" -e "$GATES_SH" || true; } \
+        | { grep -vxF -e "$FLOOR_IGNORE" -e "$MEMORY" -e "$GATES_SH" -e "$FLOOR/amendments.md" || true; } \
         | sed "s|^|$ref: |"
     done
   )
@@ -178,7 +183,7 @@ report_floor() {
   BLOCKED=$(slugs_at_phase BLOCKED | wc -l | tr -d ' ')
   echo "--- floor ---"
   echo "active: $ACTIVE   done: $DONE   blocked: $BLOCKED"
-  git status --porcelain | head -5
+  dirt | head -5
 }
 
 # Refuse before seed_state touches anything: an active flow belongs to another
@@ -199,10 +204,8 @@ require_startable() {
   # Whatever commit_floor did not commit is the user's own work in progress. The
   # picker answers RECOVER to any dirt, so arming now would send every iteration to the
   # janitor - which reports and stops rather than discarding work it does not own,
-  # burning the whole cap.
-  local dirt
-  dirt="$(git status --porcelain)"
-  if [[ -n "$dirt" ]]; then
+  # burning the whole cap. An uncommitted memory.md edit is not dirt (D36).
+  if [[ -n "$(dirt)" ]]; then
     die "Not starting: the git tree is dirty."
   fi
 }

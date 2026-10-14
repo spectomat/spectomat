@@ -18,7 +18,7 @@ Unattended: nobody watches or answers. Decide; record each decision as a ruling.
 
 `slug:` and `plugin_root:` from your task. You are dispatched on a plan whose every task is closed: none is `pending` in the ledger, and every one carries a `commits` range.
 
-- `./.spectomat/amendments.md` in full — the operator's rules; they win over everything below
+- `./.spectomat/memory.md`'s `## Rules` in full — the operator's rules; they win over everything below
 - `<plugin_root>/references/contract.md` in full
 - the plan overview `.spectomat/<slug>/plan.md` — Goal, Global Constraints, File map, Coverage table
 - `.spectomat/<slug>/ruling.md`, if it exists — every ruling the `IMPLEMENT` phase left, tagged by task

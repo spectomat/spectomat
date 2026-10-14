@@ -1,14 +1,14 @@
 # Spectomat contract
 
-This is the flow's authoritative contract. It ships with the plugin and is fixed for the whole flow: never edit it, in any phase. The operator amends it in `.spectomat/amendments.md`.
+This is the flow's authoritative contract. It ships with the plugin and is fixed for the whole flow: never edit it, in any phase. The operator amends it in the `## Rules` section of `.spectomat/memory.md`.
 
-You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file and `amendments.md` are your only memory of intent, `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read `amendments.md`, then this file, in full before doing anything.
+You are running unattended inside a Stop-hook flow. Every iteration feeds you the same pointer prompt and you arrive with no memory of the last one. **This file and `memory.md`'s Rules are your only memory of intent, the rest of `memory.md` your only memory of this codebase, and the filesystem under `.spectomat/` your only memory of progress.** Read `memory.md`, then this file, in full before doing anything.
 
 Your task is the picker's frontmatter block, verbatim: `phase:`, `slug:` and `plugin_root:` among its fields. When a brief names a plugin file, read `<plugin_root>/<that path>`. A brief holds how its phase is done; where it disagrees with this file, this file wins.
 
 ## Constitution
 
-This contract is **the single source of truth** about Flow, Floor, Phases — it wins anything else, save one: `.spectomat/amendments.md`, the operator's word, wins over this contract and every brief.
+This contract is **the single source of truth** about Flow, Floor, Phases — it wins anything else, save one: the `## Rules` of `.spectomat/memory.md`, the operator's word, win over this contract and every brief.
 
 ### Judgement
 
@@ -19,10 +19,11 @@ This contract is **the single source of truth** about Flow, Floor, Phases — it
 
 ### What you may write
 
-- ❌ DO NOT Edit this contract, `.spectomat/amendments.md`, `.spectomat/gates.sh`, anything under `.wishlist/`, or a slug dir carrying `done.md` or `blocked.md` — operator files and finished work.
+- ❌ DO NOT Edit this contract, the `## Rules` of `.spectomat/memory.md`, `.spectomat/gates.sh`, anything under `.wishlist/`, or a slug dir carrying `done.md` or `blocked.md` — operator files and finished work.
 - ❌ DO NOT Delete a draft, spec or plan.
 - ❌ DO NOT Weaken a gate to pass.
 - ❌ DO NOT Log narration into `memory.md` — durable, reusable, non-obvious, or it is not a memory.
+- ❌ DO NOT Commit, stage or stash `memory.md` — the operator reviews and commits its changes.
 
 ### Honest reporting
 
@@ -47,7 +48,7 @@ This contract is **the single source of truth** about Flow, Floor, Phases — it
 
 ### Before iteration
 
-**❌ Never start on a dirty tree:** Run `git status --porcelain` before taking a task. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git stash push -u -- <the paths you own>` to clear it without deleting it. The floor is gitignored but for `amendments.md`, `gates.sh` and its own `.gitignore`, so the rest of it never counts as dirt.
+**❌ Never start on a dirty tree:** Run `git status --porcelain -- . ':!.spectomat/memory.md'` before taking a task — that command is what *dirt* means in every brief. A dirty tree means the previous iteration died mid-phase: inspect the changes and either finish and commit that phase or `git stash push -u -- <the paths you own>` to clear it without deleting it. The floor is gitignored but for `memory.md`, `gates.sh` and its own `.gitignore`, and `memory.md` is left to the operator to commit, so only those last two of it ever count as dirt.
 
 **❌ Never trust a leftover:** a phase that dies on the floor leaves no dirt, and the picker hands it out again. Whatever output of your phase already exists — a spec, a plan, task files, snippets — is a dead iteration's draft: redo it and overwrite it; never build on it unread.
 
@@ -57,7 +58,7 @@ This contract is **the single source of truth** about Flow, Floor, Phases — it
 
 ## The floor
 
-Floor is the directories and files the Flow creates and works with in the user's project. It is local: `.spectomat/.gitignore` tracks only the operator's files — itself, `amendments.md`, `gates.sh` — so everything else lives in this working tree alone, shared by every `feat/<slug>` branch, and never enters a commit.
+Floor is the directories and files the Flow creates and works with in the user's project. It is local: `.spectomat/.gitignore` tracks only itself, `memory.md` and `gates.sh`, so everything else lives in this working tree alone, shared by every `feat/<slug>` branch, and never enters a commit. `memory.md` is tracked but never committed by a phase: its uncommitted edits ride along when a branch is checked out.
 
 ```text
 .wishlist/     the one entrance: raw ideas, one .md each — the user drops them here, and /spectomat:run moves each into its own slug dir
@@ -77,11 +78,10 @@ Floor is the directories and files the Flow creates and works with in the user's
     work/        scratch for IMPLEMENT and REVIEW: diffs, stats, anything bulky
       task-NN.gates.log   the task agent's whole gate run for one task, ending in `exit: N`; IMPLEMENT reads its numbers from here
   log.md       append-only, one line per phase of work
-  memory.md    what the factory has learned about this codebase — read every iteration, added to before a phase ends
+  memory.md    the operator's Rules over this contract, then what the factory has learned about this codebase — read every iteration, added to before a phase ends, committed by the operator only
   state.json   the whole of the flow's state — every slug, its phase, task counters and strikes, the current phase and slug, and the plugin copy that armed the flow: changed only through the Flow
-  .gitignore     tracks only itself and the two operator files below — committed
-  gates.sh       the project's single gate command — generated once from package.json, committed, yours to edit
-  amendments.md  the operator's rules over this contract — highest priority, committed, read every iteration, never written by a phase
+  .gitignore   tracks only itself, memory.md and gates.sh — committed
+  gates.sh     the project's single gate command — generated once from package.json, committed, yours to edit
 ```
 
 > A `slug` is the draft's file name without `.md`. Everything of one idea lives under `.spectomat/<slug>/` for its whole life: nothing is moved when it finishes, so the trail of one idea is one directory.
@@ -126,9 +126,9 @@ A phase that defeats you is a strike, and the third strike blocks the slug. The 
 
 **Read it before you touch anything else** — each phase brief's own Orient step names this. Trust it over your assumptions about the project, and over a habit from another repository.
 
-**Add to it before the phase ends** — each phase brief's own Procedure names the step. It is local and shared by every branch, so what one slug learns the next one reads at once.
+**Add to it before the phase ends** — each phase brief's own Procedure names the step. Its edits stay uncommitted and ride every branch checkout, so what one slug learns the next one reads at once.
 
-Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only the phase agent handling this iteration writes the file: it applies the tests itself, so the file keeps one voice.
+Its own header carries the rules for what earns a line — the three tests, the four sections, the size limits — and is not repeated here. Only the phase agent handling this iteration writes the file, and only below `## Rules`: it applies the tests itself, so the factory's part keeps one voice. `## Rules` is the operator's — obey it, never edit it.
 
 ## Log Format
 

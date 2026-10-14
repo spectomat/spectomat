@@ -39,4 +39,9 @@ is "status leaves a done slug out of blocked" "$(printf '%s\n' "$st_out" | grep 
 is "the floor line counts the finished slugs" "$(printf '%s\n' "$st_out" | grep -c 'done: 1   blocked: 1')" "1"
 is "the floor line counts the active slug"    "$(printf '%s\n' "$st_out" | grep -c 'active: 1')" "1"
 
+# The operator's ## Rules share memory.md but are not the factory's memory.
+floor st5; printf '## Rules\n\n- a rule\n\n## Learned\n\n### Map\n\n- a fact\n' > "$FIXTURE/.spectomat/memory.md"
+st_out=$(cd "$FIXTURE" && bash "$SCRIPTS/command-status.sh" 2>/dev/null)
+is "the memory count skips the rules" "$(printf '%s\n' "$st_out" | grep -c 'memory: 1 entries')" "1"
+
 finish

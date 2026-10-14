@@ -2,7 +2,7 @@
 
 A Claude Code plugin that turns raw ideas into committed, tested code without anyone watching. The operator drops a Markdown draft into `.wishlist/` and runs `/spectomat:run`; a Stop hook then generates and feeds the session the same pointer prompt over and over, and each pass — an **iteration** — advances exactly one idea by exactly one phase.
 
-The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the contract holds only the invariants that outlive both — amended by the operator in `.spectomat/amendments.md`.**
+The organising idea: **a deterministic picker decides *what* happens, a specialist brief decides *how*, and the contract holds only the invariants that outlive both — amended by the operator in the `## Rules` of `.spectomat/memory.md`.**
 
 Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPEC`** spec → reviewed spec, **`PLAN`** reviewed spec → plan, **`IMPLEMENT`** plan → one task's code, **`REVIEW`** finished plan → a verdict or fix tasks, **`ARCHIVE`** reviewed plan → archive. Every phase, plus `RECOVER`, is a subagent with its own brief, dispatched the same way by the pointer (D2); `FINISH` is the exception — the Stop hook ends the flow itself, dispatching nobody (D24). `ARCHIVE`'s brief does no archiving itself — it only invokes `scripts/agent-archive.sh` and relays its exit code, because a script that exits non-zero on a failing gate is still stronger evidence than an agent claiming the gate passed.
 
@@ -12,7 +12,7 @@ Six phases carry an idea end to end: **`SPECIFY`** draft → spec, **`REVIEW-SPE
 
 | Actor | Is | Does |
 | --- | --- | --- |
-| Operator | the human | drops drafts in `.wishlist/`, runs `/spectomat:run`, reads `/spectomat:status`, edits `amendments.md` (overrules the contract) and `memory.md` |
+| Operator | the human | drops drafts in `.wishlist/`, runs `/spectomat:run`, reads `/spectomat:status`, edits and commits `memory.md` — its Rules overrule the contract |
 | Session | the Claude Code session that ran `/spectomat:run` | holds the flow; per iteration, runs the picker and dispatches exactly one subagent; does no factory work |
 | Picker | `scripts/phase.sh` | reads `state.json` and `git status`, and nothing else; prints one frontmatter block naming the phase and everything needed to dispatch it |
 | Phase agent | `spectomat:specify`, `review-spec`, `plan`, `implement`, `review` | one fresh subagent per iteration; performs one phase — only `IMPLEMENT` commits, one `feat` commit per task (D36) |
@@ -56,7 +56,7 @@ Each is an interface the design depends on and does not own.
 | Boundary | Interface used | Fake used in tests |
 | --- | --- | --- |
 | git | `status --porcelain`, `rev-parse --show-toplevel`, `mv`, `add`, `commit`, `log` | a real throwaway repo under `mktemp -d` (§10.3) |
-| filesystem | the floor tree — local, git tracks only the operator's `.gitignore`, `gates.sh` and `amendments.md` (D36) — read as flow state by `command-run.sh` alone — its intake scan is the system's only directory listing (D27) | a fabricated floor under `mktemp -d` (§10.3) |
+| filesystem | the floor tree — local, git tracks only `.gitignore`, `gates.sh` and `memory.md`, which the operator alone commits (D36) — read as flow state by `command-run.sh` alone — its intake scan is the system's only directory listing (D27) | a fabricated floor under `mktemp -d` (§10.3) |
 | `log.md` | append-only text, written only through `log.sh`'s `<PHASE> <slug> <message>` CLI — never hand-formatted — by phase agents, `agent-archive.sh` and `recover.md`, for audit trail | a fabricated log file (§10.3) |
 | `state.json` | JSON; written by every phase's brief/`agent-archive.sh` as their last write; read by `phase.sh`, `print.sh`, `stop-hook.sh`; the flow's entire state — which slugs exist, which phase each is at, terminal ones included, their task counters and their strike ledger (D27) | a fabricated state file (§10.3) |
 | Claude Code agent runtime | plugin agent types `spectomat:<name>` from `agents/*.md` frontmatter | none; verified out-of-band per §10.5 |
