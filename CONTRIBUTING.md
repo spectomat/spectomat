@@ -61,12 +61,10 @@ What the suite cannot cover is the live runtime. **Exercise a real flow in a scr
 
 ## Testing the installed plugin
 
-The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`. Edits here are not live until the version in `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run` again. Restart Claude Code after an install or update — a live session keeps the old copy.
+The installed plugin is a cache copy under `~/.claude/plugins/cache/spectomat/`. Edits here are not live until the version in `.claude-plugin/plugin.json` is bumped and the plugin reinstalled. A project with an active flow then needs `/spectomat:cancel` and `/spectomat:run` again. Restart Claude Code after an install or update — a live session keeps the old copy. Run from the repository root:
 
 ```bash
-cd ~/Projects
-git clone https://github.com/spectomat/spectomat.git
-claude plugin marketplace add ~/Projects/spectomat
+claude plugin marketplace add .
 claude plugin install spectomat@spectomat
 claude plugin update spectomat@spectomat
 ```

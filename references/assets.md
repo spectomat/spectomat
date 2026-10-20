@@ -6,7 +6,7 @@ How the mark and the social card are drawn, rendered and published.
 | --- | --- |
 | `assets/logo.svg` | the source of the mark |
 | `assets/social.svg` | the source of the 1280×640 social preview card; it carries its own copy of the mark's paths |
-| `assets/*.png` | rendered from the SVGs; never edited by hand |
+| the PNG beside each SVG | rendered from it; never edited by hand |
 
 ## Drawing
 
@@ -22,4 +22,4 @@ Render with headless Chrome: `--screenshot --window-size=1280,640`. Do not use `
 
 ## Publishing
 
-GitHub exposes no API for the social preview: `assets/social.png` is uploaded by hand under Settings › General.
+GitHub exposes no API for the social preview: the card's PNG render is uploaded by hand under Settings › General.

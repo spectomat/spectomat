@@ -19,7 +19,7 @@ set -uo pipefail
 SCRIPTS="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../tests" && pwd)"
 
-TOTAL_PASS=0; TOTAL_FAIL=0; FILES_FAILED=0
+TOTAL_OK=0; TOTAL_FAIL=0; FILES_FAILED=0
 
 for f in "$TESTS_DIR"/*_test.sh; do
   out=$(bash "$f" "$SCRIPTS" 2>&1); rc=$?
@@ -27,10 +27,10 @@ for f in "$TESTS_DIR"/*_test.sh; do
   summary=$(printf '%s\n' "$out" | tail -1)
   p=$(printf '%s' "$summary" | sed -n 's/^\([0-9]*\) passed, .*/\1/p')
   fl=$(printf '%s' "$summary" | sed -n 's/.*, \([0-9]*\) failed$/\1/p')
-  TOTAL_PASS=$((TOTAL_PASS + ${p:-0}))
+  TOTAL_OK=$((TOTAL_OK + ${p:-0}))
   TOTAL_FAIL=$((TOTAL_FAIL + ${fl:-0}))
   [[ $rc -eq 0 ]] || FILES_FAILED=$((FILES_FAILED + 1))
 done
 
-printf '\n%d passed, %d failed\n' "$TOTAL_PASS" "$TOTAL_FAIL"
+printf '\n%d passed, %d failed\n' "$TOTAL_OK" "$TOTAL_FAIL"
 [[ $FILES_FAILED -eq 0 && $TOTAL_FAIL -eq 0 ]]
