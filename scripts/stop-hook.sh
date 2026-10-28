@@ -102,6 +102,20 @@ require_sane_state() {
   [[ "$MAX_ITERATIONS" =~ ^[0-9]+$ ]] || stop_corrupt "'max_iterations' is not a number (got: '$MAX_ITERATIONS')"
 }
 
+# A phase agent launched in the background ends the dispatching turn at once,
+# so this hook fires while the iteration is still at work. Feeding the pointer
+# back then hands the session the same verdict again, turn after turn. Let the
+# session stop instead: the agent's completion wakes it, and that turn's stop
+# runs the next iteration. Claude Code lists the session's background tasks in
+# the hook input.
+require_no_phase_running() {
+  local running
+  running=$(echo "$HOOK_INPUT" | jq -r '[.background_tasks // [] | .[]
+    | select(.type == "subagent" and .status == "running"
+             and ((.agent_type // "") | startswith("spectomat:")))] | length' 2>/dev/null) || running=0
+  [[ "${running:-0}" -eq 0 ]] || exit 0
+}
+
 require_below_max() {
   if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
     finish "🛑 Spectomat flow: max iterations ($MAX_ITERATIONS) reached. Run /spectomat:run to resume from the floor."
@@ -142,6 +156,7 @@ main() {
   require_readable_state
   require_sane_state
   [[ "$STATE_ACTIVE" == "true" ]] || exit 0
+  require_no_phase_running
   require_below_max
   ask_picker
   [[ "$PICK_PHASE" != FINISH ]] || finish "$(closing_report)"

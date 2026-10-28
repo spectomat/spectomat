@@ -85,6 +85,23 @@ is "a corrupt state survives a foreign session" "$(hook_state)" "yes"
 fire OWNER >/dev/null
 is "a corrupt state survives its own session"   "$(hook_state)" "yes"
 
+# A phase agent may run in the background, which ends the dispatching turn at
+# once. While it runs the hook lets the session stop without feeding the
+# pointer back, or the session is handed the same verdict again and again.
+fire_tasks() {
+  jq -nc --arg s "$1" --argjson t "$2" '{session_id:$s, background_tasks:$t}' \
+    | ( cd "$FIXTURE" && bash "$SCRIPTS/stop-hook.sh" 2>/dev/null )
+}
+hook_floor h_running OWNER 1 5
+out=$(fire_tasks OWNER '[{"id":"a1","type":"subagent","status":"running","agent_type":"spectomat:specify"}]')
+is "a running phase agent holds the flow"    "$out" ""
+is "a running phase agent bumps nothing"     "$(hook_iter)" "1"
+is "a running phase agent keeps the state"   "$(hook_state)" "yes"
+out=$(fire_tasks OWNER '[{"id":"a1","type":"subagent","status":"completed","agent_type":"spectomat:specify"}]')
+is "a finished phase agent lets the flow go on" "$(printf '%s' "$out" | jq -r .decision)" "block"
+out=$(fire_tasks OWNER '[{"id":"b1","type":"subagent","status":"running","agent_type":"Explore"}]')
+is "a foreign running agent does not hold"   "$(printf '%s' "$out" | jq -r .decision)" "block"
+
 hook_floor h_cancelled OWNER 1 5
 jq '.active = false' "$FIXTURE/.spectomat/state.json" > "$FIXTURE/.spectomat/state.json.tmp" && mv "$FIXTURE/.spectomat/state.json.tmp" "$FIXTURE/.spectomat/state.json"
 out=$(fire OWNER)

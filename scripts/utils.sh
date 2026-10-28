@@ -126,9 +126,13 @@ $block
 ## 2. Act on that block, and only on it
 
 Launch exactly one subagent with the Agent tool:
- \`run_in_background: false\`,
+ \`run_in_background: false\` where the tool takes it,
  \`subagent_type\` set to the \`subagent\` field of that block,
   and the body of the file named by \`brief\` — its own frontmatter stripped — as the brief.
+
+This prompt arrives only when no Spectomat subagent is running, so dispatch now, even if you recall launching one earlier: that one has ended.
+
+If the subagent runs in the background, end the turn as soon as it is launched: do not wait or poll. The Stop hook holds the flow while it runs, and its completion notice brings you to step 3.
 
 The one exception is a block whose \`subagent\` field is empty, which only \`FINISH\` produces: dispatch nothing and go to step 3.
 

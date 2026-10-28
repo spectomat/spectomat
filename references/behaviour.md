@@ -12,13 +12,13 @@ Trigger: the Stop hook blocks a session exit and feeds back the pointer prompt. 
 
 1. The Stop hook has already run the picker for this iteration (§3.5) and embedded its frontmatter block in the pointer prompt; the session reads that block from the prompt rather than running `phase.sh` itself.
 2. It dispatches per §3.3.
-3. It prints at most five lines of the report and stops, which fires the Stop hook again.
+3. It prints at most five lines of the report and stops, which fires the Stop hook again. A subagent the harness runs in the background ends the dispatching turn at once; the session stops without a report, and the Stop hook lets it, because the hook input's `background_tasks` lists a running `spectomat:*` subagent (D37). The agent's completion notice wakes the session, which reports and stops.
 
 The session reads no contract, no floor file and no source. Its context accumulates one short report per iteration.
 
 ### 3.3 Dispatch
 
-The pointer has no lookup table: every field it needs is in the block. It launches exactly one subagent — `run_in_background: false`, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` (after that file's own frontmatter) as the task's brief — for every `phase` from `SPECIFY` through `RECOVER`. `FINISH` is the exception: its block names no `subagent` and no `brief`, because the Stop hook ends the flow on that verdict before the pointer ever sees it (§3.5). A pointer that does see a `FINISH` block — from `/spectomat:status`, or a janitor running the picker by hand — dispatches nothing.
+The pointer has no lookup table: every field it needs is in the block. It launches exactly one subagent — `run_in_background: false` where the Agent tool takes it, `subagent_type` set to the block's `subagent` field, and the body of the file named by `brief` (after that file's own frontmatter) as the task's brief — for every `phase` from `SPECIFY` through `RECOVER`. `FINISH` is the exception: its block names no `subagent` and no `brief`, because the Stop hook ends the flow on that verdict before the pointer ever sees it (§3.5). A pointer that does see a `FINISH` block — from `/spectomat:status`, or a janitor running the picker by hand — dispatches nothing.
 
 The task handed to the subagent is the picker's frontmatter block, verbatim, fences included — the pointer neither reformats it nor extracts fields from it. A brief therefore carries no plugin path of its own but can still reach `templates/` by reading `plugin_root:` out of its own task.
 
