@@ -1,0 +1,10 @@
+{
+  "events": [
+    {
+      "id": "spectomat-001",
+      "date": "2026-09-07",
+      "name": "first commit",
+      "kind": "event"
+    }
+  ]
+}

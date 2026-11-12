@@ -1,0 +1,10 @@
+{
+  "refs": [
+    {
+      "id": "spectomat-001",
+      "name": "cloudflare/security-audit-skill",
+      "url": "https://github.com/cloudflare/security-audit-skill",
+      "type": "github"
+    }
+  ]
+}
