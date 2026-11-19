@@ -2,12 +2,6 @@
   "id": "spectomat",
   "name": "Spectomat",
   "description": "Spec-driven code development flow for Claude Code, installable as a git dependency",
-  "purpose": "Turn ideas into tested code with minimal manual work.",
-  "goals": [
-    "Automate the idea-to-code pipeline: wishlist drafts become specs, plans, tasks, committed and tested code unattended",
-    "Package and distribute it as an installable Claude Code plugin",
-    "Reach a reliable unattended flow with minimal manual intervention"
-  ],
   "status": "maintain",
   "repoUrl": "https://github.com/spectomat/spectomat",
   "prodUrl": "https://github.com/spectomat/spectomat",

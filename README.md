@@ -11,6 +11,16 @@ Spec-driven code development flow for Claude Code.
 You drop ideas into `.wishlist/` and call one `/spectomat:run` command,
 then an *unattended flow* turns each idea into a spec, each spec into a plan and tasks, and then executes all of them to produce well-tested, committed code.
 
+## Purpose
+
+Turn ideas into tested code with minimal manual work.
+
+## Goals
+
+- Automate the idea-to-code pipeline: wishlist drafts become specs, plans, tasks, committed and tested code unattended
+- Package and distribute it as an installable Claude Code plugin
+- Reach a reliable unattended flow with minimal manual intervention
+
 ## Workflow
 
 ### Install
