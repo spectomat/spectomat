@@ -2,7 +2,7 @@
   "id": "spectomat",
   "name": "Spectomat",
   "description": "Spec-driven code development flow for Claude Code, installable as a git dependency",
-  "status": "maintain",
+  "status": "hold",
   "repoUrl": "https://github.com/spectomat/spectomat",
   "prodUrl": "https://github.com/spectomat/spectomat",
   "domain": "dev",
