@@ -113,7 +113,7 @@ pointer_prompt() {
   body=$(cat <<EOF
 # Spectomat next iteration pointer
 
-Fresh context each iteration.
+Each subagent starts with a fresh context; this session only dispatches and reports.
 
 ## 1. The picker's verdict
 
