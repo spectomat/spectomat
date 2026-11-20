@@ -4,5 +4,8 @@
   "private": true,
   "description": "Spec-driven code development flow for Claude Code, installable as a git dependency",
   "license": "MIT",
-  "repository": "github:spectomat/spectomat"
+  "repository": "github:spectomat/spectomat",
+  "scripts": {
+    "gates": "bash scripts/selftest.sh"
+  }
 }
